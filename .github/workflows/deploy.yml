@@ -20,8 +20,17 @@ jobs:
         script: |
           cd /var/www/html/drupal/modules/custom/news_extractor
           git config --global --add safe.directory /var/www/html/drupal/modules/custom/news_extractor
+          # Set ownership to ubuntu for git operations
+          sudo chown -R ubuntu:ubuntu .
+          # Pull the latest changes
           git fetch origin main
           git reset --hard origin/main
+          # Set ownership back to www-data for web server
           sudo chown -R www-data:www-data .
-          sudo chmod -R 755 .
+          # Set permissions but exclude .git directory from www-data ownership
+          sudo find . -name ".git" -prune -o -type f -exec chmod 644 {} \;
+          sudo find . -name ".git" -prune -o -type d -exec chmod 755 {} \;
+          # Keep .git directory accessible to ubuntu user
+          sudo chown -R ubuntu:ubuntu .git
+          # Clear Drupal cache
           drush cr
