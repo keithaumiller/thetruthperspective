@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @file  testing
+ * @file  testing2
  * News Extractor module - Extracts full article content using Diffbot API and generates AI summaries.
  */
 
