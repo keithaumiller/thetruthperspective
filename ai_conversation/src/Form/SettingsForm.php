@@ -55,27 +55,51 @@ class SettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('ai_conversation.settings');
 
-    $form['api_settings'] = [
+    $form['aws_settings'] = [
       '#type' => 'fieldset',
-      '#title' => $this->t('API Settings'),
+      '#title' => $this->t('AWS Bedrock Settings'),
       '#collapsible' => FALSE,
     ];
 
-    $form['api_settings']['anthropic_api_key'] = [
+    $form['aws_settings']['aws_access_key_id'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Anthropic API Key'),
-      '#description' => $this->t('Enter your Anthropic API key. Get one from <a href="@url" target="_blank">Anthropic Console</a>.', [
-        '@url' => 'https://console.anthropic.com/',
-      ]),
-      '#default_value' => $config->get('anthropic_api_key'),
+      '#title' => $this->t('AWS Access Key ID'),
+      '#description' => $this->t('Your AWS Access Key ID for Bedrock access.'),
+      '#default_value' => $config->get('aws_access_key_id'),
       '#required' => TRUE,
     ];
 
-    $form['api_settings']['test_connection'] = [
+    $form['aws_settings']['aws_secret_access_key'] = [
+      '#type' => 'password',
+      '#title' => $this->t('AWS Secret Access Key'),
+      '#description' => $this->t('Your AWS Secret Access Key for Bedrock access.'),
+      '#default_value' => $config->get('aws_secret_access_key'),
+      '#required' => TRUE,
+    ];
+
+    $form['aws_settings']['aws_region'] = [
+      '#type' => 'select',
+      '#title' => $this->t('AWS Region'),
+      '#description' => $this->t('The AWS region where Bedrock is available.'),
+      '#options' => [
+        'us-east-1' => 'US East (N. Virginia)',
+        'us-west-2' => 'US West (Oregon)',
+        'eu-west-1' => 'Europe (Ireland)',
+        'ap-southeast-1' => 'Asia Pacific (Singapore)',
+        'ap-northeast-1' => 'Asia Pacific (Tokyo)',
+      ],
+      '#default_value' => $config->get('aws_region') ?: 'us-east-1',
+    ];
+
+    $form['aws_settings']['test_connection'] = [
       '#type' => 'submit',
       '#value' => $this->t('Test Connection'),
       '#submit' => ['::testConnection'],
-      '#limit_validation_errors' => [['anthropic_api_key']],
+      '#limit_validation_errors' => [
+        ['aws_access_key_id'],
+        ['aws_secret_access_key'],
+        ['aws_region'],
+      ],
     ];
 
     $form['default_settings'] = [
@@ -89,10 +113,12 @@ class SettingsForm extends ConfigFormBase {
       '#title' => $this->t('Default AI Model'),
       '#description' => $this->t('Select the default AI model for new conversations.'),
       '#options' => [
-        'claude-sonnet-4-20250514' => 'Claude Sonnet 4',
-        'claude-opus-4-20250514' => 'Claude Opus 4',
+        'anthropic.claude-3-5-sonnet-20240620-v1:0' => 'Claude 3.5 Sonnet (June 2024)',
+        'anthropic.claude-3-5-sonnet-20241022-v2:0' => 'Claude 3.5 Sonnet (October 2024)',
+        'anthropic.claude-3-opus-20240229-v1:0' => 'Claude 3 Opus',
+        'anthropic.claude-3-haiku-20240307-v1:0' => 'Claude 3 Haiku',
       ],
-      '#default_value' => $config->get('default_model') ?: 'claude-sonnet-4-20250514',
+      '#default_value' => $config->get('default_model') ?: 'anthropic.claude-3-5-sonnet-20240620-v1:0',
     ];
 
     $form['default_settings']['default_system_prompt'] = [
@@ -119,17 +145,19 @@ class SettingsForm extends ConfigFormBase {
    * Test API connection.
    */
   public function testConnection(array &$form, FormStateInterface $form_state) {
-    // Temporarily save the API key to test.
-    $api_key = $form_state->getValue('anthropic_api_key');
+    // Temporarily save the AWS credentials to test.
     $config = $this->config('ai_conversation.settings');
-    $config->set('anthropic_api_key', $api_key)->save();
+    $config->set('aws_access_key_id', $form_state->getValue('aws_access_key_id'))
+      ->set('aws_secret_access_key', $form_state->getValue('aws_secret_access_key'))
+      ->set('aws_region', $form_state->getValue('aws_region'))
+      ->save();
 
     $result = $this->aiApiService->testConnection();
     
     if ($result['success']) {
-      $this->messenger()->addMessage($this->t('API connection successful!'));
+      $this->messenger()->addMessage($this->t('AWS Bedrock connection successful!'));
     } else {
-      $this->messenger()->addError($this->t('API connection failed: @message', [
+      $this->messenger()->addError($this->t('AWS Bedrock connection failed: @message', [
         '@message' => $result['message'],
       ]));
     }
@@ -140,7 +168,9 @@ class SettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $this->config('ai_conversation.settings')
-      ->set('anthropic_api_key', $form_state->getValue('anthropic_api_key'))
+      ->set('aws_access_key_id', $form_state->getValue('aws_access_key_id'))
+      ->set('aws_secret_access_key', $form_state->getValue('aws_secret_access_key'))
+      ->set('aws_region', $form_state->getValue('aws_region'))
       ->set('default_model', $form_state->getValue('default_model'))
       ->set('default_system_prompt', $form_state->getValue('default_system_prompt'))
       ->set('max_tokens', $form_state->getValue('max_tokens'))
