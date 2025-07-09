@@ -1,4 +1,4 @@
 services:
   ai_conversation.api_service:
     class: Drupal\ai_conversation\Service\AIApiService
-    arguments: ['@http_client_factory', '@config.factory', '@logger.factory']
+    arguments: ['@config.factory', '@logger.factory']
