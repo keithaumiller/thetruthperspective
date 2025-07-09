@@ -1,0 +1,8 @@
+name: News Extractor
+type: module
+description: 'Extracts full article content using Diffbot API'
+core_version_requirement: ^8 || ^9 || ^10 || ^11
+package: Custom
+dependencies:
+  - node
+  - feeds
