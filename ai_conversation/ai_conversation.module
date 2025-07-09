@@ -1,1 +1,60 @@
+<?php
 
+/**
+ * @file
+ * AI Conversation module.
+ */
+
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_theme().
+ */
+function ai_conversation_theme() {
+  return [
+    'ai_conversation_chat' => [
+      'variables' => [
+        'conversation' => NULL,
+        'messages' => [],
+      ],
+      'template' => 'ai-conversation-chat',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_entity_view().
+ */
+function ai_conversation_entity_view(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display, $view_mode) {
+  if ($entity->getEntityTypeId() === 'node' && $entity->bundle() === 'ai_conversation') {
+    // Add a link to the chat interface.
+    $build['chat_link'] = [
+      '#type' => 'link',
+      '#title' => t('Start Chat'),
+      '#url' => Url::fromRoute('ai_conversation.chat_interface', ['node' => $entity->id()]),
+      '#attributes' => [
+        'class' => ['btn', 'btn-primary'],
+      ],
+      '#weight' => 10,
+    ];
+  }
+}
+
+/**
+ * Implements hook_entity_operation().
+ */
+function ai_conversation_entity_operation(EntityInterface $entity) {
+  $operations = [];
+  
+  if ($entity->getEntityTypeId() === 'node' && $entity->bundle() === 'ai_conversation') {
+    $operations['chat'] = [
+      'title' => t('Chat'),
+      'url' => Url::fromRoute('ai_conversation.chat_interface', ['node' => $entity->id()]),
+      'weight' => 50,
+    ];
+  }
+  
+  return $operations;
+}
