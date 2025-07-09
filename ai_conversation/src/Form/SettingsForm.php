@@ -55,51 +55,17 @@ class SettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('ai_conversation.settings');
 
-    $form['aws_settings'] = [
-      '#type' => 'fieldset',
-      '#title' => $this->t('AWS Bedrock Settings'),
-      '#collapsible' => FALSE,
+    $form['connection_info'] = [
+      '#type' => 'item',
+      '#title' => $this->t('AWS Bedrock Connection'),
+      '#description' => $this->t('This module uses the server\'s AWS IAM role configuration to connect to Bedrock. No additional credentials are required.'),
     ];
 
-    $form['aws_settings']['aws_access_key_id'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('AWS Access Key ID'),
-      '#description' => $this->t('Your AWS Access Key ID for Bedrock access.'),
-      '#default_value' => $config->get('aws_access_key_id'),
-      '#required' => TRUE,
-    ];
-
-    $form['aws_settings']['aws_secret_access_key'] = [
-      '#type' => 'password',
-      '#title' => $this->t('AWS Secret Access Key'),
-      '#description' => $this->t('Your AWS Secret Access Key for Bedrock access.'),
-      '#default_value' => $config->get('aws_secret_access_key'),
-      '#required' => TRUE,
-    ];
-
-    $form['aws_settings']['aws_region'] = [
-      '#type' => 'select',
-      '#title' => $this->t('AWS Region'),
-      '#description' => $this->t('The AWS region where Bedrock is available.'),
-      '#options' => [
-        'us-east-1' => 'US East (N. Virginia)',
-        'us-west-2' => 'US West (Oregon)',
-        'eu-west-1' => 'Europe (Ireland)',
-        'ap-southeast-1' => 'Asia Pacific (Singapore)',
-        'ap-northeast-1' => 'Asia Pacific (Tokyo)',
-      ],
-      '#default_value' => $config->get('aws_region') ?: 'us-east-1',
-    ];
-
-    $form['aws_settings']['test_connection'] = [
+    $form['test_connection'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Test Connection'),
+      '#value' => $this->t('Test Bedrock Connection'),
       '#submit' => ['::testConnection'],
-      '#limit_validation_errors' => [
-        ['aws_access_key_id'],
-        ['aws_secret_access_key'],
-        ['aws_region'],
-      ],
+      '#limit_validation_errors' => [],
     ];
 
     $form['default_settings'] = [
@@ -145,17 +111,10 @@ class SettingsForm extends ConfigFormBase {
    * Test API connection.
    */
   public function testConnection(array &$form, FormStateInterface $form_state) {
-    // Temporarily save the AWS credentials to test.
-    $config = $this->config('ai_conversation.settings');
-    $config->set('aws_access_key_id', $form_state->getValue('aws_access_key_id'))
-      ->set('aws_secret_access_key', $form_state->getValue('aws_secret_access_key'))
-      ->set('aws_region', $form_state->getValue('aws_region'))
-      ->save();
-
     $result = $this->aiApiService->testConnection();
     
     if ($result['success']) {
-      $this->messenger()->addMessage($this->t('AWS Bedrock connection successful!'));
+      $this->messenger()->addMessage($this->t('AWS Bedrock connection successful! ✅'));
     } else {
       $this->messenger()->addError($this->t('AWS Bedrock connection failed: @message', [
         '@message' => $result['message'],
@@ -168,9 +127,6 @@ class SettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $this->config('ai_conversation.settings')
-      ->set('aws_access_key_id', $form_state->getValue('aws_access_key_id'))
-      ->set('aws_secret_access_key', $form_state->getValue('aws_secret_access_key'))
-      ->set('aws_region', $form_state->getValue('aws_region'))
       ->set('default_model', $form_state->getValue('default_model'))
       ->set('default_system_prompt', $form_state->getValue('default_system_prompt'))
       ->set('max_tokens', $form_state->getValue('max_tokens'))
