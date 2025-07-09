@@ -11,10 +11,13 @@ jobs:
     
     - name: Deploy modules to server
       uses: appleboy/ssh-action@v0.1.5
+      env:
+        GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.PRIVATE_KEY }}
+        envs: GITHUB_PAT
         script: |
           set -e  # Exit on any error
           
@@ -37,9 +40,9 @@ jobs:
           echo "Current remote URL:"
           git remote -v
           
-          # Ensure we're using HTTPS URL (not SSH)
-          git remote set-url origin https://github.com/keithaumiller/thetruthperspective.git
-          echo "Updated remote URL to HTTPS"
+          # Ensure we're using HTTPS URL with token authentication
+          git remote set-url origin https://${GITHUB_PAT}@github.com/keithaumiller/thetruthperspective.git
+          echo "Updated remote URL to HTTPS with authentication"
           
           # Pull the latest changes with error checking
           echo "=== Fetching latest changes ==="
