@@ -13,7 +13,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 /**
  * Implements hook_feeds_process_alter().
  * 
- * Alter feed item data before it becomes a node.
+ * Alter feed item data before it becomes a node. 
  */
 function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
   // Check if this is an article feed
