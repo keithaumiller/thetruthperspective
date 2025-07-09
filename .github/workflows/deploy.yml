@@ -1,9 +1,7 @@
 name: Deploy to Server
-
 on:
   push:
     branches: [ main ]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -11,7 +9,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Deploy to server
+    - name: Deploy news_extractor module
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.HOST }}
@@ -32,5 +30,53 @@ jobs:
           sudo find . -name ".git" -prune -o -type d -exec chmod 755 {} \;
           # Keep .git directory accessible to ubuntu user
           sudo chown -R ubuntu:ubuntu .git
+          
+    - name: Deploy ai_conversation module
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.PRIVATE_KEY }}
+        script: |
+          # Create ai_conversation directory if it doesn't exist
+          sudo mkdir -p /var/www/html/drupal/modules/custom/ai_conversation
+          cd /var/www/html/drupal/modules/custom/ai_conversation
+          
+          # Initialize git if not already done
+          if [ ! -d ".git" ]; then
+            git clone https://github.com/yourusername/your-repo-name.git .
+            git config --global --add safe.directory /var/www/html/drupal/modules/custom/ai_conversation
+            # Use sparse checkout to only get the ai_conversation folder
+            git config core.sparseCheckout true
+            echo "ai_conversation/*" > .git/info/sparse-checkout
+            git read-tree -m -u HEAD
+          fi
+          
+          git config --global --add safe.directory /var/www/html/drupal/modules/custom/ai_conversation
+          # Set ownership to ubuntu for git operations
+          sudo chown -R ubuntu:ubuntu .
+          # Pull the latest changes
+          git fetch origin main
+          git reset --hard origin/main
+          # Move files from ai_conversation subdirectory to root
+          if [ -d "ai_conversation" ]; then
+            sudo cp -r ai_conversation/* .
+            sudo rm -rf ai_conversation
+          fi
+          # Set ownership back to www-data for web server
+          sudo chown -R www-data:www-data .
+          # Set permissions but exclude .git directory from www-data ownership
+          sudo find . -name ".git" -prune -o -type f -exec chmod 644 {} \;
+          sudo find . -name ".git" -prune -o -type d -exec chmod 755 {} \;
+          # Keep .git directory accessible to ubuntu user
+          sudo chown -R ubuntu:ubuntu .git
+          
+    - name: Clear Drupal cache
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.PRIVATE_KEY }}
+        script: |
           # Clear Drupal cache
           drush cr
