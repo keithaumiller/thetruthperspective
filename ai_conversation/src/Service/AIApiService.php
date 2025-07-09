@@ -3,22 +3,15 @@
 namespace Drupal\ai_conversation\Service;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Http\ClientFactory;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\node\NodeInterface;
-use GuzzleHttp\Exception\RequestException;
+use Aws\BedrockRuntime\BedrockRuntimeClient;
+use Aws\Exception\AwsException;
 
 /**
- * Service for AI API communication.
+ * Service for AI API communication using AWS Bedrock.
  */
 class AIApiService {
-
-  /**
-   * The HTTP client factory.
-   *
-   * @var \Drupal\Core\Http\ClientFactory
-   */
-  protected $httpClientFactory;
 
   /**
    * The config factory.
@@ -35,12 +28,35 @@ class AIApiService {
   protected $logger;
 
   /**
+   * The AWS Bedrock client.
+   *
+   * @var \Aws\BedrockRuntime\BedrockRuntimeClient
+   */
+  protected $bedrock;
+
+  /**
    * Constructs a new AIApiService object.
    */
-  public function __construct(ClientFactory $http_client_factory, ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory) {
-    $this->httpClientFactory = $http_client_factory;
+  public function __construct(ConfigFactoryInterface $config_factory, LoggerChannelFactoryInterface $logger_factory) {
     $this->configFactory = $config_factory;
     $this->logger = $logger_factory->get('ai_conversation');
+    $this->initializeBedrockClient();
+  }
+
+  /**
+   * Initialize the AWS Bedrock client.
+   */
+  private function initializeBedrockClient() {
+    $config = $this->configFactory->get('ai_conversation.settings');
+    
+    $this->bedrock = new BedrockRuntimeClient([
+      'version' => 'latest',
+      'region' => $config->get('aws_region') ?: 'us-east-1',
+      'credentials' => [
+        'key' => $config->get('aws_access_key_id'),
+        'secret' => $config->get('aws_secret_access_key'),
+      ],
+    ]);
   }
 
   /**
@@ -48,14 +64,13 @@ class AIApiService {
    */
   public function sendMessage(NodeInterface $conversation, string $message) {
     $config = $this->configFactory->get('ai_conversation.settings');
-    $api_key = $config->get('anthropic_api_key');
     
-    if (!$api_key) {
-      throw new \Exception('Anthropic API key not configured');
+    if (!$config->get('aws_access_key_id') || !$config->get('aws_secret_access_key')) {
+      throw new \Exception('AWS credentials not configured');
     }
 
     // Get the AI model from the conversation.
-    $model = $conversation->get('field_ai_model')->value ?: 'claude-sonnet-4-20250514';
+    $model = $conversation->get('field_ai_model')->value ?: 'anthropic.claude-3-5-sonnet-20240620-v1:0';
 
     // Build the conversation history.
     $messages = $this->buildConversationHistory($conversation);
@@ -69,39 +84,39 @@ class AIApiService {
     // Get system prompt/context.
     $system_prompt = $conversation->get('field_context')->value ?: 'You are a helpful AI assistant.';
 
-    // Prepare the API request.
-    $request_data = [
-      'model' => $model,
-      'max_tokens' => 4000,
-      'messages' => $messages,
-      'system' => $system_prompt,
-    ];
-
-    $client = $this->httpClientFactory->fromOptions([
-      'timeout' => 30,
-      'headers' => [
-        'Content-Type' => 'application/json',
-        'X-API-Key' => $api_key,
-        'anthropic-version' => '2023-06-01',
-      ],
-    ]);
+    // Add system message to the beginning if it exists.
+    if ($system_prompt) {
+      array_unshift($messages, [
+        'role' => 'user',
+        'content' => $system_prompt,
+      ]);
+      array_unshift($messages, [
+        'role' => 'assistant',
+        'content' => 'I understand. I will act as a helpful AI assistant.',
+      ]);
+    }
 
     try {
-      $response = $client->post('https://api.anthropic.com/v1/messages', [
-        'json' => $request_data,
+      $response = $this->bedrock->invokeModel([
+        'modelId' => $model,
+        'body' => json_encode([
+          'anthropic_version' => 'bedrock-2023-05-31',
+          'max_tokens' => $config->get('max_tokens') ?: 4000,
+          'messages' => $messages,
+        ])
       ]);
 
-      $response_data = json_decode($response->getBody()->getContents(), TRUE);
+      $response_body = json_decode($response['body'], TRUE);
       
-      if (isset($response_data['content'][0]['text'])) {
-        return $response_data['content'][0]['text'];
+      if (isset($response_body['content'][0]['text'])) {
+        return $response_body['content'][0]['text'];
       } else {
-        $this->logger->error('Unexpected API response format: @response', ['@response' => print_r($response_data, TRUE)]);
+        $this->logger->error('Unexpected API response format: @response', ['@response' => print_r($response_body, TRUE)]);
         throw new \Exception('Unexpected API response format');
       }
 
-    } catch (RequestException $e) {
-      $this->logger->error('API request failed: @error', ['@error' => $e->getMessage()]);
+    } catch (AwsException $e) {
+      $this->logger->error('AWS Bedrock API request failed: @error', ['@error' => $e->getMessage()]);
       throw new \Exception('Failed to communicate with AI service: ' . $e->getMessage());
     }
   }
@@ -132,25 +147,16 @@ class AIApiService {
    */
   public function testConnection() {
     $config = $this->configFactory->get('ai_conversation.settings');
-    $api_key = $config->get('anthropic_api_key');
     
-    if (!$api_key) {
-      return ['success' => FALSE, 'message' => 'API key not configured'];
+    if (!$config->get('aws_access_key_id') || !$config->get('aws_secret_access_key')) {
+      return ['success' => FALSE, 'message' => 'AWS credentials not configured'];
     }
 
-    $client = $this->httpClientFactory->fromOptions([
-      'timeout' => 10,
-      'headers' => [
-        'Content-Type' => 'application/json',
-        'X-API-Key' => $api_key,
-        'anthropic-version' => '2023-06-01',
-      ],
-    ]);
-
     try {
-      $response = $client->post('https://api.anthropic.com/v1/messages', [
-        'json' => [
-          'model' => 'claude-sonnet-4-20250514',
+      $response = $this->bedrock->invokeModel([
+        'modelId' => 'anthropic.claude-3-5-sonnet-20240620-v1:0',
+        'body' => json_encode([
+          'anthropic_version' => 'bedrock-2023-05-31',
           'max_tokens' => 10,
           'messages' => [
             [
@@ -158,19 +164,19 @@ class AIApiService {
               'content' => 'Hello',
             ],
           ],
-        ],
+        ])
       ]);
 
-      $response_data = json_decode($response->getBody()->getContents(), TRUE);
+      $response_body = json_decode($response['body'], TRUE);
       
-      if (isset($response_data['content'][0]['text'])) {
-        return ['success' => TRUE, 'message' => 'API connection successful'];
+      if (isset($response_body['content'][0]['text'])) {
+        return ['success' => TRUE, 'message' => 'AWS Bedrock connection successful'];
       } else {
         return ['success' => FALSE, 'message' => 'Unexpected API response'];
       }
 
-    } catch (RequestException $e) {
-      return ['success' => FALSE, 'message' => 'API request failed: ' . $e->getMessage()];
+    } catch (AwsException $e) {
+      return ['success' => FALSE, 'message' => 'AWS Bedrock API request failed: ' . $e->getMessage()];
     }
   }
 
