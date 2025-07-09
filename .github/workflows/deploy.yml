@@ -68,5 +68,11 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.PRIVATE_KEY }}
         script: |
-          # Clear Drupal cache
-          drush cr
+          # Fix file permissions for Drupal files directory
+          sudo chown -R www-data:www-data /var/www/html/drupal/sites/default/files
+          sudo find /var/www/html/drupal/sites/default/files -type f -exec chmod 664 {} \;
+          sudo find /var/www/html/drupal/sites/default/files -type d -exec chmod 775 {} \;
+          
+          # Clear Drupal cache as www-data user
+          cd /var/www/html/drupal
+          sudo -u www-data drush cr
