@@ -16,25 +16,19 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.PRIVATE_KEY }}
         script: |
-          # Navigate to news_extractor directory
           cd /var/www/html/drupal/modules/custom/news_extractor
-          
-          # Configure git safe directory
           git config --global --add safe.directory /var/www/html/drupal/modules/custom/news_extractor
-          
           # Set ownership to ubuntu for git operations
-          sudo chown -R ubuntu:ubuntu .git
           sudo chown -R ubuntu:ubuntu .
-          
           # Pull the latest changes
           git fetch origin main
           git reset --hard origin/main
-          
-          # Set proper permissions
-          sudo chown -R ubuntu:ubuntu .git
+          # Set ownership back to www-data for web server
           sudo chown -R www-data:www-data .
+          # Set permissions but exclude .git directory from www-data ownership
           sudo find . -name ".git" -prune -o -type f -exec chmod 644 {} \;
           sudo find . -name ".git" -prune -o -type d -exec chmod 755 {} \;
+          # Keep .git directory accessible to ubuntu user
           sudo chown -R ubuntu:ubuntu .git
           
     - name: Deploy ai_conversation module
@@ -44,157 +38,16 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.PRIVATE_KEY }}
         script: |
-          # Remove existing ai_conversation directory
+          # Remove existing ai_conversation directory if it exists
           sudo rm -rf /var/www/html/drupal/modules/custom/ai_conversation
           
           # Copy ai_conversation module from news_extractor repo
           sudo cp -r /var/www/html/drupal/modules/custom/news_extractor/ai_conversation /var/www/html/drupal/modules/custom/
           
-          # Set proper permissions for ai_conversation
+          # Set proper ownership and permissions
           sudo chown -R www-data:www-data /var/www/html/drupal/modules/custom/ai_conversation
           sudo find /var/www/html/drupal/modules/custom/ai_conversation -type f -exec chmod 644 {} \;
           sudo find /var/www/html/drupal/modules/custom/ai_conversation -type d -exec chmod 755 {} \;
-          
-    - name: Clear Drupal cache
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.PRIVATE_KEY }}
-        script: |
-          # Fix file permissions for Drupal files directory
-          sudo chown -R www-data:www-data /var/www/html/drupal/sites/default/files
-          sudo find /var/www/html/drupal/sites/default/files -name: Deploy to Server
-on:
-  push:
-    branches: [ main ]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Deploy news_extractor module
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.PRIVATE_KEY }}
-        script: |
-          # Create news_extractor directory if it doesn't exist
-          if [ ! -d "/var/www/html/drupal/modules/custom/news_extractor" ]; then
-            sudo mkdir -p /var/www/html/drupal/modules/custom/news_extractor
-            cd /var/www/html/drupal/modules/custom/news_extractor
-            git clone https://github.com/keithaumiller/thetruthperspective.git .
-          else
-            cd /var/www/html/drupal/modules/custom/news_extractor
-          fi
-          
-          git config --global --add safe.directory /var/www/html/drupal/modules/custom/news_extractor
-          # Set ownership to ubuntu for git operations
-          sudo chown -R ubuntu:ubuntu .
-          # Pull the latest changes
-          git fetch origin main
-          git reset --hard origin/main
-          # Set ownership back to www-data for web server
-          sudo chown -R www-data:www-data .
-          # Set permissions but exclude .git directory from www-data ownership
-          sudo find . -name ".git" -prune -o -type f -exec chmod 644 {} \;
-          sudo find . -name ".git" -prune -o -type d -exec chmod 755 {} \;
-          # Keep .git directory accessible to ubuntu user
-          sudo chown -R ubuntu:ubuntu .git
-          
-    - name: Deploy ai_conversation module
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.PRIVATE_KEY }}
-        script: |
-          # Remove existing ai_conversation directory if it exists
-          sudo rm -rf /var/www/html/drupal/modules/custom/ai_conversation
-          
-          # Create temporary directory for clone
-          TEMP_DIR="/tmp/ai_conversation_deploy_$(date +%s)"
-          mkdir -p "$TEMP_DIRname: Deploy to Server
-on:
-  push:
-    branches: [ main ]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Deploy news_extractor module
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.PRIVATE_KEY }}
-        script: |
-          # Create news_extractor directory if it doesn't exist
-          if [ ! -d "/var/www/html/drupal/modules/custom/news_extractor" ]; then
-            sudo mkdir -p /var/www/html/drupal/modules/custom/news_extractor
-            cd /var/www/html/drupal/modules/custom/news_extractor
-            git clone https://github.com/yourusername/your-repo-name.git .
-          else
-            cd /var/www/html/drupal/modules/custom/news_extractor
-          fi
-          
-          git config --global --add safe.directory /var/www/html/drupal/modules/custom/news_extractor
-          # Set ownership to ubuntu for git operations
-          sudo chown -R ubuntu:ubuntu .
-          # Pull the latest changes
-          git fetch origin main
-          git reset --hard origin/main
-          # Set ownership back to www-data for web server
-          sudo chown -R www-data:www-data .
-          # Set permissions but exclude .git directory from www-data ownership
-          sudo find . -name ".git" -prune -o -type f -exec chmod 644 {} \;
-          sudo find . -name ".git" -prune -o -type d -exec chmod 755 {} \;
-          # Keep .git directory accessible to ubuntu user
-          sudo chown -R ubuntu:ubuntu .git
-          
-    - name: Deploy ai_conversation module
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.PRIVATE_KEY }}
-        script: |
-          # Remove existing ai_conversation directory if it exists
-          sudo rm -rf /var/www/html/drupal/modules/custom/ai_conversation
-          
-          # Create temporary directory for clone
-          TEMP_DIR="/tmp/ai_conversation_deploy_$(date +%s)"
-          mkdir -p "$TEMP_DIR"
-          cd "$TEMP_DIR"
-          
-          # Clone the repository (replace with your actual repo URL)
-          git clone https://github.com/yourusername/your-repo-name.git .
-          
-          # Create ai_conversation directory
-          sudo mkdir -p /var/www/html/drupal/modules/custom/ai_conversation
-          
-          # Copy ai_conversation files to the target directory
-          if [ -d "ai_conversation" ]; then
-            sudo cp -r ai_conversation/* /var/www/html/drupal/modules/custom/ai_conversation/
-          else
-            echo "ai_conversation directory not found in repository"
-            exit 1
-          fi
-          
-          # Clean up temporary directory
-          rm -rf "$TEMP_DIR"
-          
-          # Set proper ownership and permissions
-          cd /var/www/html/drupal/modules/custom/ai_conversation
-          sudo chown -R www-data:www-data .
-          sudo find . -type f -exec chmod 644 {} \;
-          sudo find . -type d -exec chmod 755 {} \;
           
     - name: Clear Drupal cache
       uses: appleboy/ssh-action@v0.1.5
