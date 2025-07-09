@@ -16,6 +16,10 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.PRIVATE_KEY }}
         script: |
+          set -e  # Exit on any error
+          
+          echo "=== Starting deployment ==="
+          
           # Navigate to custom modules directory (now the git repository)
           cd /var/www/html/drupal/modules/custom
           
@@ -26,9 +30,34 @@ jobs:
           sudo chown -R ubuntu:ubuntu .git
           sudo chown -R ubuntu:ubuntu .
           
-          # Pull the latest changes
-          git fetch origin main
+          # Debug: Show current state
+          echo "=== Current git state ==="
+          git status
+          git log --oneline -3
+          echo "Current remote URL:"
+          git remote -v
+          
+          # Ensure we're using HTTPS URL (not SSH)
+          git remote set-url origin https://github.com/keithaumiller/thetruthperspective.git
+          echo "Updated remote URL to HTTPS"
+          
+          # Pull the latest changes with error checking
+          echo "=== Fetching latest changes ==="
+          if ! git fetch origin main; then
+            echo "ERROR: Failed to fetch from GitHub"
+            exit 1
+          fi
+          
+          echo "=== After fetch ==="
+          git log --oneline -3
+          
+          echo "=== Resetting to origin/main ==="
           git reset --hard origin/main
+          
+          echo "=== After reset ==="
+          git log --oneline -3
+          echo "Files in repository:"
+          ls -la
           
           # Set proper permissions for both modules
           sudo chown -R ubuntu:ubuntu .git
@@ -38,7 +67,7 @@ jobs:
           sudo find ai_conversation -type f -exec chmod 644 {} \;
           sudo find ai_conversation -type d -exec chmod 755 {} \;
           
-          echo "Both modules deployed successfully"
+          echo "=== Both modules deployed successfully ==="
           
     - name: Clear Drupal cache
       uses: appleboy/ssh-action@v0.1.5
@@ -47,6 +76,10 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.PRIVATE_KEY }}
         script: |
+          set -e  # Exit on any error
+          
+          echo "=== Clearing Drupal cache ==="
+          
           # Fix file permissions for Drupal files directory
           sudo chown -R www-data:www-data /var/www/html/drupal/sites/default/files
           sudo find /var/www/html/drupal/sites/default/files -type f -exec chmod 664 {} \;
@@ -54,4 +87,9 @@ jobs:
           
           # Clear Drupal cache as www-data user
           cd /var/www/html/drupal
-          sudo -u www-data drush cr
+          if ! sudo -u www-data drush cr; then
+            echo "ERROR: Failed to clear Drupal cache"
+            exit 1
+          fi
+          
+          echo "=== Cache cleared successfully ==="
