@@ -83,7 +83,7 @@ function _ai_conversation_create_fields() {
     'description' => 'The AI model to use for this conversation',
     'required' => TRUE,
     'default_value' => [
-      ['value' => 'claude-sonnet-4-20250514'],
+      ['value' => 'anthropic.claude-3-5-sonnet-20240620-v1:0'],
     ],
     'settings' => [],
   ]);
