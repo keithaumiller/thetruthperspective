@@ -1,1 +1,10 @@
-
+chat-interface:
+  js:
+    js/chat-interface.js: {}
+  css:
+    theme:
+      css/chat-interface.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
