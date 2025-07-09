@@ -1,1 +1,31 @@
+ai_conversation.chat_interface:
+  path: '/node/{node}/chat'
+  defaults:
+    _controller: '\Drupal\ai_conversation\Controller\ChatController::chatInterface'
+    _title: 'AI Chat'
+  requirements:
+    _permission: 'access content'
+    _entity_access: 'node.view'
+    node: \d+
+  options:
+    parameters:
+      node:
+        type: entity:node
 
+ai_conversation.send_message:
+  path: '/ai-conversation/send-message'
+  defaults:
+    _controller: '\Drupal\ai_conversation\Controller\ChatController::sendMessage'
+  requirements:
+    _permission: 'access content'
+    _method: 'POST'
+  options:
+    _csrf_token: TRUE
+
+ai_conversation.settings:
+  path: '/admin/config/ai-conversation'
+  defaults:
+    _form: '\Drupal\ai_conversation\Form\SettingsForm'
+    _title: 'AI Conversation Settings'
+  requirements:
+    _permission: 'administer site configuration'
