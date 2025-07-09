@@ -1,4 +1,4 @@
-# The Truth Perspective - Drupal Modules
+# The Truth Perspective - Drupal Modules 
 
 **Version**: 1.0.0  
 **Last Updated**: July 2025  
