@@ -1,1 +1,153 @@
+<?php
 
+/**
+ * @file
+ * Install file for AI Conversation module.
+ */
+
+use Drupal\node\Entity\NodeType;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
+
+/**
+ * Implements hook_install().
+ */
+function ai_conversation_install() {
+  // Create the conversation content type.
+  $conversation_type = NodeType::create([
+    'type' => 'ai_conversation',
+    'name' => 'AI Conversation',
+    'description' => 'A conversation with an AI model',
+    'settings' => [
+      'node' => [
+        'options' => [
+          'status' => TRUE,
+          'promote' => FALSE,
+          'sticky' => FALSE,
+          'revision' => TRUE,
+        ],
+        'preview' => DRUPAL_DISABLED,
+        'submitted' => TRUE,
+      ],
+    ],
+  ]);
+  $conversation_type->save();
+
+  // Create fields for the conversation content type.
+  _ai_conversation_create_fields();
+
+  // Set default permissions.
+  _ai_conversation_set_permissions();
+}
+
+/**
+ * Create fields for the conversation content type.
+ */
+function _ai_conversation_create_fields() {
+  // Messages field - stores the conversation history.
+  $field_storage = FieldStorageConfig::create([
+    'field_name' => 'field_messages',
+    'entity_type' => 'node',
+    'type' => 'text_long',
+    'cardinality' => -1, // Unlimited values
+    'settings' => [],
+  ]);
+  $field_storage->save();
+
+  $field_config = FieldConfig::create([
+    'field_storage' => $field_storage,
+    'bundle' => 'ai_conversation',
+    'label' => 'Messages',
+    'description' => 'Conversation messages',
+    'required' => FALSE,
+    'settings' => [],
+  ]);
+  $field_config->save();
+
+  // Model field - stores which AI model to use.
+  $field_storage = FieldStorageConfig::create([
+    'field_name' => 'field_ai_model',
+    'entity_type' => 'node',
+    'type' => 'string',
+    'cardinality' => 1,
+    'settings' => [
+      'max_length' => 255,
+    ],
+  ]);
+  $field_storage->save();
+
+  $field_config = FieldConfig::create([
+    'field_storage' => $field_storage,
+    'bundle' => 'ai_conversation',
+    'label' => 'AI Model',
+    'description' => 'The AI model to use for this conversation',
+    'required' => TRUE,
+    'default_value' => [
+      ['value' => 'claude-sonnet-4-20250514'],
+    ],
+    'settings' => [],
+  ]);
+  $field_config->save();
+
+  // Context field - stores conversation context/system prompt.
+  $field_storage = FieldStorageConfig::create([
+    'field_name' => 'field_context',
+    'entity_type' => 'node',
+    'type' => 'text_long',
+    'cardinality' => 1,
+    'settings' => [],
+  ]);
+  $field_storage->save();
+
+  $field_config = FieldConfig::create([
+    'field_storage' => $field_storage,
+    'bundle' => 'ai_conversation',
+    'label' => 'Context',
+    'description' => 'System prompt or conversation context',
+    'required' => FALSE,
+    'settings' => [],
+  ]);
+  $field_config->save();
+}
+
+/**
+ * Set default permissions for the conversation content type.
+ */
+function _ai_conversation_set_permissions() {
+  $role_storage = \Drupal::entityTypeManager()->getStorage('user_role');
+  
+  // Give authenticated users permission to create conversations.
+  $authenticated_role = $role_storage->load('authenticated');
+  if ($authenticated_role) {
+    $authenticated_role->grantPermission('create ai_conversation content');
+    $authenticated_role->grantPermission('edit own ai_conversation content');
+    $authenticated_role->grantPermission('delete own ai_conversation content');
+    $authenticated_role->grantPermission('view own ai_conversation content');
+    $authenticated_role->save();
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function ai_conversation_uninstall() {
+  // Remove the conversation content type.
+  $conversation_type = NodeType::load('ai_conversation');
+  if ($conversation_type) {
+    $conversation_type->delete();
+  }
+
+  // Remove fields.
+  $fields = ['field_messages', 'field_ai_model', 'field_context'];
+  foreach ($fields as $field_name) {
+    $field_config = FieldConfig::loadByName('node', 'ai_conversation', $field_name);
+    if ($field_config) {
+      $field_config->delete();
+    }
+    
+    $field_storage = FieldStorageConfig::loadByName('node', $field_name);
+    if ($field_storage) {
+      $field_storage->delete();
+    }
+  }
+}
