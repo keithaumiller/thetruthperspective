@@ -9,45 +9,36 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Deploy news_extractor module
+    - name: Deploy modules to server
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.PRIVATE_KEY }}
         script: |
-          cd /var/www/html/drupal/modules/custom/news_extractor
-          git config --global --add safe.directory /var/www/html/drupal/modules/custom/news_extractor
+          # Navigate to custom modules directory (now the git repository)
+          cd /var/www/html/drupal/modules/custom
+          
+          # Configure git safe directory
+          git config --global --add safe.directory /var/www/html/drupal/modules/custom
+          
           # Set ownership to ubuntu for git operations
+          sudo chown -R ubuntu:ubuntu .git
           sudo chown -R ubuntu:ubuntu .
+          
           # Pull the latest changes
           git fetch origin main
           git reset --hard origin/main
-          # Set ownership back to www-data for web server
-          sudo chown -R www-data:www-data .
-          # Set permissions but exclude .git directory from www-data ownership
-          sudo find . -name ".git" -prune -o -type f -exec chmod 644 {} \;
-          sudo find . -name ".git" -prune -o -type d -exec chmod 755 {} \;
-          # Keep .git directory accessible to ubuntu user
+          
+          # Set proper permissions for both modules
           sudo chown -R ubuntu:ubuntu .git
+          sudo chown -R www-data:www-data news_extractor ai_conversation
+          sudo find news_extractor -type f -exec chmod 644 {} \;
+          sudo find news_extractor -type d -exec chmod 755 {} \;
+          sudo find ai_conversation -type f -exec chmod 644 {} \;
+          sudo find ai_conversation -type d -exec chmod 755 {} \;
           
-    - name: Deploy ai_conversation module
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.PRIVATE_KEY }}
-        script: |
-          # Remove existing ai_conversation directory if it exists
-          sudo rm -rf /var/www/html/drupal/modules/custom/ai_conversation
-          
-          # Copy ai_conversation module from news_extractor repo
-          sudo cp -r /var/www/html/drupal/modules/custom/news_extractor/ai_conversation /var/www/html/drupal/modules/custom/
-          
-          # Set proper ownership and permissions
-          sudo chown -R www-data:www-data /var/www/html/drupal/modules/custom/ai_conversation
-          sudo find /var/www/html/drupal/modules/custom/ai_conversation -type f -exec chmod 644 {} \;
-          sudo find /var/www/html/drupal/modules/custom/ai_conversation -type d -exec chmod 755 {} \;
+          echo "Both modules deployed successfully"
           
     - name: Clear Drupal cache
       uses: appleboy/ssh-action@v0.1.5
