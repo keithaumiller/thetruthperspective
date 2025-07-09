@@ -1,1 +1,55 @@
+{#
+/**
+ * @file
+ * Template for AI conversation chat interface.
+ *
+ * Available variables:
+ * - conversation: The conversation node entity.
+ * - messages: Array of conversation messages.
+ */
+#}
 
+<div class="ai-conversation-chat" data-node-id="{{ conversation.id }}">
+  <div class="conversation-header">
+    <h2>{{ conversation.title.value }}</h2>
+    <div class="conversation-meta">
+      <span class="model-info">Model: {{ conversation.field_ai_model.value }}</span>
+      {% if conversation.field_context.value %}
+        <span class="context-info">Context: {{ conversation.field_context.value|length > 50 ? conversation.field_context.value|slice(0, 50) ~ '...' : conversation.field_context.value }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="chat-messages" id="chat-messages">
+    {% for message in messages %}
+      <div class="message message--{{ message.role }}">
+        <div class="message-content">
+          <div class="message-text">{{ message.content|nl2br }}</div>
+          <div class="message-timestamp">{{ message.timestamp|format_date('short') }}</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="chat-input-container">
+    <form id="chat-form" class="chat-form">
+      <div class="input-group">
+        <textarea
+          id="message-input"
+          name="message"
+          placeholder="Type your message..."
+          rows="3"
+          required></textarea>
+        <button type="submit" id="send-button" class="btn btn-primary">
+          <span class="send-text">Send</span>
+          <span class="loading-text" style="display: none;">Sending...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="loading-indicator" class="loading-indicator" style="display: none;">
+    <div class="spinner"></div>
+    <span>AI is thinking...</span>
+  </div>
+</div>
