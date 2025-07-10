@@ -303,3 +303,37 @@ function ai_conversation_update_8001() {
 
   return t('Added conversation summary fields and updated existing conversations.');
 }
+
+/**
+ * Update hook to add total tokens field.
+ */
+function ai_conversation_update_8002() {
+  // Add the total tokens field.
+  $field_storage = FieldStorageConfig::loadByName('node', 'field_total_tokens');
+  if (!$field_storage) {
+    $field_storage = FieldStorageConfig::create([
+      'field_name' => 'field_total_tokens',
+      'entity_type' => 'node',
+      'type' => 'integer',
+      'cardinality' => 1,
+      'settings' => [],
+    ]);
+    $field_storage->save();
+  }
+
+  $field_config = FieldConfig::loadByName('node', 'ai_conversation', 'field_total_tokens');
+  if (!$field_config) {
+    $field_config = FieldConfig::create([
+      'field_storage' => $field_storage,
+      'bundle' => 'ai_conversation',
+      'label' => 'Total Tokens',
+      'description' => 'Total tokens used in this conversation',
+      'required' => FALSE,
+      'default_value' => [['value' => 0]],
+      'settings' => [],
+    ]);
+    $field_config->save();
+  }
+
+  return t('Added total tokens field to AI conversations.');
+}

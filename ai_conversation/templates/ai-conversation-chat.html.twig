@@ -9,6 +9,9 @@
       <strong>{{ 'Recent Messages'|t }}:</strong> {{ stats.recent_messages }}
     </div>
     <div class="stat-item">
+      <strong>{{ 'Total Tokens'|t }}:</strong> {{ stats.total_tokens|number_format }}
+    </div>
+    <div class="stat-item">
       <strong>{{ 'Has Summary'|t }}:</strong> 
       {% if stats.has_summary %}
         <span class="status-yes">{{ 'Yes'|t }}</span>
@@ -16,14 +19,14 @@
         <span class="status-no">{{ 'No'|t }}</span>
       {% endif %}
     </div>
-    <div class="stat-item">
-      <strong>{{ 'Estimated Tokens'|t }}:</strong> {{ stats.estimated_tokens }}
-    </div>
     {% if stats.summary_updated %}
     <div class="stat-item">
       <strong>{{ 'Summary Updated'|t }}:</strong> {{ stats.summary_updated|date('M j, Y - H:i') }}
     </div>
     {% endif %}
+    <div class="stat-item">
+      <strong>{{ 'Context Tokens'|t }}:</strong> {{ stats.estimated_tokens|number_format }}
+    </div>
   </div>
 </div>
 {% endif %}
@@ -33,7 +36,7 @@
     <h2>{{ conversation.label }}</h2>
     {% if conversation.field_context.value %}
       <div class="context-info">
-        {{ conversation.field_context.value|striptags|slice(0, 100) }}{% if conversation.field_context.value|striptags|length > 100 %}...{% endif %}
+        <strong>{{ 'Context'|t }}:</strong> {{ conversation.field_context.value|striptags|slice(0, 100) }}{% if conversation.field_context.value|striptags|length > 100 %}...{% endif %}
       </div>
     {% endif %}
   </div>
@@ -41,7 +44,7 @@
   <div class="chat-messages" id="chat-messages">
     {% if stats and stats.has_summary %}
       <div class="summary-indicator">
-        <em>{{ 'This conversation has been summarized. Showing recent messages.'|t }}</em>
+        <em>{{ 'This conversation has been summarized. Showing recent 20 messages.'|t }}</em>
       </div>
     {% endif %}
     

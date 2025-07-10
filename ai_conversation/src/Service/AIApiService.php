@@ -30,7 +30,14 @@ class AIApiService {
    *
    * @var int
    */
-  protected $maxRecentMessages = 10;
+  protected $maxRecentMessages = 20;
+
+  /**
+   * Update summary every N messages.
+   *
+   * @var int
+   */
+  protected $summaryFrequency = 10;
 
   /**
    * Maximum tokens before triggering summary update.
@@ -79,6 +86,9 @@ class AIApiService {
 
       // Build the optimized conversation context (summary + recent messages).
       $context = $this->buildOptimizedContext($conversation, $message);
+      
+      // Estimate input tokens.
+      $input_tokens = $this->estimateTokens($context);
 
       // Get max tokens from config.
       $config = $this->configFactory->get('ai_conversation.settings');
@@ -101,7 +111,13 @@ class AIApiService {
       $result = json_decode($response['body']->getContents(), true);
       
       if (isset($result['content'][0]['text'])) {
-        return $result['content'][0]['text'];
+        $ai_response = $result['content'][0]['text'];
+        
+        // Estimate output tokens and update total.
+        $output_tokens = $this->estimateTokens($ai_response);
+        $this->updateTokenCount($conversation, $input_tokens + $output_tokens);
+        
+        return $ai_response;
       }
       
       $this->logger->error('Unexpected API response format: @response', ['@response' => print_r($result, TRUE)]);
@@ -113,6 +129,21 @@ class AIApiService {
       ]);
       throw new \Exception('Failed to communicate with AI service: ' . $e->getMessage());
     }
+  }
+
+  /**
+   * Update total token count for conversation.
+   */
+  private function updateTokenCount(NodeInterface $conversation, int $tokens) {
+    $current_tokens = $conversation->get('field_total_tokens')->value ?: 0;
+    $new_total = $current_tokens + $tokens;
+    $conversation->set('field_total_tokens', $new_total);
+    
+    $this->logger->info('Updated token count for conversation @nid: +@tokens (total: @total)', [
+      '@nid' => $conversation->id(),
+      '@tokens' => $tokens,
+      '@total' => $new_total,
+    ]);
   }
 
   /**
@@ -189,25 +220,9 @@ class AIApiService {
     // Get current message count.
     $message_count = $conversation->get('field_message_count')->value ?: 0;
     
-    // If we have more than maxRecentMessages, and summary hasn't been updated recently.
-    if ($message_count > $this->maxRecentMessages) {
-      // Check if we need to update summary based on token count or message count.
-      $should_update = FALSE;
-      
-      // Update summary every 20 messages or when token count gets high.
-      if ($message_count % 20 === 0) {
-        $should_update = TRUE;
-      }
-      
-      // Or if the context is getting too long.
-      $context_length = $this->estimateTokenCount($conversation);
-      if ($context_length > $this->maxTokensBeforeSummary) {
-        $should_update = TRUE;
-      }
-
-      if ($should_update) {
-        $this->updateConversationSummary($conversation);
-      }
+    // Update summary every 10 messages, starting from 20 messages.
+    if ($message_count >= 20 && $message_count % $this->summaryFrequency === 0) {
+      $this->updateConversationSummary($conversation);
     }
   }
 
@@ -216,8 +231,14 @@ class AIApiService {
    */
   private function updateConversationSummary(NodeInterface $conversation) {
     try {
-      // Get all messages except the most recent ones.
+      // Get all messages.
       $all_messages = $this->getAllMessages($conversation);
+      
+      // Keep only the most recent 20 messages, summarize the rest.
+      if (count($all_messages) <= $this->maxRecentMessages) {
+        return; // Not enough messages to summarize.
+      }
+
       $messages_to_summarize = array_slice($all_messages, 0, -$this->maxRecentMessages);
       
       if (empty($messages_to_summarize)) {
@@ -238,7 +259,11 @@ class AIApiService {
       $recent_messages = array_slice($all_messages, -$this->maxRecentMessages);
       $this->updateMessagesField($conversation, $recent_messages);
       
-      $this->logger->info('Updated conversation summary for node @nid', ['@nid' => $conversation->id()]);
+      $this->logger->info('Updated conversation summary for node @nid: summarized @count messages, kept @keep recent', [
+        '@nid' => $conversation->id(),
+        '@count' => count($messages_to_summarize),
+        '@keep' => count($recent_messages),
+      ]);
       
     } catch (\Exception $e) {
       $this->logger->error('Error updating conversation summary: @message', [
@@ -293,9 +318,9 @@ class AIApiService {
    * Build context for summary generation.
    */
   private function buildSummaryContext(NodeInterface $conversation, array $messages_to_summarize) {
-    $context = "Please create a comprehensive summary of the following conversation. ";
-    $context .= "Focus on key topics discussed, important decisions made, and relevant context that would be useful for continuing the conversation. ";
-    $context .= "Keep the summary concise but informative.\n\n";
+    $context = "Please create a concise summary of the following conversation. ";
+    $context .= "Focus on key topics discussed and important information that would be useful for continuing the conversation. ";
+    $context .= "Keep the summary brief but informative.\n\n";
 
     // Add existing summary if it exists.
     if ($conversation->hasField('field_conversation_summary') && !$conversation->get('field_conversation_summary')->isEmpty()) {
@@ -358,8 +383,15 @@ class AIApiService {
    */
   private function estimateTokenCount(NodeInterface $conversation) {
     $context = $this->buildOptimizedContext($conversation, '');
+    return $this->estimateTokens($context);
+  }
+
+  /**
+   * Estimate token count for text (rough approximation).
+   */
+  private function estimateTokens(string $text) {
     // Rough estimate: 1 token ≈ 4 characters.
-    return strlen($context) / 4;
+    return intval(strlen($text) / 4);
   }
 
   /**
@@ -416,9 +448,10 @@ class AIApiService {
     $stats = [
       'total_messages' => $conversation->get('field_message_count')->value ?: 0,
       'recent_messages' => count($this->getRecentMessages($conversation)),
+      'total_tokens' => $conversation->get('field_total_tokens')->value ?: 0,
       'has_summary' => !empty($conversation->get('field_conversation_summary')->value),
-      'estimated_tokens' => $this->estimateTokenCount($conversation),
       'summary_updated' => $conversation->get('field_summary_updated')->value,
+      'estimated_tokens' => $this->estimateTokenCount($conversation),
     ];
 
     return $stats;
