@@ -33,7 +33,7 @@
     <h2>{{ conversation.label }}</h2>
     {% if conversation.field_context.value %}
       <div class="context-info">
-        <strong>{{ 'Context'|t }}:</strong> {{ conversation.field_context.value|striptags|truncate(100) }}
+        {{ conversation.field_context.value|striptags|slice(0, 100) }}{% if conversation.field_context.value|striptags|length > 100 %}...{% endif %}
       </div>
     {% endif %}
   </div>
