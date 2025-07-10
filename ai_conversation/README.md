@@ -1,168 +1,270 @@
-# AI Conversation Module for Drupal
+# Rolling Conversation Summary Implementation Guide
 
-This module provides a conversational AI interface for Drupal sites, allowing authenticated users to have persistent conversations with AI models using AWS Bedrock (Claude from Anthropic).
+## 🎯 Overview
 
-## Features
+Your AI Conversation module now includes a sophisticated **rolling conversation summary system** that automatically manages conversation context to:
 
-- **Persistent Conversations**: Each conversation is stored as a Drupal node with full context preservation
-- **Real-time Chat Interface**: AJAX-powered chat interface for seamless user experience
-- **Multiple AI Models**: Support for different Claude models via AWS Bedrock
-- **Configurable System Prompts**: Set custom context/system prompts for different conversations
-- **User Access Control**: Only authenticated users can create and access their own conversations
-- **Responsive Design**: Mobile-friendly chat interface
-- **AWS Bedrock Integration**: Uses AWS Bedrock for secure, scalable AI access
+- **Prevent token overflow** by keeping only recent messages + summary
+- **Maintain conversation continuity** through intelligent summarization
+- **Optimize API costs** by reducing payload size
+- **Improve response quality** by focusing on relevant context
 
-## Requirements
+## 🔧 What's New
 
-- Drupal 9.x or 10.x
-- PHP 7.4 or higher
-- AWS account with Bedrock access
-- AWS SDK for PHP (usually available via Composer)
+### Database Schema Updates
+- **`field_conversation_summary`** - Stores rolling summary of older messages
+- **`field_message_count`** - Tracks total messages for summary logic
+- **`field_summary_updated`** - Timestamp of last summary update
 
-## Installation
+### Enhanced AI Service
+- **Automatic summary generation** when conversation exceeds thresholds
+- **Context optimization** - summary + recent messages only
+- **Token estimation** to trigger summarization
+- **Message pruning** to maintain manageable conversation size
 
-1. **Download the module**: Place the `ai_conversation` folder in your Drupal `modules/custom/` directory.
+### Smart Configuration
+- **Configurable message retention** (default: 10 recent messages)
+- **Token-based triggers** (default: 6000 tokens)
+- **Summary frequency control** (default: every 20 messages)
+- **Debug mode** for monitoring
 
-2. **Enable the module**: 
-   ```bash
-   drush en ai_conversation
-   ```
-   Or enable it through the Drupal admin interface at `/admin/modules`.
+## 📋 Installation Steps
 
-3. **Configure AWS settings**:
-   - Go to `/admin/config/ai-conversation`
-   - Enter your AWS Access Key ID and Secret Access Key
-   - Select your AWS region
-   - Configure default settings
-   - Test the connection
+### 1. Database Updates
+```bash
+# Run the update to add new fields
+drush updatedb
 
-## Configuration
+# Or if this is a fresh install
+drush pm:enable ai_conversation
+```
 
-### AWS Bedrock Setup
+### 2. Configuration
+Navigate to **Admin → Configuration → AI Conversation** to configure:
+- Max recent messages to keep (5-50)
+- Token threshold for summarization (2000-15000)
+- Summary update frequency (10-50 messages)
+- Debug mode and statistics display
 
-1. **Enable Bedrock models** in your AWS account:
-   - Go to AWS Bedrock console
-   - Request access to Claude models
-   - Ensure your region supports Bedrock
+### 3. Test the System
+1. Create a new AI conversation node
+2. Start chatting - the system will automatically handle summarization
+3. Monitor the conversation statistics panel
+4. Watch as older messages get summarized after reaching thresholds
 
-2. **Create IAM user** with Bedrock permissions:
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Effect": "Allow",
-         "Action": [
-           "bedrock:InvokeModel"
-         ],
-         "Resource": "arn:aws:bedrock:*:*:model/anthropic.claude-*"
-       }
-     ]
-   }
-   ```
+## 🚀 How It Works
 
-3. **Get Access Keys** for the IAM user
+### Context Building Process
+1. **System prompt** (from node context field)
+2. **Conversation summary** (if exists)
+3. **Recent messages** (last N messages)
+4. **Current user message**
 
-### Module Settings
+### Summary Generation Logic
+```
+IF (message_count > max_recent_messages) {
+  IF (message_count % summary_frequency == 0) OR (tokens > max_tokens_before_summary) {
+    GENERATE_SUMMARY()
+    PRUNE_OLD_MESSAGES()
+  }
+}
+```
 
-Navigate to `/admin/config/ai-conversation` to configure:
+### Summary Content
+- **Existing summary** (if updating)
+- **Key topics and decisions** from older messages
+- **Important context** for conversation continuity
+- **Concise but comprehensive** overview
 
-- **AWS Access Key ID**: Your AWS Access Key ID
-- **AWS Secret Access Key**: Your AWS Secret Access Key
-- **AWS Region**: Choose the region where Bedrock is available
-- **Default Model**: Choose from available Claude models:
-  - Claude 3.5 Sonnet (June 2024) - `anthropic.claude-3-5-sonnet-20240620-v1:0`
-  - Claude 3.5 Sonnet (October 2024) - `anthropic.claude-3-5-sonnet-20241022-v2:0`
-  - Claude 3 Opus - `anthropic.claude-3-opus-20240229-v1:0`
-  - Claude 3 Haiku - `anthropic.claude-3-haiku-20240307-v1:0`
-- **Default System Prompt**: Set a default context for new conversations
-- **Max Tokens**: Configure response length limits
+## 📊 User Experience
 
-## Usage
+### Chat Interface Features
+- **Statistics panel** showing:
+  - Total messages vs. recent messages
+  - Summary status (Yes/No)
+  - Estimated token usage
+  - Last summary update time
 
-### Creating a New Conversation
+- **Visual indicators**:
+  - Summary indicator when conversation is summarized
+  - Loading spinner during AI responses
+  - Error handling for failed requests
 
-1. Go to `/node/add/ai-conversation`
-2. Fill in the conversation details:
-   - **Title**: Give your conversation a name
-   - **AI Model**: Choose which model to use
-   - **Context**: Optional system prompt to guide the AI
+- **Manual controls**:
+  - Trigger summary update button (appears after 20+ messages)
+  - Clear input button
+  - Enter to send, Shift+Enter for new line
 
-### Using the Chat Interface
+### Performance Monitoring
+- **Real-time statistics** update after each message
+- **Token estimation** to predict API costs
+- **Summary effectiveness** tracking
 
-1. After creating a conversation, click "Start Chat" or go to `/node/[node-id]/chat`
-2. Type your message in the input field
-3. Press Enter or click "Send" to submit
-4. The AI will respond, and the conversation context is preserved
+## 🛠️ API Endpoints
 
-### Managing Conversations
+### New Endpoints
+- **`/ai-conversation/stats`** - Get conversation statistics
+- **`/node/{node}/trigger-summary`** - Manually trigger summary update
+- **`/admin/config/ai-conversation`** - Configuration form
 
-- Users can view their conversations at `/admin/content` (filter by "AI Conversation")
-- Edit conversation settings by editing the node
-- Delete conversations through the standard Drupal content management interface
+### Enhanced Endpoints
+- **`/ai-conversation/send-message`** - Now returns updated statistics
+- **`/node/{node}/chat`** - Includes statistics in interface
 
-## Permissions
+## 🔍 Debugging & Monitoring
 
-The module creates the following permissions:
+### Debug Mode Features
+- **Detailed logging** of summary generation
+- **Token usage tracking**
+- **Message pruning logs**
+- **API call monitoring**
 
-- **Use AI Conversation**: Allows users to create and use AI conversations
-- **Administer AI Conversation**: Allows configuration of module settings
+### Statistics Available
+```php
+$stats = [
+  'total_messages' => 45,
+  'recent_messages' => 10,
+  'has_summary' => true,
+  'estimated_tokens' => 2847,
+  'summary_updated' => 1704067200
+];
+```
 
-By default, authenticated users receive permission to create and use AI conversations.
+## 📈 Performance Benefits
 
-## Available Models
+### Before Implementation
+- **Growing context** sent to API with every message
+- **Token usage** increases linearly with conversation length
+- **API costs** escalate with longer conversations
+- **Response time** degrades with large contexts
 
-The module supports these AWS Bedrock Claude models:
+### After Implementation
+- **Constant context size** (summary + recent messages)
+- **Predictable token usage** regardless of conversation length
+- **Optimized API costs** through smart context management
+- **Consistent response times** with bounded context
 
-- **Claude 3.5 Sonnet (June 2024)**: `anthropic.claude-3-5-sonnet-20240620-v1:0` (Default)
-- **Claude 3.5 Sonnet (October 2024)**: `anthropic.claude-3-5-sonnet-20241022-v2:0`
-- **Claude 3 Opus**: `anthropic.claude-3-opus-20240229-v1:0`
-- **Claude 3 Haiku**: `anthropic.claude-3-haiku-20240307-v1:0`
+## 🎛️ Configuration Options
 
-## Security Considerations
+### Essential Settings
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `max_recent_messages` | 10 | Recent messages to keep in full |
+| `max_tokens_before_summary` | 6000 | Token threshold for summary trigger |
+| `summary_frequency` | 20 | Messages between summary updates |
+| `enable_auto_summary` | TRUE | Enable automatic summarization |
 
-- AWS credentials are stored in Drupal's configuration system
-- Users can only access their own conversations
-- All API requests are server-side (AWS keys never exposed to browsers)
-- CSRF protection on all AJAX requests
-- Uses AWS IAM for secure API access
+### Advanced Settings
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `max_tokens` | 4000 | Max tokens for AI responses |
+| `debug_mode` | FALSE | Enable detailed logging |
+| `show_stats` | TRUE | Show statistics in chat interface |
 
-## Troubleshooting
+## 🔄 Deployment with GitHub Actions
+
+Your existing deployment pipeline will automatically handle:
+- Database updates (`drush updatedb`)
+- Cache clearing (`drush cache:rebuild`)
+- Code deployment (via Git or rsync)
+
+## 🧪 Testing Strategy
+
+### Manual Testing
+1. **Create long conversation** (30+ messages)
+2. **Verify summary generation** at configured intervals
+3. **Check context optimization** in API calls
+4. **Monitor token usage** through statistics
+5. **Test manual summary trigger**
+
+### Automated Testing
+```bash
+# Test API connection
+drush ai-conversation:test
+
+# Check configuration
+drush config:get ai_conversation.settings
+
+# Verify database schema
+drush sql:query "DESCRIBE node__field_conversation_summary"
+```
+
+## 🚨 Troubleshooting
 
 ### Common Issues
 
-1. **AWS Bedrock Connection Failed**:
-   - Verify your AWS credentials are correct
-   - Check your AWS region supports Bedrock
-   - Ensure your IAM user has bedrock:InvokeModel permissions
-   - Verify the Claude models are enabled in your AWS account
+**Summary not generating**
+- Check `enable_auto_summary` setting
+- Verify message count threshold
+- Review debug logs
 
-2. **Chat Interface Not Loading**:
-   - Clear Drupal cache: `drush cr`
-   - Check browser console for JavaScript errors
-   - Verify the module is properly enabled
+**High token usage**
+- Reduce `max_recent_messages`
+- Lower `max_tokens_before_summary`
+- Check summary quality
 
-3. **Permissions Issues**:
-   - Check user permissions at `/admin/people/permissions`
-   - Ensure users have "Use AI Conversation" permission
+**API errors**
+- Verify AWS credentials
+- Check Bedrock model availability
+- Review error logs
 
-### Debug Mode
+### Debug Commands
+```bash
+# Check module status
+drush pm:list | grep ai_conversation
 
-Enable Drupal's logging to see detailed error messages:
-- Check logs at `/admin/reports/dblog`
-- Look for "ai_conversation" entries
+# View recent logs
+drush watchdog:show --type=ai_conversation
 
-## API Rate Limits
+# Test configuration
+drush config:get ai_conversation.settings
+```
 
-Be aware of AWS Bedrock's rate limits:
-- Monitor your AWS usage in the AWS Console
-- Consider implementing additional rate limiting for high-traffic sites
-- The module includes basic error handling for rate limit responses
+## 🎯 Next Steps
 
-## License
+### Immediate Actions
+1. **Deploy the updated module** using your GitHub Actions pipeline
+2. **Configure settings** through the admin interface
+3. **Test with existing conversations** to verify functionality
+4. **Monitor performance** through the statistics panel
 
-This module is provided under the GPL-2.0 license, consistent with Drupal's licensing.
+### Future Enhancements
+- **Advanced summarization** with topic extraction
+- **Conversation branching** for different discussion threads
+- **Export/import** of conversation summaries
+- **Integration with other AI models** for specialized summarization
 
-## Support
+## 📝 File Structure
 
-For issues and contributions, please use your project's issue tracking system or repository.
+```
+ai_conversation/
+├── ai_conversation.install          # Database schema + updates
+├── ai_conversation.module           # Hooks and theme definitions
+├── ai_conversation.routing.yml      # Route definitions
+├── ai_conversation.services.yml     # Service definitions
+├── ai_conversation.libraries.yml    # Asset libraries
+├── src/
+│   ├── Service/
+│   │   └── AIApiService.php        # Enhanced AI service
+│   ├── Controller/
+│   │   └── ChatController.php      # Enhanced chat controller
+│   └── Form/
+│       └── SettingsForm.php        # Configuration form
+├── templates/
+│   └── ai-conversation-chat.html.twig  # Chat interface template
+├── css/
+│   └── chat-interface.css          # Styles
+└── js/
+    └── chat-interface.js           # JavaScript functionality
+```
+
+## 🎉 Success Metrics
+
+Your rolling summary system is working correctly when:
+- ✅ **Conversation statistics** update in real-time
+- ✅ **Summary indicator** appears after threshold reached
+- ✅ **Token usage** remains stable regardless of conversation length
+- ✅ **API response times** stay consistent
+- ✅ **Context quality** maintained through summarization
+
+**Ready to revolutionize your AI conversations with intelligent context management!** 🚀
