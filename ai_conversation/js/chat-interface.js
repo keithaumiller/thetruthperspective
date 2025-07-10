@@ -92,9 +92,9 @@
           } else if (label.includes('tokens saved')) {
             newValue = Number(stats.tokens_saved_by_summary || 0).toLocaleString();
           } else if (label.includes('estimated cost')) {
-            newValue = ' + Number(stats.estimated_cost || 0).toFixed(4);
+            newValue = Number(stats.estimated_cost || 0).toFixed(4);
           } else if (label.includes('cost saved')) {
-            newValue = ' + Number(stats.cost_saved_by_summary || 0).toFixed(4);
+            newValue = Number(stats.cost_saved_by_summary || 0).toFixed(4);
           } else if (label.includes('health score')) {
             newValue = Number(stats.conversation_health || 100).toFixed(1) + '/100';
           }

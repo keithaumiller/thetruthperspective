@@ -1,6 +1,6 @@
 # Rolling Conversation Summary Implementation Guide
 
-## 🎯 Overview
+## 🎯 Overview 
 
 Your AI Conversation module now includes a sophisticated **rolling conversation summary system** that automatically manages conversation context to:
 
