@@ -2,3 +2,5 @@ services:
   ai_conversation.api_service:
     class: Drupal\ai_conversation\Service\AIApiService
     arguments: ['@config.factory', '@logger.factory']
+    tags:
+      - { name: service }
