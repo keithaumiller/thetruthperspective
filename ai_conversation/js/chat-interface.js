@@ -1,138 +1,187 @@
-(function ($, Drupal, drupalSettings) {
+(function($, Drupal) {
   'use strict';
 
   Drupal.behaviors.aiConversationChat = {
-    attach: function (context, settings) {
-      var $chatContainer = $('.ai-conversation-chat', context);
+    attach: function(context, settings) {
+      const $chatContainer = $('.ai-conversation-chat', context);
+      
       if ($chatContainer.length === 0) {
         return;
       }
 
-      // Prevent multiple attachments
-      if ($chatContainer.hasClass('ai-chat-processed')) {
-        return;
-      }
-      $chatContainer.addClass('ai-chat-processed');
+      const chatSettings = settings.aiConversation || {};
+      const $messageInput = $('#message-input', $chatContainer);
+      const $sendButton = $('#send-button', $chatContainer);
+      const $clearButton = $('#clear-input', $chatContainer);
+      const $triggerSummaryButton = $('#trigger-summary', $chatContainer);
+      const $messagesContainer = $('#chat-messages', $chatContainer);
+      const $loadingIndicator = $('#loading-indicator', $chatContainer);
 
-      var nodeId = $chatContainer.data('node-id');
-      var $form = $('#chat-form', context);
-      var $messageInput = $('#message-input', context);
-      var $sendButton = $('#send-button', context);
-      var $messagesContainer = $('#chat-messages', context);
-      var $loadingIndicator = $('#loading-indicator', context);
-
-      // Auto-scroll to bottom of messages
-      function scrollToBottom() {
-        $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
-      }
-
-      // Initial scroll to bottom
-      scrollToBottom();
-
-      // Format timestamp
-      function formatTimestamp(timestamp) {
-        return new Date(timestamp * 1000).toLocaleTimeString();
-      }
-
-      // Add message to chat
-      function addMessage(message) {
-        var messageHtml = '<div class="message message--' + message.role + '">' +
-          '<div class="message-content">' +
-          '<div class="message-text">' + message.content.replace(/\n/g, '<br>') + '</div>' +
-          '<div class="message-timestamp">' + formatTimestamp(message.timestamp) + '</div>' +
-          '</div>' +
-          '</div>';
+      // Send message handler
+      function sendMessage() {
+        const message = $messageInput.val().trim();
         
-        $messagesContainer.append(messageHtml);
-        scrollToBottom();
-      }
+        if (!message) {
+          return;
+        }
 
-      // Show loading state
-      function showLoading() {
-        $sendButton.prop('disabled', true);
-        $('.send-text').hide();
-        $('.loading-text').show();
+        // Show loading indicator
         $loadingIndicator.show();
-      }
+        $sendButton.prop('disabled', true);
 
-      // Hide loading state
-      function hideLoading() {
-        $sendButton.prop('disabled', false);
-        $('.send-text').show();
-        $('.loading-text').hide();
-        $loadingIndicator.hide();
-      }
+        // Add user message to chat immediately
+        addMessageToChat('user', message);
 
-      // Send message
-      function sendMessage(message) {
-        showLoading();
+        // Clear input
+        $messageInput.val('');
 
+        // Send to server
         $.ajax({
-          url: drupalSettings.aiConversation.sendMessageUrl,
+          url: chatSettings.sendMessageUrl,
           type: 'POST',
           data: {
-            node_id: nodeId,
+            node_id: chatSettings.nodeId,
             message: message,
-            csrf_token: drupalSettings.aiConversation.csrfToken
+            csrf_token: chatSettings.csrfToken
           },
-          success: function (response) {
-            hideLoading();
-            
+          success: function(response) {
             if (response.success) {
-              // Add user message
-              addMessage(response.user_message);
+              // Add AI response to chat
+              addMessageToChat('assistant', response.response);
               
-              // Add AI response
-              addMessage(response.ai_message);
-              
-              // Clear input
-              $messageInput.val('');
-              $messageInput.focus();
+              // Update statistics if provided
+              if (response.stats) {
+                updateStats(response.stats);
+              }
             } else {
-              alert('Error: ' + (response.error || 'Unknown error'));
+              showError(response.error || 'Unknown error occurred');
             }
           },
-          error: function (xhr, status, error) {
-            hideLoading();
-            console.error('AJAX error:', error);
-            alert('Failed to send message. Please try again.');
+          error: function(xhr, status, error) {
+            let errorMessage = 'Failed to send message';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+              errorMessage = xhr.responseJSON.error;
+            }
+            showError(errorMessage);
+          },
+          complete: function() {
+            $loadingIndicator.hide();
+            $sendButton.prop('disabled', false);
+            $messageInput.focus();
           }
         });
       }
 
-      // Remove any existing event listeners first
-      $form.off('submit.aiChat');
-      $messageInput.off('keydown.aiChat');
-
-      // Handle form submission
-      $form.on('submit.aiChat', function (e) {
-        e.preventDefault();
+      // Add message to chat UI
+      function addMessageToChat(role, content) {
+        const timestamp = new Date().toLocaleString();
+        const $message = $('<div class="message message--' + role + '">');
+        const $content = $('<div class="message-content">').html(content.replace(/\n/g, '<br>'));
+        const $timestamp = $('<div class="message-timestamp">').text(timestamp);
         
-        var message = $messageInput.val().trim();
-        if (message === '') {
+        $message.append($content).append($timestamp);
+        $messagesContainer.append($message);
+        
+        // Scroll to bottom
+        $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
+      }
+
+      // Show error message
+      function showError(message) {
+        const $error = $('<div class="message message--error">');
+        const $content = $('<div class="message-content">').html('<strong>Error:</strong> ' + message);
+        
+        $error.append($content);
+        $messagesContainer.append($error);
+        $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
+      }
+
+      // Update statistics display
+      function updateStats(stats) {
+        // Update total messages
+        $('.stat-item').each(function() {
+          const $this = $(this);
+          const text = $this.text();
+          
+          if (text.includes('Total Messages')) {
+            $this.html('<strong>Total Messages:</strong> ' + stats.total_messages);
+          } else if (text.includes('Recent Messages')) {
+            $this.html('<strong>Recent Messages:</strong> ' + stats.recent_messages);
+          } else if (text.includes('Has Summary')) {
+            const hasStatus = stats.has_summary ? 
+              '<span class="status-yes">Yes</span>' : 
+              '<span class="status-no">No</span>';
+            $this.html('<strong>Has Summary:</strong> ' + hasStatus);
+          } else if (text.includes('Estimated Tokens')) {
+            $this.html('<strong>Estimated Tokens:</strong> ' + stats.estimated_tokens);
+          }
+        });
+
+        // Show/hide summary indicator
+        if (stats.has_summary && $('.summary-indicator').length === 0) {
+          $messagesContainer.prepend(
+            '<div class="summary-indicator"><em>This conversation has been summarized. Showing recent messages.</em></div>'
+          );
+        }
+
+        // Show/hide trigger summary button
+        if (stats.total_messages > 20) {
+          $triggerSummaryButton.show();
+        } else {
+          $triggerSummaryButton.hide();
+        }
+      }
+
+      // Trigger summary update
+      function triggerSummaryUpdate() {
+        if (!confirm('Are you sure you want to update the conversation summary? This will condense older messages.')) {
           return;
         }
 
-        sendMessage(message);
-      });
+        $triggerSummaryButton.prop('disabled', true);
+        
+        $.ajax({
+          url: '/node/' + chatSettings.nodeId + '/trigger-summary',
+          type: 'GET',
+          success: function(response) {
+            if (response.success) {
+              alert('Summary updated successfully!');
+              location.reload(); // Reload to show updated conversation
+            } else {
+              alert('Error updating summary: ' + (response.error || 'Unknown error'));
+            }
+          },
+          error: function(xhr, status, error) {
+            alert('Failed to update summary: ' + error);
+          },
+          complete: function() {
+            $triggerSummaryButton.prop('disabled', false);
+          }
+        });
+      }
 
-      // Handle Enter key (without Shift)
-      $messageInput.on('keydown.aiChat', function (e) {
+      // Event handlers
+      $sendButton.on('click', sendMessage);
+      $clearButton.on('click', function() {
+        $messageInput.val('');
+        $messageInput.focus();
+      });
+      $triggerSummaryButton.on('click', triggerSummaryUpdate);
+
+      // Enter key to send (with Shift+Enter for new line)
+      $messageInput.on('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          $form.trigger('submit.aiChat');
+          sendMessage();
         }
       });
 
-      // Auto-resize textarea
-      $messageInput.on('input', function () {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-      });
-
-      // Focus on input when page loads
+      // Focus on message input when page loads
       $messageInput.focus();
+
+      // Auto-scroll to bottom of messages
+      $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
     }
   };
 
-})(jQuery, Drupal, drupalSettings);
+})(jQuery, Drupal);
