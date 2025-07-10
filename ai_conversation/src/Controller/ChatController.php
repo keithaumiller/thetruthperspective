@@ -180,7 +180,11 @@ class ChatController extends ControllerBase {
       ];
       
       $this->addMessageToNode($node, $user_message);
-
+      
+      // IMPORTANT: Save the node after adding user message
+      // This ensures the message count is in the database before summary check
+      $node->save();
+      
       // Get AI response (this will handle summary generation if needed).
       $ai_response = $this->aiApiService->sendMessage($node, $message);
 
