@@ -8,6 +8,12 @@
         return;
       }
 
+      // Prevent multiple attachments
+      if ($chatContainer.hasClass('ai-chat-processed')) {
+        return;
+      }
+      $chatContainer.addClass('ai-chat-processed');
+
       var nodeId = $chatContainer.data('node-id');
       var $form = $('#chat-form', context);
       var $messageInput = $('#message-input', context);
@@ -94,8 +100,12 @@
         });
       }
 
+      // Remove any existing event listeners first
+      $form.off('submit.aiChat');
+      $messageInput.off('keydown.aiChat');
+
       // Handle form submission
-      $form.on('submit', function (e) {
+      $form.on('submit.aiChat', function (e) {
         e.preventDefault();
         
         var message = $messageInput.val().trim();
@@ -107,10 +117,10 @@
       });
 
       // Handle Enter key (without Shift)
-      $messageInput.on('keydown', function (e) {
+      $messageInput.on('keydown.aiChat', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          $form.submit();
+          $form.trigger('submit.aiChat');
         }
       });
 
