@@ -70,6 +70,12 @@ class AIApiService {
       
       // Get the AI model from the conversation.
       $model = $conversation->get('field_ai_model')->value ?: 'anthropic.claude-3-5-sonnet-20240620-v1:0';
+      
+      // Validate and fix common model ID issues
+      if (strpos($model, 'claude-sonnet-4') !== false) {
+        $model = 'anthropic.claude-3-5-sonnet-20240620-v1:0';
+        $this->logger->warning('Invalid model ID detected, using default: @model', ['@model' => $model]);
+      }
 
       // Build the optimized conversation context (summary + recent messages).
       $context = $this->buildOptimizedContext($conversation, $message);
