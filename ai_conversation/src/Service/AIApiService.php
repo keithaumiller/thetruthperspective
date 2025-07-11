@@ -221,7 +221,7 @@ class AIApiService {
     $message_count = $conversation->get('field_message_count')->value ?: 0;
     
     // Update summary every 10 messages, starting from 20 messages.
-    if ($message_count >= 20 && $message_count % $this->summaryFrequency === 0) {
+    if ($message_count >= 5 && $message_count % $this->summaryFrequency === 0) {
       $this->updateConversationSummary($conversation);
     }
   }
