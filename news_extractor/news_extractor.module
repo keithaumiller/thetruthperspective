@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/news_extractor.scraper.php';
+
 /**
  * @file
  * News Extractor module - Extracts full article content using Diffbot API and generates AI summaries.

@@ -71,3 +71,55 @@ function _news_extractor_update_article(EntityInterface $entity, array $article_
     $entity->save();
   }
 }
+
+<?php
+/**
+ * Check if URL is likely a news article (not podcast, video, ad, etc.).
+ */
+function _news_extractor_is_article_url($url) {
+  $blocked_domains = [
+    'comparecards.com',
+    'fool.com',
+    'lendingtree.com',
+  ];
+
+  foreach ($blocked_domains as $domain) {
+    if (strpos($url, $domain) !== FALSE) {
+      return FALSE;
+    }
+  }
+
+  $skip_patterns = [
+    '/audio/', '/video/', '/podcast/', '/gallery/', '/interactive/', '/live-news/', '/live-tv/',
+    '/newsletters/', '/sponsored/', '/advertisement/', '/ads/', '/promo/', '/newsletter/',
+    '/weather/', '/specials/', '/cnn-underscored/', '/coupons/', '/profiles/',
+  ];
+
+  foreach ($skip_patterns as $pattern) {
+    if (strpos($url, $pattern) !== FALSE) {
+      return FALSE;
+    }
+  }
+
+  $ad_keywords = ['sponsored', 'advertisement', 'promo', 'ad-', '-ad', 'coupon'];
+  $url_lower = strtolower($url);
+
+  foreach ($ad_keywords as $keyword) {
+    if (strpos($url_lower, $keyword) !== FALSE) {
+      return FALSE;
+    }
+  }
+
+  $article_patterns = ['/politics/', '/world/', '/us/', '/national/', '/international/', '/breaking/', '/news/'];
+  foreach ($article_patterns as $pattern) {
+    if (strpos($url, $pattern) !== FALSE) {
+      return TRUE;
+    }
+  }
+
+  if (preg_match('/\/(index\.html?|story\.html?)$/i', $url) || preg_match('/\/\d{4}\/\d{2}\/\d{2}\//', $url)) {
+    return TRUE;
+  }
+
+  return TRUE;
+}
