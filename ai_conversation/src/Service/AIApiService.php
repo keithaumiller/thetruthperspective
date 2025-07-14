@@ -217,17 +217,16 @@ class AIApiService {
    * Check if we need to update the conversation summary.
    */
   private function checkAndUpdateSummary(NodeInterface $conversation) {
-    // Get current message count and last summary update count.
-    $message_count = $conversation->get('field_message_count')->value ?: 0;
-    $last_summary_count = $conversation->get('field_summary_updated')->value ?: 0;
+    // Use field_summary_message_count exclusively for summary logic.
+    $summary_message_count = $conversation->get('field_summary_message_count')->value ?? 0;
+    $summary_message_count++;
+    $conversation->set('field_summary_message_count', $summary_message_count);
 
-    // If summary hasn't been updated in 10+ messages, update it.
-    $last_summary_message_count = $conversation->get('field_summary_message_count')->value ?? 0;
-    $messages_since_summary = $message_count - $last_summary_message_count;
-    if ($messages_since_summary >= $this->summaryFrequency) {
+    // If 10 messages have gone by, generate summary and reset counter.
+    if ($summary_message_count >= $this->summaryFrequency) {
       $this->updateConversationSummary($conversation);
-      // Update the field to track last summary message count
-      $conversation->set('field_summary_message_count', $message_count);
+      // Reset summary message count to 0 after summary generation.
+      $conversation->set('field_summary_message_count', 0);
     }
   }
 
