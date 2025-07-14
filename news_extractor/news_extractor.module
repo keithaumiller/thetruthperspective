@@ -63,22 +63,63 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
         $description = strip_tags($item['description']);
         $description = trim($description);
         $fallback_title = substr($description, 0, 60);
-        
+
         // Add ellipsis if we truncated
         if (strlen($description) > 60) {
           $fallback_title .= '...';
         }
-        
+
+        // Truncate to 255 characters for DB safety
+        $fallback_title = substr($fallback_title, 0, 255);
+
+        // Check blocked domains in fallback title
+        $blocked_domains = [
+          'comparecards.com',
+          'fool.com',
+          'lendingtree.com',
+        ];
+        foreach ($blocked_domains as $domain) {
+          if (strpos(strtolower($fallback_title), strtolower($domain)) !== FALSE) {
+            \Drupal::logger('news_extractor')->info('Skipping blocked domain in fallback title: @title', [
+              '@title' => $fallback_title,
+            ]);
+            $feed->skipItem($item);
+            return;
+          }
+        }
+
         $item['title'] = $fallback_title;
-        
+
         \Drupal::logger('news_extractor')->info('Created fallback title: @title', [
           '@title' => $fallback_title,
         ]);
-      } else {
-        // No title and no description - skip this item
-        \Drupal::logger('news_extractor')->info('Skipping item with no title or description: @url', [
-          '@url' => $item['link'] ?? 'No URL',
+      } else if (!empty($item['link'])) {
+        // Use link as fallback title, but check length and blocked domains
+        $fallback_title = substr($item['link'], 0, 255);
+
+        $blocked_domains = [
+          'comparecards.com',
+          'fool.com',
+          'lendingtree.com',
+        ];
+        foreach ($blocked_domains as $domain) {
+          if (strpos(strtolower($fallback_title), strtolower($domain)) !== FALSE) {
+            \Drupal::logger('news_extractor')->info('Skipping blocked domain in fallback link title: @title', [
+              '@title' => $fallback_title,
+            ]);
+            $feed->skipItem($item);
+            return;
+          }
+        }
+
+        $item['title'] = $fallback_title;
+
+        \Drupal::logger('news_extractor')->info('Created fallback title from link: @title', [
+          '@title' => $fallback_title,
         ]);
+      } else {
+        // No title, description, or link - skip this item
+        \Drupal::logger('news_extractor')->info('Skipping item with no title, description, or link.');
         $feed->skipItem($item);
         return;
       }
