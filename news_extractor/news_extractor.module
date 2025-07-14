@@ -18,18 +18,30 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
   // Check if this is an article feed
   if ($entity_interface->getTarget()->bundle() == 'article') {
-    
-    // Filter out specific domains in the link
+    $blocked_strings = [
+      'comparecards.com',
+      'fool.com',
+      'lendingtree.com',
+    ];
+
+    // Abort if blocked strings are anywhere in the title
+    if (!empty($item['title'])) {
+      foreach ($blocked_strings as $str) {
+        if (stripos($item['title'], $str) !== FALSE) {
+          \Drupal::logger('news_extractor')->info('Skipping blocked string in title: @title', [
+            '@title' => $item['title'],
+          ]);
+          $feed->skipItem($item);
+          return;
+        }
+      }
+    }
+
+    // Abort if blocked strings are anywhere in the link/URL
     if (!empty($item['link'])) {
-      $blocked_domains = [
-        'comparecards.com',
-        'fool.com',
-        'lendingtree.com',
-      ];
-      
-      foreach ($blocked_domains as $domain) {
-        if (strpos($item['link'], $domain) !== FALSE) {
-          \Drupal::logger('news_extractor')->info('Skipping blocked domain in link: @url', [
+      foreach ($blocked_strings as $str) {
+        if (stripos($item['link'], $str) !== FALSE) {
+          \Drupal::logger('news_extractor')->info('Skipping blocked string in link: @url', [
             '@url' => $item['link'],
           ]);
           $feed->skipItem($item);
@@ -38,24 +50,6 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
       }
     }
 
-    // Filter out specific domains in the title
-    if (!empty($item['title'])) {
-      $blocked_domains = [
-        'comparecards.com',
-        'fool.com',
-        'lendingtree.com',
-      ];
-      foreach ($blocked_domains as $domain) {
-        if (strpos(strtolower($item['title']), strtolower($domain)) !== FALSE) {
-          \Drupal::logger('news_extractor')->info('Skipping blocked domain in title: @title', [
-            '@title' => $item['title'],
-          ]);
-          $feed->skipItem($item);
-          return;
-        }
-      }
-    }
-    
     // Handle missing or empty titles
     if (empty($item['title']) || trim($item['title']) == '') {
       if (!empty($item['description'])) {
@@ -465,7 +459,7 @@ if ($entity->hasField('field_news_source') && !$entity->get('field_news_source')
   
   // When setting field_original_url_title, always truncate:
   if ($entity->hasField('field_original_url_title')) {
-    $title_value = $item['title'];
+    $title_value = $entity->getTitle();
     // Truncate to 255 characters for DB safety
     $title_value = substr($title_value, 0, 255);
     $entity->set('field_original_url_title', $title_value);
