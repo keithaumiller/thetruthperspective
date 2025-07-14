@@ -463,6 +463,14 @@ if ($entity->hasField('field_news_source') && !$entity->get('field_news_source')
     }
   }
   
+  // When setting field_original_url_title, always truncate:
+  if ($entity->hasField('field_original_url_title')) {
+    $title_value = $item['title'];
+    // Truncate to 255 characters for DB safety
+    $title_value = substr($title_value, 0, 255);
+    $entity->set('field_original_url_title', $title_value);
+  }
+  
   // Save the entity if any updates were made
   if ($updated) {
     $entity->save();
