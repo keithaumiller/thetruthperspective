@@ -72,7 +72,6 @@ function _news_extractor_update_article(EntityInterface $entity, array $article_
   }
 }
 
-<?php
 /**
  * Check if URL is likely a news article (not podcast, video, ad, etc.).
  */
