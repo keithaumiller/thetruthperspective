@@ -24,29 +24,29 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
       'lendingtree.com',
     ];
 
-    // Abort if blocked strings are anywhere in the title
-    if (!empty($item['title'])) {
-      foreach ($blocked_strings as $str) {
-        if (stripos($item['title'], $str) !== FALSE) {
-          \Drupal::logger('news_extractor')->info('Skipping blocked string in title: @title', [
-            '@title' => $item['title'],
-          ]);
-          $feed->skipItem($item);
-          return;
-        }
+    // Normalize all possible title sources
+    $title_to_check = $item['title'] ?? '';
+    $link_to_check = $item['link'] ?? '';
+
+    // Check blocked strings in title
+    foreach ($blocked_strings as $str) {
+      if (stripos($title_to_check, $str) !== FALSE) {
+        \Drupal::logger('news_extractor')->info('Skipping blocked string in title: @title', [
+          '@title' => $title_to_check,
+        ]);
+        $feed->skipItem($item);
+        return;
       }
     }
 
-    // Abort if blocked strings are anywhere in the link/URL
-    if (!empty($item['link'])) {
-      foreach ($blocked_strings as $str) {
-        if (stripos($item['link'], $str) !== FALSE) {
-          \Drupal::logger('news_extractor')->info('Skipping blocked string in link: @url', [
-            '@url' => $item['link'],
-          ]);
-          $feed->skipItem($item);
-          return;
-        }
+    // Check blocked strings in link
+    foreach ($blocked_strings as $str) {
+      if (stripos($link_to_check, $str) !== FALSE) {
+        \Drupal::logger('news_extractor')->info('Skipping blocked string in link: @url', [
+          '@url' => $link_to_check,
+        ]);
+        $feed->skipItem($item);
+        return;
       }
     }
 
