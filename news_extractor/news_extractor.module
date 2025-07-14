@@ -16,6 +16,9 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
  * Alter feed item data before it becomes a node. 
  */
 function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
+  // Debug: Log module version on every feed import
+  \Drupal::logger('news_extractor')->info('news_extractor module version: 1.0.0 - feeds_process_alter triggered');
+
   // Check if this is an article feed
   if ($entity_interface->getTarget()->bundle() == 'article') {
     $blocked_strings = [
@@ -52,71 +55,11 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
 
     // Handle missing or empty titles
     if (empty($item['title']) || trim($item['title']) == '') {
-      if (!empty($item['description'])) {
-        // Use first 60 characters of description as title
-        $description = strip_tags($item['description']);
-        $description = trim($description);
-        $fallback_title = substr($description, 0, 60);
-
-        // Add ellipsis if we truncated
-        if (strlen($description) > 60) {
-          $fallback_title .= '...';
-        }
-
-        // Truncate to 255 characters for DB safety
-        $fallback_title = substr($fallback_title, 0, 255);
-
-        // Check blocked domains in fallback title
-        $blocked_domains = [
-          'comparecards.com',
-          'fool.com',
-          'lendingtree.com',
-        ];
-        foreach ($blocked_domains as $domain) {
-          if (strpos(strtolower($fallback_title), strtolower($domain)) !== FALSE) {
-            \Drupal::logger('news_extractor')->info('Skipping blocked domain in fallback title: @title', [
-              '@title' => $fallback_title,
-            ]);
-            $feed->skipItem($item);
-            return;
-          }
-        }
-
-        $item['title'] = $fallback_title;
-
-        \Drupal::logger('news_extractor')->info('Created fallback title: @title', [
-          '@title' => $fallback_title,
-        ]);
-      } else if (!empty($item['link'])) {
-        // Use link as fallback title, but check length and blocked domains
-        $fallback_title = substr($item['link'], 0, 255);
-
-        $blocked_domains = [
-          'comparecards.com',
-          'fool.com',
-          'lendingtree.com',
-        ];
-        foreach ($blocked_domains as $domain) {
-          if (strpos(strtolower($fallback_title), strtolower($domain)) !== FALSE) {
-            \Drupal::logger('news_extractor')->info('Skipping blocked domain in fallback link title: @title', [
-              '@title' => $fallback_title,
-            ]);
-            $feed->skipItem($item);
-            return;
-          }
-        }
-
-        $item['title'] = $fallback_title;
-
-        \Drupal::logger('news_extractor')->info('Created fallback title from link: @title', [
-          '@title' => $fallback_title,
-        ]);
-      } else {
-        // No title, description, or link - skip this item
-        \Drupal::logger('news_extractor')->info('Skipping item with no title, description, or link.');
-        $feed->skipItem($item);
-        return;
-      }
+      \Drupal::logger('news_extractor')->info('Skipping item with missing or empty title: @url', [
+        '@url' => $item['link'] ?? 'No URL',
+      ]);
+      $feed->skipItem($item);
+      return;
     }
     
     // Skip items with very short titles (even after fallback)
