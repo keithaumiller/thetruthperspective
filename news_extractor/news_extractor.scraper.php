@@ -13,7 +13,7 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
   $request_url = $api_url . '?' . http_build_query([
     'token' => $api_token,
     'url' => $url,
-    'paging' => 'false',
+    'naturalLanguage' => 'summary',
   ]);
 
   try {
@@ -26,13 +26,17 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
     // Store the full response for debugging
     _news_extractor_store_debug_diffbot_response($data);
 
-    if (isset($data['objects'][0])) {
-      _news_extractor_update_article($entity, $data['objects'][0]);
-      \Drupal::logger('news_extractor')->info('Successfully extracted content for article: @title', [
+    if (isset($data['objects'][0]['text'])) {
+      $entity->set('body', [
+        'value' => $data['objects'][0]['text'],
+        'format' => 'basic_html',
+      ]);
+      $entity->save();
+      \Drupal::logger('news_extractor')->info('Updated article body from Diffbot for: @title', [
         '@title' => $entity->getTitle(),
       ]);
     } else {
-      \Drupal::logger('news_extractor')->warning('No article data returned from Diffbot for URL: @url', [
+      \Drupal::logger('news_extractor')->warning('No article text returned from Diffbot for URL: @url', [
         '@url' => $url,
       ]);
     }
@@ -74,6 +78,49 @@ function _news_extractor_update_article(EntityInterface $entity, array $article_
 
   if ($updated) {
     $entity->save();
+  }
+}
+
+/**
+ * Scrape headlines from a section page using Diffbot Analyze API.
+ *
+ * @param string $url The section URL (e.g., https://www.cnn.com/politics)
+ * @return array Array of headlines with title, summary, and link.
+ */
+function _news_extractor_scrape_headlines($url) {
+  $api_token = '8488710a556cedc9ff2ad6547bbbecaf';
+  $client = new Client();
+
+  try {
+    $response = $client->request('GET', 'https://api.diffbot.com/v3/analyze', [
+      'query' => [
+        'token' => $api_token,
+        'url' => $url,
+      ],
+      'headers' => [
+        'accept' => 'application/json',
+      ],
+      'timeout' => 30,
+    ]);
+    $data = json_decode($response->getBody(), TRUE);
+
+    $headlines = [];
+    if (!empty($data['objects'][0]['items'])) {
+      foreach ($data['objects'][0]['items'] as $item) {
+        $headlines[] = [
+          'title' => $item['title'] ?? $item['container_list-headlines__text'] ?? '',
+          'summary' => $item['summary'] ?? '',
+          'link' => $item['link'] ?? $item['container__link--type-article'] ?? '',
+        ];
+      }
+    }
+    return $headlines;
+
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error scraping headlines: @message', [
+      '@message' => $e->getMessage(),
+    ]);
+    return [];
   }
 }
 
@@ -126,49 +173,6 @@ function _news_extractor_is_article_url($url) {
   }
 
   return TRUE;
-}
-
-/**
- * Scrape headlines from a section page using Diffbot Analyze API.
- *
- * @param string $url The section URL (e.g., https://www.cnn.com/politics)
- * @return array Array of headlines with title, summary, and link.
- */
-function _news_extractor_scrape_headlines($url) {
-  $api_token = '8488710a556cedc9ff2ad6547bbbecaf';
-  $client = new Client();
-
-  try {
-    $response = $client->request('GET', 'https://api.diffbot.com/v3/analyze', [
-      'query' => [
-        'token' => $api_token,
-        'url' => $url,
-      ],
-      'headers' => [
-        'accept' => 'application/json',
-      ],
-      'timeout' => 30,
-    ]);
-    $data = json_decode($response->getBody(), TRUE);
-
-    $headlines = [];
-    if (!empty($data['objects'][0]['items'])) {
-      foreach ($data['objects'][0]['items'] as $item) {
-        $headlines[] = [
-          'title' => $item['title'] ?? $item['container_list-headlines__text'] ?? '',
-          'summary' => $item['summary'] ?? '',
-          'link' => $item['link'] ?? $item['container__link--type-article'] ?? '',
-        ];
-      }
-    }
-    return $headlines;
-
-  } catch (\Exception $e) {
-    \Drupal::logger('news_extractor')->error('Error scraping headlines: @message', [
-      '@message' => $e->getMessage(),
-    ]);
-    return [];
-  }
 }
 
 /**
