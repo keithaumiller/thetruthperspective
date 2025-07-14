@@ -1,6 +1,7 @@
 <?php
 
 use Drupal\Core\Entity\EntityInterface;
+use GuzzleHttp\Client;
 
 /**
  * Extract full article content using Diffbot API.
@@ -121,4 +122,47 @@ function _news_extractor_is_article_url($url) {
   }
 
   return TRUE;
+}
+
+/**
+ * Scrape headlines from a section page using Diffbot Analyze API.
+ *
+ * @param string $url The section URL (e.g., https://www.cnn.com/politics)
+ * @return array Array of headlines with title, summary, and link.
+ */
+function _news_extractor_scrape_headlines($url) {
+  $api_token = '8488710a556cedc9ff2ad6547bbbecaf';
+  $client = new Client();
+
+  try {
+    $response = $client->request('GET', 'https://api.diffbot.com/v3/analyze', [
+      'query' => [
+        'token' => $api_token,
+        'url' => $url,
+      ],
+      'headers' => [
+        'accept' => 'application/json',
+      ],
+      'timeout' => 30,
+    ]);
+    $data = json_decode($response->getBody(), TRUE);
+
+    $headlines = [];
+    if (!empty($data['objects'][0]['items'])) {
+      foreach ($data['objects'][0]['items'] as $item) {
+        $headlines[] = [
+          'title' => $item['title'] ?? $item['container_list-headlines__text'] ?? '',
+          'summary' => $item['summary'] ?? '',
+          'link' => $item['link'] ?? $item['container__link--type-article'] ?? '',
+        ];
+      }
+    }
+    return $headlines;
+
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error scraping headlines: @message', [
+      '@message' => $e->getMessage(),
+    ]);
+    return [];
+  }
 }
