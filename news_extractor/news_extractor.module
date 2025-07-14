@@ -19,17 +19,36 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
   // Check if this is an article feed
   if ($entity_interface->getTarget()->bundle() == 'article') {
     
-    // Filter out specific domains
+    // Filter out specific domains in the link
     if (!empty($item['link'])) {
       $blocked_domains = [
         'comparecards.com',
         'fool.com',
+        'lendingtree.com',
       ];
       
       foreach ($blocked_domains as $domain) {
         if (strpos($item['link'], $domain) !== FALSE) {
-          \Drupal::logger('news_extractor')->info('Skipping blocked domain: @url', [
+          \Drupal::logger('news_extractor')->info('Skipping blocked domain in link: @url', [
             '@url' => $item['link'],
+          ]);
+          $feed->skipItem($item);
+          return;
+        }
+      }
+    }
+
+    // Filter out specific domains in the title
+    if (!empty($item['title'])) {
+      $blocked_domains = [
+        'comparecards.com',
+        'fool.com',
+        'lendingtree.com',
+      ];
+      foreach ($blocked_domains as $domain) {
+        if (strpos(strtolower($item['title']), strtolower($domain)) !== FALSE) {
+          \Drupal::logger('news_extractor')->info('Skipping blocked domain in title: @title', [
+            '@title' => $item['title'],
           ]);
           $feed->skipItem($item);
           return;
