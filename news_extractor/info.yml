@@ -1,1 +1,10 @@
+name: News Extractor
+type: module
+description: Extracts news articles from various sources.
+package: Custom
+core_version_requirement: ^8 || ^9 || ^10 || ^11
+version: 1.0.0
+dependencies:
+  - http_client
+  - parser_lib
 
