@@ -2,6 +2,7 @@
 
 use Drupal\Core\Entity\EntityInterface;
 use GuzzleHttp\Client;
+use Drupal\node\Entity\Node;
 
 /**
  * Extract full article content using Diffbot API.
@@ -21,6 +22,9 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
       'headers' => ['Accept' => 'application/json'],
     ]);
     $data = json_decode($response->getBody()->getContents(), TRUE);
+
+    // Store the full response for debugging
+    _news_extractor_store_debug_diffbot_response($data);
 
     if (isset($data['objects'][0])) {
       _news_extractor_update_article($entity, $data['objects'][0]);
@@ -166,3 +170,27 @@ function _news_extractor_scrape_headlines($url) {
     return [];
   }
 }
+
+/**
+ * Store the full Diffbot response in a new article node for debugging.
+ *
+ * @param array $diffbot_response The full response array from Diffbot.
+ */
+function _news_extractor_store_debug_diffbot_response(array $diffbot_response) {
+  // Encode the response as pretty JSON for readability.
+  $body = json_encode($diffbot_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+  // Create a new article node.
+  $node = Node::create([
+    'type' => 'article',
+    'title' => 'debugdiffbot',
+    'body' => [
+      'value' => $body,
+      'format' => 'basic_html',
+    ],
+  ]);
+  $node->save();
+
+  \Drupal::logger('news_extractor')->info('Stored debugdiffbot article with full Diffbot response.');
+}
+
