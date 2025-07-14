@@ -57,6 +57,7 @@ class AIApiService {
     $config = $this->configFactory->get('ai_conversation.settings');
     $this->maxRecentMessages = $config->get('max_recent_messages') ?: 10;
     $this->maxTokensBeforeSummary = $config->get('max_tokens_before_summary') ?: 6000;
+    $this->summaryFrequency = $config->get('summary_frequency') ?: 10;
   }
 
   /**
@@ -222,8 +223,8 @@ class AIApiService {
     $summary_message_count++;
     $conversation->set('field_summary_message_count', $summary_message_count);
 
-    // If 10 messages have gone by, generate summary and reset counter.
-    if ($summary_message_count >= $this->summaryFrequency) {
+    // If summary_message_count is divisible by summaryFrequency, generate summary and reset counter.
+    if ($summary_message_count % $this->summaryFrequency === 0) {
       $this->updateConversationSummary($conversation);
       // Reset summary message count to 0 after summary generation.
       $conversation->set('field_summary_message_count', 0);
