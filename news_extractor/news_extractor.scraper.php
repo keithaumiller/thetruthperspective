@@ -184,7 +184,8 @@ function _news_extractor_store_debug_diffbot_response(array $diffbot_response) {
   // Encode the response as pretty JSON for readability.
   $body = json_encode($diffbot_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-  // Create a new article node.
+  // Commented out: Create a new article node for debugging.
+  /*
   $node = Node::create([
     'type' => 'article',
     'title' => 'debugdiffbot',
@@ -196,5 +197,34 @@ function _news_extractor_store_debug_diffbot_response(array $diffbot_response) {
   $node->save();
 
   \Drupal::logger('news_extractor')->info('Stored debugdiffbot article with full Diffbot response.');
+  */
+}
+
+/**
+ * Loop through all article nodes and update their body from Diffbot,
+ * but only process articles that do not have a body set.
+ */
+function news_extractor_update_articles_missing_body_from_diffbot() {
+  $nids = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->execute();
+
+  foreach ($nids as $nid) {
+    $node = Node::load($nid);
+    // Only process if body is empty or not set
+    if (
+      $node &&
+      $node->hasField('field_original_url') &&
+      !$node->get('field_original_url')->isEmpty() &&
+      (
+        !$node->hasField('body') ||
+        $node->get('body')->isEmpty() ||
+        empty($node->get('body')->value)
+      )
+    ) {
+      $original_url = $node->get('field_original_url')->uri;
+      _news_extractor_extract_content($node, $original_url);
+    }
+  }
 }
 
