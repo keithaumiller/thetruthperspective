@@ -1,53 +1,208 @@
-# Rolling Conversation Summary Implementation Guide
+# AI Conversation Module
 
-## 🎯 Overview 
+## 🎯 Overview
 
-Your AI Conversation module now includes a sophisticated **rolling conversation summary system** that automatically manages conversation context to:
+The AI Conversation module provides a sophisticated chat interface for interacting with AI models through AWS Bedrock. It features intelligent conversation management with rolling summary functionality to optimize token usage and maintain conversation context over extended interactions.
 
-- **Prevent token overflow** by keeping only recent messages + summary
-- **Maintain conversation continuity** through intelligent summarization
-- **Optimize API costs** by reducing payload size
-- **Improve response quality** by focusing on relevant context
+## ✨ Features
 
-## 🔧 What's New
+- **Interactive Chat Interface**: Real-time conversation with AI models
+- **Rolling Summary System**: Automatically manages conversation context to prevent token overflow
+- **AWS Bedrock Integration**: Uses Claude 3.5 Sonnet for high-quality responses
+- **Token Management**: Intelligent token tracking and optimization
+- **Conversation Continuity**: Maintains context while managing memory efficiently
+- **Configurable Settings**: Customizable parameters for different use cases
 
-### Database Schema Updates
-- **`field_conversation_summary`** - Stores rolling summary of older messages
-- **`field_message_count`** - Tracks total messages for summary logic
-- **`field_summary_updated`** - Timestamp of last summary update
+## 🔧 Technical Details
 
-### Enhanced AI Service
-- **Automatic summary generation** when conversation exceeds thresholds
-- **Context optimization** - summary + recent messages only
-- **Token estimation** to trigger summarization
-- **Message pruning** to maintain manageable conversation size
+### AI Integration
+- **Service**: AWS Bedrock Runtime
+- **Model**: `anthropic.claude-3-5-sonnet-20240620-v1:0`
+- **Region**: `us-west-2`
+- **Max Tokens**: Configurable (default: 4000)
 
-### Smart Configuration
-- **Configurable message retention** (default: 10 recent messages)
-- **Token-based triggers** (default: 6000 tokens)
-- **Summary frequency control** (default: every 20 messages)
-- **Debug mode** for monitoring
+### Core Architecture
 
-## 📋 Installation Steps
+#### AIApiService Class
+Main service handling AI communication and conversation management.
 
-### 1. Database Updates
-```bash
-# Run the update to add new fields
-drush updatedb
+**Key Methods**:
+- `sendMessage(NodeInterface $conversation, string $message)`: Send messages to AI
+- `buildOptimizedContext()`: Creates context with summary + recent messages
+- `checkAndUpdateSummary()`: Manages rolling summary updates
+- `estimateTokens()`: Estimates token usage for optimization
 
-# Or if this is a fresh install
-drush pm:enable ai_conversation
-```
+#### Rolling Summary System
+- **Automatic Summarization**: Triggers when conversation exceeds thresholds
+- **Context Optimization**: Maintains summary + recent messages only
+- **Token-Based Logic**: Summarizes based on token count, not just message count
+- **Intelligent Pruning**: Removes older messages while preserving context
 
-### 2. Configuration
+### Database Schema
+
+#### Conversation Content Type Fields
+- **`field_conversation_summary`**: Stores rolling summary of older messages
+- **`field_message_count`**: Tracks total messages for summary logic
+- **`field_summary_updated`**: Timestamp of last summary update
+- **`field_total_tokens`**: Running count of tokens used
+- **`field_ai_model`**: Selected AI model for the conversation
+
+## 🚀 Installation
+
+1. Enable the module: `drush pm:enable ai_conversation`
+2. Run database updates: `drush updatedb`
+3. Configure AWS credentials for Bedrock access
+4. Configure module settings
+5. Clear cache: `drush cr`
+
+## 📋 Requirements
+
+- Drupal 9, 10, or 11
+- Node module
+- AWS SDK for PHP
+- AWS Bedrock access with Claude model permissions
+
+## 🔑 Configuration
+
+### AWS Setup
+Ensure your server has AWS credentials configured with access to:
+- AWS Bedrock Runtime
+- Claude 3.5 Sonnet model permissions
+
+### Module Configuration
 Navigate to **Admin → Configuration → AI Conversation** to configure:
-- Max recent messages to keep (5-50)
-- Token threshold for summarization (2000-15000)
-- Summary update frequency (10-50 messages)
-- Debug mode and statistics display
 
-### 3. Test the System
-1. Create a new AI conversation node
+#### Memory Management
+- **Max Recent Messages**: Number of recent messages to keep (default: 10)
+- **Token Threshold**: Maximum tokens before triggering summary (default: 6000)
+- **Summary Frequency**: Update summary every N messages (default: 20)
+
+#### Response Settings
+- **Max Tokens**: Maximum tokens for AI responses (default: 4000)
+- **Model Selection**: Choose AI model (supports fallback to default)
+
+#### Debug Options
+- **Debug Mode**: Enable detailed logging
+- **Statistics Display**: Show token usage and conversation stats
+
+## 📊 Usage
+
+### Starting a Conversation
+1. **Create Conversation Node**: Add new AI Conversation content
+2. **Configure Settings**: Select AI model and parameters
+3. **Begin Chat**: Use the chat interface to interact with AI
+
+### Chat Interface Features
+- **Real-time Responses**: Immediate AI responses
+- **Message History**: Full conversation history with timestamps
+- **Context Awareness**: AI maintains conversation context
+- **Auto-scrolling**: Interface automatically scrolls to new messages
+
+### Conversation Management
+- **Automatic Summarization**: System manages context automatically
+- **Token Tracking**: Monitor usage in conversation details
+- **Context Optimization**: Recent messages + summary for best performance
+
+## 🎨 Advanced Features
+
+### Rolling Summary System
+The module implements a sophisticated memory management system:
+
+1. **Monitors Conversation Length**: Tracks both message count and token usage
+2. **Triggers Summarization**: When thresholds are exceeded
+3. **Generates Summary**: AI creates concise summary of older messages
+4. **Prunes History**: Removes older messages while keeping summary
+5. **Maintains Context**: Recent messages + summary for continuity
+
+### Token Optimization
+- **Input Token Estimation**: Calculates tokens before sending to AI
+- **Output Token Tracking**: Monitors response token usage
+- **Total Token Management**: Maintains running totals per conversation
+- **Cost Optimization**: Reduces API costs through efficient context management
+
+## 🔍 Logging and Monitoring
+
+The module provides comprehensive logging:
+
+- **Conversation Events**: Message sending and receiving
+- **Summary Operations**: When summaries are created/updated
+- **Token Usage**: Detailed token consumption tracking
+- **Error Conditions**: API errors and recovery attempts
+- **Performance Metrics**: Response times and optimization events
+
+Access logs: **Reports > Recent log messages > ai_conversation**
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+**AI Not Responding**
+- Check AWS Bedrock permissions and connectivity
+- Verify Claude model access
+- Review error logs for API issues
+- Test with simple messages first
+
+**Token Limit Exceeded**
+- Adjust max tokens setting
+- Check summary frequency configuration
+- Review conversation length and complexity
+
+**Summary Not Working**
+- Verify token threshold settings
+- Check summary frequency configuration
+- Review conversation message count
+
+**Model Errors**
+- Confirm model ID is correct
+- Check for model availability in region
+- Verify AWS service status
+
+### Debug Steps
+1. Enable debug mode in module configuration
+2. Check recent log messages for detailed information
+3. Test AWS connectivity with simple requests
+4. Verify conversation node configuration
+5. Monitor token usage in conversation details
+
+## 🔄 Customization
+
+### Prompt Engineering
+Modify the system prompts in `AIApiService.php` to:
+- Adjust AI personality and behavior
+- Add specialized knowledge domains
+- Customize response formatting
+- Implement role-based responses
+
+### Model Configuration
+- Change AI model by updating configuration
+- Support for multiple models per conversation
+- Fallback model configuration for reliability
+
+### Summary Behavior
+Customize summarization by modifying:
+- Summary prompt templates
+- Trigger thresholds
+- Context window size
+- Message retention policies
+
+## 🚀 Future Enhancements
+
+Potential improvements:
+- Multi-model conversations
+- Conversation templates
+- Export/import functionality
+- API integration
+- Mobile-optimized interface
+- Voice interaction support
+
+## 📞 Support
+
+For issues or questions:
+1. Enable debug mode for detailed error information
+2. Check AWS Bedrock service status and permissions
+3. Review conversation configuration settings
+4. Test with minimal conversation complexity
+5. Monitor token usage and adjust thresholds accordingly
 2. Start chatting - the system will automatically handle summarization
 3. Monitor the conversation statistics panel
 4. Watch as older messages get summarized after reaching thresholds
