@@ -252,7 +252,7 @@ function news_extractor_generate_ai_summary(Node $node) {
   $title = $node->getTitle();
   $body = $node->get('body')->value;
 
-  $prompt = "Write this from the perspective of a scientist that puts things in the context of key performance metrics of the United States.\n\nSelect the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\nHeadline: $title\n\nBody: $body";
+  $prompt = "Write a summary from the perspective of a social scientist that puts things in the context of key performance metrics of the United States.\n\nSelect the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\nHeadline: $title\n\nBody: $body";
 
   // Call your AI backend here (pseudo-code, replace with actual API call)
   $ai_summary = call_claude_api($prompt);
