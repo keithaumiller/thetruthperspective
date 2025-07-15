@@ -1,1 +1,4 @@
+services:
+  job_application_automation.manager:
+    class: 'Drupal\job_application_automation\JobApplicationManager'
 

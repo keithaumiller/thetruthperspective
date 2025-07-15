@@ -1,1 +1,7 @@
-
+name: Job Application Automation
+type: module
+description: Automatically generates tailored resumes based on job descriptions using AI.
+core_version_requirement: ^9 || ^10 || ^11
+package: Custom
+dependencies:
+  - node

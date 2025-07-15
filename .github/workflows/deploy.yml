@@ -62,15 +62,17 @@ jobs:
           echo "Files in repository:"
           ls -la
           
-          # Set proper permissions for both modules
+          # Set proper permissions for all modules
           sudo chown -R ubuntu:ubuntu .git
-          sudo chown -R www-data:www-data news_extractor ai_conversation
+          sudo chown -R www-data:www-data news_extractor ai_conversation job_application_automation
           sudo find news_extractor -type f -exec chmod 644 {} \;
           sudo find news_extractor -type d -exec chmod 755 {} \;
           sudo find ai_conversation -type f -exec chmod 644 {} \;
           sudo find ai_conversation -type d -exec chmod 755 {} \;
+          sudo find job_application_automation -type f -exec chmod 644 {} \;
+          sudo find job_application_automation -type d -exec chmod 755 {} \;
           
-          echo "=== Both modules deployed successfully ==="
+          echo "=== All three modules deployed successfully ==="
           
     - name: Clear Drupal cache
       uses: appleboy/ssh-action@v0.1.5
