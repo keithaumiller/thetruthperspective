@@ -283,6 +283,7 @@ function _news_extractor_has_invalid_title($title) {
 function _news_extractor_build_ai_prompt($article_title, $article_text) {
   return "Write this from the perspective of a scientist that puts things in the context of key performance metrics of the United States.\n\n" .
          "Select the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\n" .
+         "list out each of the entities mentioned in the article including the author and their percieved motivations in the context of this article.\n\n" .
          "Article Title: " . $article_title . "\n\n" .
          "Article Text: " . $article_text;
 }
