@@ -32,6 +32,21 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         'format' => 'basic_html',
       ]);
       $entity->save();
+      
+      // Generate AI summary using the existing function from news_extractor.module
+      $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
+      
+      if ($ai_summary && $entity->hasField('field_ai_summary')) {
+        $entity->set('field_ai_summary', [
+          'value' => $ai_summary,
+          'format' => 'basic_html',
+        ]);
+        $entity->save();
+        \Drupal::logger('news_extractor')->info('Generated AI summary for: @title', [
+          '@title' => $entity->getTitle(),
+        ]);
+      }
+
       \Drupal::logger('news_extractor')->info('Updated article body from Diffbot for: @title', [
         '@title' => $entity->getTitle(),
       ]);
@@ -250,5 +265,5 @@ function news_extractor_generate_ai_summary(Node $node) {
     ]); 
     $node->save();
   }
-} 
+}
 
