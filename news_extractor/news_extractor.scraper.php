@@ -5,7 +5,7 @@ use GuzzleHttp\Client;
 use Drupal\node\Entity\Node;
 
 /**
- * Extract full article content using Diffbot API.
+ * Extract full article content using Diffbot API and generate AI summary.
  */
 function _news_extractor_extract_content(EntityInterface $entity, $url) {
   $api_token = '8488710a556cedc9ff2ad6547bbbecaf';
@@ -23,15 +23,9 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
     ]);
     $data = json_decode($response->getBody()->getContents(), TRUE);
 
-    // Store the full response for debugging
-    _news_extractor_store_debug_diffbot_response($data);
-
     if (isset($data['objects'][0]['text'])) {
-      $entity->set('body', [
-        'value' => $data['objects'][0]['text'],
-        'format' => 'basic_html',
-      ]);
-      $entity->save();
+      // Update article with extracted content
+      _news_extractor_update_article($entity, $data['objects'][0]);
       
       // Generate AI summary using the existing function from news_extractor.module
       $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
@@ -47,7 +41,7 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         ]);
       }
 
-      \Drupal::logger('news_extractor')->info('Updated article body from Diffbot for: @title', [
+      \Drupal::logger('news_extractor')->info('Successfully processed article: @title', [
         '@title' => $entity->getTitle(),
       ]);
     } else {
@@ -93,49 +87,6 @@ function _news_extractor_update_article(EntityInterface $entity, array $article_
 
   if ($updated) {
     $entity->save();
-  }
-}
-
-/**
- * Scrape headlines from a section page using Diffbot Analyze API.
- *
- * @param string $url The section URL (e.g., https://www.cnn.com/politics)
- * @return array Array of headlines with title, summary, and link.
- */
-function _news_extractor_scrape_headlines($url) {
-  $api_token = '8488710a556cedc9ff2ad6547bbbecaf';
-  $client = new Client();
-
-  try {
-    $response = $client->request('GET', 'https://api.diffbot.com/v3/analyze', [
-      'query' => [
-        'token' => $api_token,
-        'url' => $url,
-      ],
-      'headers' => [
-        'accept' => 'application/json',
-      ],
-      'timeout' => 30,
-    ]);
-    $data = json_decode($response->getBody(), TRUE);
-
-    $headlines = [];
-    if (!empty($data['objects'][0]['items'])) {
-      foreach ($data['objects'][0]['items'] as $item) {
-        $headlines[] = [
-          'title' => $item['title'] ?? $item['container_list-headlines__text'] ?? '',
-          'summary' => $item['summary'] ?? '',
-          'link' => $item['link'] ?? $item['container__link--type-article'] ?? '',
-        ];
-      }
-    }
-    return $headlines;
-
-  } catch (\Exception $e) {
-    \Drupal::logger('news_extractor')->error('Error scraping headlines: @message', [
-      '@message' => $e->getMessage(),
-    ]);
-    return [];
   }
 }
 
@@ -191,31 +142,6 @@ function _news_extractor_is_article_url($url) {
 }
 
 /**
- * Store the full Diffbot response in a new article node for debugging.
- *
- * @param array $diffbot_response The full response array from Diffbot.
- */
-function _news_extractor_store_debug_diffbot_response(array $diffbot_response) {
-  // Encode the response as pretty JSON for readability.
-  $body = json_encode($diffbot_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-  // Commented out: Create a new article node for debugging.
-  /*
-  $node = Node::create([
-    'type' => 'article',
-    'title' => 'debugdiffbot',
-    'body' => [
-      'value' => $body,
-      'format' => 'basic_html',
-    ],
-  ]);
-  $node->save();
-
-  \Drupal::logger('news_extractor')->info('Stored debugdiffbot article with full Diffbot response.');
-  */
-}
-
-/**
  * Loop through all article nodes and update their body from Diffbot,
  * but only process articles that do not have a body set.
  */
@@ -240,30 +166,6 @@ function news_extractor_update_articles_missing_body_from_diffbot() {
       $original_url = $node->get('field_original_url')->uri;
       _news_extractor_extract_content($node, $original_url);
     }
-  }
-}
-
-/**
- * Generate AI summary analysis for an article node using Claude.
- *
- * @param \Drupal\node\Entity\Node $node
- */
-function news_extractor_generate_ai_summary(Node $node) {
-  $title = $node->getTitle();
-  $body = $node->get('body')->value;
-
-  $prompt = "Write a summary from the perspective of a social scientist that puts things in the context of key performance metrics of the United States.\n\nSelect the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\nHeadline: $title\n\nBody: $body";
-
-  // Call your AI backend here (pseudo-code, replace with actual API call)
-  $ai_summary = call_claude_api($prompt);
-
-  // Store the AI summary in the node's field_ai_summary
-  if ($node->hasField('field_ai_summary')) {
-    $node->set('field_ai_summary', [
-      'value' => $ai_summary,
-      'format' => 'basic_html',
-    ]); 
-    $node->save();
   }
 }
 

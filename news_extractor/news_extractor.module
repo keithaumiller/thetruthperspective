@@ -22,51 +22,17 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
     return;
   }
 
-  $blocked_strings = [
-    'comparecards.com',
-    'fool.com',
-    'lendingtree.com',
-  ];
-
   $title_to_check = $item['title'] ?? '';
   $link_to_check = $item['link'] ?? '';
 
-  // Abort if blocked strings are anywhere in the title
-  foreach ($blocked_strings as $str) {
-    if (stripos($title_to_check, $str) !== FALSE) {
-      \Drupal::logger('news_extractor')->info('Skipping blocked string in title: @title', [
-        '@title' => $title_to_check,
-      ]);
-      $feed->skipItem($item);
-      return;
-    }
-  }
-
-  // Abort if blocked strings are anywhere in the link/URL
-  foreach ($blocked_strings as $str) {
-    if (stripos($link_to_check, $str) !== FALSE) {
-      \Drupal::logger('news_extractor')->info('Skipping blocked string in link: @url', [
-        '@url' => $link_to_check,
-      ]);
-      $feed->skipItem($item);
-      return;
-    }
-  }
-
-  // Skip items with missing or empty titles
-  if (empty($item['title']) || trim($item['title']) == '') {
-    \Drupal::logger('news_extractor')->info('Skipping item with missing or empty title: @url', [
-      '@url' => $item['link'] ?? 'No URL',
-    ]);
+  // Skip items with blocked strings
+  if (_news_extractor_has_blocked_content($title_to_check, $link_to_check)) {
     $feed->skipItem($item);
     return;
   }
 
-  // Skip items with very short titles
-  if (strlen(trim($item['title'])) < 10) {
-    \Drupal::logger('news_extractor')->info('Skipping item with very short title: @title', [
-      '@title' => $item['title'],
-    ]);
+  // Skip items with invalid titles
+  if (_news_extractor_has_invalid_title($title_to_check)) {
     $feed->skipItem($item);
     return;
   }
@@ -90,22 +56,26 @@ function news_extractor_node_insert(EntityInterface $entity) {
     return;
   }
 
-  if ($entity->hasField('field_original_url') && !$entity->get('field_original_url')->isEmpty()) {
-    $original_url = $entity->get('field_original_url')->uri;
+  if (!$entity->hasField('field_original_url') || $entity->get('field_original_url')->isEmpty()) {
+    return;
+  }
 
-    if (!_news_extractor_is_article_url($original_url)) {
-      \Drupal::logger('news_extractor')->info('Deleting non-article content: @title (@url)', [
-        '@title' => $entity->getTitle(),
-        '@url' => $original_url,
-      ]);
-      $entity->delete();
-      return;
-    }
+  $original_url = $entity->get('field_original_url')->uri;
 
-    $body = $entity->get('body')->value;
-    if (empty($body) || strlen($body) < 500) {
-      _news_extractor_extract_content($entity, $original_url);
-    }
+  // Delete non-article content
+  if (!_news_extractor_is_article_url($original_url)) {
+    \Drupal::logger('news_extractor')->info('Deleting non-article content: @title (@url)', [
+      '@title' => $entity->getTitle(),
+      '@url' => $original_url,
+    ]);
+    $entity->delete();
+    return;
+  }
+
+  // Extract content if body is empty or too short
+  $body = $entity->get('body')->value;
+  if (empty($body) || strlen($body) < 500) {
+    _news_extractor_extract_content($entity, $original_url);
   }
 }
 
@@ -118,22 +88,48 @@ function news_extractor_node_update(EntityInterface $entity) {
     return;
   }
 
-  if ($entity->hasField('field_original_url') && !$entity->get('field_original_url')->isEmpty()) {
-    $original_url = $entity->get('field_original_url')->uri;
-    $original_entity = $entity->original;
+  if (!$entity->hasField('field_original_url') || $entity->get('field_original_url')->isEmpty()) {
+    return;
+  }
 
-    if (!$original_entity->get('field_original_url')->isEmpty()) {
-      $old_url = $original_entity->get('field_original_url')->uri;
-      if ($original_url != $old_url) {
-        _news_extractor_extract_content($entity, $original_url);
-      }
+  $original_url = $entity->get('field_original_url')->uri;
+  $original_entity = $entity->original;
+
+  // Only extract if URL has changed
+  if (!$original_entity->get('field_original_url')->isEmpty()) {
+    $old_url = $original_entity->get('field_original_url')->uri;
+    if ($original_url != $old_url) {
+      _news_extractor_extract_content($entity, $original_url);
     }
   }
 }
 
 /**
- * Check if URL is likely a news article (not podcast, video, ad, etc.).
- *
+ * Implements hook_cron().
+ * Process any articles that might have failed extraction during cron runs.
+ */
+function news_extractor_cron() {
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_original_url.uri', '', '<>')
+    ->condition('body.value', '', '=')
+    ->range(0, 10)
+    ->accessCheck(FALSE);
+
+  $nids = $query->execute();
+
+  if (!empty($nids)) {
+    $nodes = Node::loadMultiple($nids);
+    foreach ($nodes as $node) {
+      $original_url = $node->get('field_original_url')->uri;
+      _news_extractor_extract_content($node, $original_url);
+    }
+    \Drupal::logger('news_extractor')->info('Processed @count articles during cron run', [
+      '@count' => count($nids),
+    ]);
+  }
+}
+
 /**
  * Generate AI summary using AWS Bedrock Claude.
  */
@@ -145,13 +141,7 @@ function _news_extractor_generate_ai_summary($article_text, $article_title) {
     ]);
     $bedrock = $sdk->createBedrockRuntime();
 
-    $prompt = "Please provide a neutral, analytical summary of this news article. Include:\n\n";
-    $prompt .= "1. Key points (2-3 sentences)\n";
-    $prompt .= "2. Main facts and any important quotes\n";
-    $prompt .= "3. Brief analysis of significance\n\n";
-    $prompt .= "Keep the summary to 2-3 paragraphs total.\n\n";
-    $prompt .= "Article Title: " . $article_title . "\n\n";
-    $prompt .= "Article Text: " . $article_text;
+    $prompt = _news_extractor_build_ai_prompt($article_title, $article_text);
 
     $response = $bedrock->invokeModel([
       'modelId' => 'anthropic.claude-3-5-sonnet-20240620-v1:0',
@@ -191,10 +181,12 @@ function _news_extractor_get_or_create_tag($tag_name) {
     'name' => $tag_name,
     'vid' => 'tags',
   ]);
+
   if (!empty($terms)) {
     $term = reset($terms);
     return $term->id();
   }
+
   try {
     $term = $term_storage->create([
       'name' => $tag_name,
@@ -208,32 +200,6 @@ function _news_extractor_get_or_create_tag($tag_name) {
       '@message' => $e->getMessage(),
     ]);
     return NULL;
-  }
-}
-
-/**
- * Implements hook_cron().
- * Process any articles that might have failed extraction during cron runs.
- */
-function news_extractor_cron() {
-  $query = \Drupal::entityQuery('node')
-    ->condition('type', 'article')
-    ->condition('field_original_url.uri', '', '<>')
-    ->condition('body.value', '', '=')
-    ->range(0, 10)
-    ->accessCheck(FALSE);
-
-  $nids = $query->execute();
-
-  if (!empty($nids)) {
-    $nodes = Node::loadMultiple($nids);
-    foreach ($nodes as $node) {
-      $original_url = $node->get('field_original_url')->uri;
-      _news_extractor_extract_content($node, $original_url);
-    }
-    \Drupal::logger('news_extractor')->info('Processed @count articles during cron run', [
-      '@count' => count($nids),
-    ]);
   }
 }
 
@@ -257,6 +223,66 @@ function _news_extractor_get_source_bias($source) {
     'Politico' => ['bias' => 'lean_left', 'credibility' => 72],
     'The Hill' => ['bias' => 'center', 'credibility' => 70],
   ];
-  $default = ['bias' => 'center', 'credibility' => 50];
-  return $source_ratings[$source] ?? $default;
+
+  return $source_ratings[$source] ?? ['bias' => 'center', 'credibility' => 50];
+}
+
+/**
+ * Helper function to check for blocked content in title and link.
+ */
+function _news_extractor_has_blocked_content($title, $link) {
+  $blocked_strings = [
+    'comparecards.com',
+    'fool.com',
+    'lendingtree.com',
+  ];
+
+  foreach ($blocked_strings as $str) {
+    if (stripos($title, $str) !== FALSE) {
+      \Drupal::logger('news_extractor')->info('Skipping blocked string in title: @title', [
+        '@title' => $title,
+      ]);
+      return TRUE;
+    }
+    
+    if (stripos($link, $str) !== FALSE) {
+      \Drupal::logger('news_extractor')->info('Skipping blocked string in link: @url', [
+        '@url' => $link,
+      ]);
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * Helper function to check for invalid titles.
+ */
+function _news_extractor_has_invalid_title($title) {
+  // Skip items with missing or empty titles
+  if (empty($title) || trim($title) == '') {
+    \Drupal::logger('news_extractor')->info('Skipping item with missing or empty title');
+    return TRUE;
+  }
+
+  // Skip items with very short titles
+  if (strlen(trim($title)) < 10) {
+    \Drupal::logger('news_extractor')->info('Skipping item with very short title: @title', [
+      '@title' => $title,
+    ]);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Helper function to build AI prompt for social scientist perspective.
+ */
+function _news_extractor_build_ai_prompt($article_title, $article_text) {
+  return "Write this from the perspective of a scientist that puts things in the context of key performance metrics of the United States.\n\n" .
+         "Select the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\n" .
+         "Article Title: " . $article_title . "\n\n" .
+         "Article Text: " . $article_text;
 }
