@@ -247,8 +247,8 @@ function news_extractor_generate_ai_summary(Node $node) {
     $node->set('field_ai_summary', [
       'value' => $ai_summary,
       'format' => 'basic_html',
-    ]);
+    ]); 
     $node->save();
   }
-}
+} 
 
