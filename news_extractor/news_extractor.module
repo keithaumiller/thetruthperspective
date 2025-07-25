@@ -296,65 +296,10 @@ function _news_extractor_has_invalid_title($title) {
 }
 
 /**
- * Helper function to build AI prompt for social scientist perspective.
- */
-function _news_extractor_build_ai_prompt($article_title, $article_text) {
-  return "Write this from the perspective of a scientist that puts things in the context of key performance metrics of the United States.\n\n" .
-         "Select the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\n" .
-         "List out each of the entities mentioned in the article including the author and their perceived motivations in the context of this article.\n\n" .
-         "Format your response exactly as follows:\n\n" .
-         "Entities mentioned:\n- Entity 1\n- Entity 2\n\n" .
-         "Motivations:\n- Motivation 1\n- Motivation 2\n\n" .
-         "Key metric: Metric Name\n\n" .
-         "Article Title: " . $article_title . "\n\n" .
-         "Article Text: " . $article_text;
-}
-
-/**
- * Extract entities, motivations, and metrics from the AI summary.
- * Assumes the AI summary lists these in a structured way.
- */
-function _news_extractor_extract_tags_from_summary($ai_summary) {
-  $entities = [];
-  $motivations = [];
-  $metrics = [];
-
-  // Example extraction logic (adjust to your AI summary format):
-  // Entities: lines starting with "- " under "Entities mentioned:"
-  if (preg_match('/Entities mentioned:(.*?)(?:Motivations:|Key metric:|$)/is', $ai_summary, $matches)) {
-    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
-      if (preg_match('/-\s*(.+)/', $line, $m)) {
-        $entities[] = trim($m[1]);
-      }
-    }
-  }
-
-  // Motivations: lines starting with "- " under "Motivations:"
-  if (preg_match('/Motivations:(.*?)(?:Entities mentioned:|Key metric:|$)/is', $ai_summary, $matches)) {
-    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
-      if (preg_match('/-\s*(.+)/', $line, $m)) {
-        $motivations[] = trim($m[1]);
-      }
-    }
-  }
-
-  // Key metric: single line after "Key metric:"
-  if (preg_match('/Key metric:\s*(.+)/i', $ai_summary, $matches)) {
-    $metrics[] = trim($matches[1]);
-  }
-
-  return [
-    'entities' => $entities,
-    'motivations' => $motivations,
-    'metrics' => $metrics,
-  ];
-}
-
-/**
- * Motivational category mapping based on thetruthperspective.org framework.
+ * Returns the motivational category mapping based on thetruthperspective.org framework.
  * Key: Lowercase motivation string, Value: Motivational category.
  */
-function _news_extractor_get_motivation_category($motivation) {
+function _news_extractor_get_motivation_map() {
   static $motivation_map = [
     // Self-Determination Theory
     'joy' => 'Intrinsic Motivation',
@@ -485,7 +430,73 @@ function _news_extractor_get_motivation_category($motivation) {
     'ambivalence' => 'Complex/Mixed Emotions',
     'poignancy' => 'Complex/Mixed Emotions',
   ];
+  return $motivation_map;
+}
 
+/**
+ * Motivational category mapping based on thetruthperspective.org framework.
+ */
+function _news_extractor_get_motivation_category($motivation) {
+  $motivation_map = _news_extractor_get_motivation_map();
   $key = strtolower(trim($motivation));
   return $motivation_map[$key] ?? 'Other';
+}
+
+/**
+ * Helper function to build AI prompt for social scientist perspective.
+ */
+function _news_extractor_build_ai_prompt($article_title, $article_text) {
+  $motivation_map = _news_extractor_get_motivation_map();
+  $allowed_motivations = implode(", ", array_keys($motivation_map));
+
+  return "Write this from the perspective of a scientist that puts things in the context of key performance metrics of the United States.\n\n" .
+         "Select the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\n" .
+         "List out each of the entities mentioned in the article including the author and their perceived motivations in the context of this article.\n\n" .
+         "Only use motivations/emotions from the following list: $allowed_motivations\n\n" .
+         "Format your response exactly as follows:\n\n" .
+         "Entities mentioned:\n- Entity 1\n- Entity 2\n\n" .
+         "Motivations:\n- Motivation 1\n- Motivation 2\n\n" .
+         "Key metric: Metric Name\n\n" .
+         "Article Title: " . $article_title . "\n\n" .
+         "Article Text: " . $article_text;
+}
+
+/**
+ * Extract entities, motivations, and metrics from the AI summary.
+ * Assumes the AI summary lists these in a structured way.
+ */
+function _news_extractor_extract_tags_from_summary($ai_summary) {
+  $entities = [];
+  $motivations = [];
+  $metrics = [];
+
+  // Example extraction logic (adjust to your AI summary format):
+  // Entities: lines starting with "- " under "Entities mentioned:"
+  if (preg_match('/Entities mentioned:(.*?)(?:Motivations:|Key metric:|$)/is', $ai_summary, $matches)) {
+    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
+      if (preg_match('/-\s*(.+)/', $line, $m)) {
+        $entities[] = trim($m[1]);
+      }
+    }
+  }
+
+  // Motivations: lines starting with "- " under "Motivations:"
+  if (preg_match('/Motivations:(.*?)(?:Entities mentioned:|Key metric:|$)/is', $ai_summary, $matches)) {
+    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
+      if (preg_match('/-\s*(.+)/', $line, $m)) {
+        $motivations[] = trim($m[1]);
+      }
+    }
+  }
+
+  // Key metric: single line after "Key metric:"
+  if (preg_match('/Key metric:\s*(.+)/i', $ai_summary, $matches)) {
+    $metrics[] = trim($matches[1]);
+  }
+
+  return [
+    'entities' => $entities,
+    'motivations' => $motivations,
+    'metrics' => $metrics,
+  ];
 }
