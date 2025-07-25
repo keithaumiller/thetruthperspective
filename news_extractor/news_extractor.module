@@ -51,31 +51,12 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
   $image_url = $item['image'] ?? ($item['media:content'] ?? '');
 
   if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
-    try {
-      // Download image to temporary location
-      $data = file_get_contents($image_url);
-      if ($data !== false) {
-        $filename = basename(parse_url($image_url, PHP_URL_PATH));
-        $temp_path = 'public://' . uniqid('feedimg_') . '_' . $filename;
-        file_put_contents($temp_path, $data);
-
-        // Save as Drupal file entity
-        $file = \Drupal\file\Entity\File::create([
-          'uri' => $temp_path,
-          'status' => 1,
-        ]);
-        $file->save();
-
-        // Attach file to node image field
-        if ($entity_interface->getTarget()->hasField('field_image')) {
-          $entity_interface->getTarget()->set('field_image', [
-            'target_id' => $file->id(),
-            'alt' => $item['title'] ?? '',
-          ]);
-        }
-      }
-    } catch (\Exception $e) {
-      \Drupal::logger('news_extractor')->error('Error attaching image: @msg', ['@msg' => $e->getMessage()]);
+    // Store the image URL in the node's link field
+    if ($entity_interface->getTarget()->hasField('field_external_image_url')) {
+      $entity_interface->getTarget()->set('field_external_image_url', [
+        'uri' => $image_url,
+        'title' => $item['title'] ?? '',
+      ]);
     }
   }
   // --- End image linking logic ---
