@@ -76,6 +76,24 @@ function news_extractor_node_insert(EntityInterface $entity) {
   $body = $entity->get('body')->value;
   if (empty($body) || strlen($body) < 500) {
     _news_extractor_extract_content($entity, $original_url);
+
+    // --- Tagging logic ---
+    // Get the AI summary from the entity
+    $ai_summary = $entity->get('field_ai_summary')->value ?? '';
+    if (!empty($ai_summary)) {
+      $tags = _news_extractor_extract_tags_from_summary($ai_summary);
+      $all_tags = array_merge($tags['entities'], $tags['motivations'], $tags['metrics']);
+      $tag_ids = [];
+      foreach ($all_tags as $tag) {
+        $tid = _news_extractor_get_or_create_tag($tag);
+        if ($tid) $tag_ids[] = $tid;
+      }
+      if (!empty($tag_ids)) {
+        $entity->set('field_tags', $tag_ids);
+        $entity->save();
+      }
+    }
+    // --- End tagging logic ---
   }
 }
 
@@ -283,7 +301,51 @@ function _news_extractor_has_invalid_title($title) {
 function _news_extractor_build_ai_prompt($article_title, $article_text) {
   return "Write this from the perspective of a scientist that puts things in the context of key performance metrics of the United States.\n\n" .
          "Select the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\n" .
-         "list out each of the entities mentioned in the article including the author and their percieved motivations in the context of this article.\n\n" .
+         "List out each of the entities mentioned in the article including the author and their perceived motivations in the context of this article.\n\n" .
+         "Format your response exactly as follows:\n\n" .
+         "Entities mentioned:\n- Entity 1\n- Entity 2\n\n" .
+         "Motivations:\n- Motivation 1\n- Motivation 2\n\n" .
+         "Key metric: Metric Name\n\n" .
          "Article Title: " . $article_title . "\n\n" .
          "Article Text: " . $article_text;
+}
+
+/**
+ * Extract entities, motivations, and metrics from the AI summary.
+ * Assumes the AI summary lists these in a structured way.
+ */
+function _news_extractor_extract_tags_from_summary($ai_summary) {
+  $entities = [];
+  $motivations = [];
+  $metrics = [];
+
+  // Example extraction logic (adjust to your AI summary format):
+  // Entities: lines starting with "- " under "Entities mentioned:"
+  if (preg_match('/Entities mentioned:(.*?)(?:Motivations:|Key metric:|$)/is', $ai_summary, $matches)) {
+    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
+      if (preg_match('/-\s*(.+)/', $line, $m)) {
+        $entities[] = trim($m[1]);
+      }
+    }
+  }
+
+  // Motivations: lines starting with "- " under "Motivations:"
+  if (preg_match('/Motivations:(.*?)(?:Entities mentioned:|Key metric:|$)/is', $ai_summary, $matches)) {
+    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
+      if (preg_match('/-\s*(.+)/', $line, $m)) {
+        $motivations[] = trim($m[1]);
+      }
+    }
+  }
+
+  // Key metric: single line after "Key metric:"
+  if (preg_match('/Key metric:\s*(.+)/i', $ai_summary, $matches)) {
+    $metrics[] = trim($matches[1]);
+  }
+
+  return [
+    'entities' => $entities,
+    'motivations' => $motivations,
+    'metrics' => $metrics,
+  ];
 }
