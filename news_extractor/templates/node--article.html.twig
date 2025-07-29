@@ -1,0 +1,10 @@
+{# Display external image if the field is set #}
+<p style="color: red;">[node-article.html.twig is ACTIVE]</p>
+{% if node.field_external_image_url.0 %}
+  <img src="{{ node.field_external_image_url.0.uri }}" alt="{{ node.title.value }}" />
+{% endif %}
+{{ dump(node.field_external_image_url) }}
+{{ node.field_external_image_url }}
+{{ node.field_external_image_url.0 }}
+{{ node.field_external_image_url.0.uri }}
+{{ node.field_external_image_url.0.value }}
