@@ -182,6 +182,7 @@ function _news_extractor_is_article_url($url) {
 function news_extractor_update_articles_missing_body_from_diffbot() {
   $nids = \Drupal::entityQuery('node')
     ->condition('type', 'article')
+    ->accessCheck(FALSE)  // Add this line
     ->execute();
 
   foreach ($nids as $nid) {
@@ -309,6 +310,7 @@ function news_extractor_format_structured_display($json_data) {
 function news_extractor_update_motivation_analysis_formatting() {
   $nids = \Drupal::entityQuery('node')
     ->condition('type', 'article')
+    ->accessCheck(FALSE)  // Add this line
     ->execute();
 
   $processed = 0;
