@@ -29,27 +29,16 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
     $data = json_decode($response->getBody()->getContents(), TRUE);
 
     if (isset($data['objects'][0]['text'])) {
-      // Update article with extracted content
+      // --- Update article with extracted content ---
       _news_extractor_update_article($entity, $data['objects'][0]);
-      
-      // Generate AI summary using the existing function from news_extractor.module
-      $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
-      
-      if ($ai_summary && $entity->hasField('field_ai_summary')) {
-        $entity->set('field_ai_summary', [
-          'value' => $ai_summary,
-          'format' => 'basic_html',
-        ]);
-        $entity->save();
-        \Drupal::logger('news_extractor')->info('Generated AI summary for: @title', [
-          '@title' => $entity->getTitle(),
-        ]);
-      }
 
-      // Generate Motivation Analysis
+      // --- Generate Motivation Analysis ---
+      $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
       if ($ai_summary && $entity->hasField('field_motivation_analysis')) {
+        // Format the Motivation Analysis for readability
+        $motivation_analysis = news_extractor_format_motivation_analysis($ai_summary);
         $entity->set('field_motivation_analysis', [
-          'value' => $ai_summary,
+          'value' => $motivation_analysis,
           'format' => 'basic_html',
         ]);
         $entity->save();
@@ -185,4 +174,28 @@ function news_extractor_update_articles_missing_body_from_diffbot() {
     }
   }
 }
+
+/**
+ * Format the motivation analysis text with proper line breaks.
+ */
+function news_extractor_format_motivation_analysis($text) {
+  // Add a line break after "Entities mentioned:" and its list
+  $text = preg_replace('/(Entities mentioned:)(.*?)(Motivations:)/s', "$1$2\n\n$3", $text);
+
+  // Add a line break after "Motivations:" and its list
+  $text = preg_replace('/(Motivations:)(.*?)(Key metric:)/s', "$1$2\n\n$3", $text);
+
+  // Add a line break after "Key metric:" line
+  $text = preg_replace('/(Key metric:.*?)(\n|$)/', "$1\n\n", $text);
+
+  return $text;
+}
+
+// Additional processing for motivation analysis
+$motivation_analysis_raw = $entity->get('field_motivation_analysis')->value;
+$motivation_analysis = news_extractor_format_motivation_analysis($motivation_analysis_raw);
+$entity->set('field_motivation_analysis', [
+  'value' => $motivation_analysis,
+  'format' => 'basic_html', // or your preferred format
+]);
 
