@@ -303,3 +303,53 @@ function news_extractor_format_structured_display($json_data) {
   return $output;
 }
 
+/**
+ * Update the formatting for motivation analysis field on all existing article nodes.
+ */
+function news_extractor_update_motivation_analysis_formatting() {
+  $nids = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->execute();
+
+  $processed = 0;
+  $updated = 0;
+
+  foreach ($nids as $nid) {
+    $node = Node::load($nid);
+    
+    if ($node && $node->hasField('field_motivation_analysis') && !$node->get('field_motivation_analysis')->isEmpty()) {
+      $original_analysis = $node->get('field_motivation_analysis')->value;
+      
+      // Apply formatting
+      $formatted_analysis = news_extractor_format_motivation_analysis($original_analysis);
+      
+      // Only update if the content actually changed
+      if ($formatted_analysis !== $original_analysis) {
+        $node->set('field_motivation_analysis', [
+          'value' => $formatted_analysis,
+          'format' => $node->get('field_motivation_analysis')->format,
+        ]);
+        $node->save();
+        $updated++;
+        
+        \Drupal::logger('news_extractor')->info('Updated motivation analysis formatting for: @title (nid: @nid)', [
+          '@title' => $node->getTitle(),
+          '@nid' => $nid,
+        ]);
+      }
+      
+      $processed++;
+    }
+  }
+
+  \Drupal::logger('news_extractor')->info('Motivation analysis formatting update complete. Processed: @processed, Updated: @updated', [
+    '@processed' => $processed,
+    '@updated' => $updated,
+  ]);
+
+  return [
+    'processed' => $processed,
+    'updated' => $updated,
+  ];
+}
+
