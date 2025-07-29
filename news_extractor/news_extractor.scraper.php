@@ -364,3 +364,35 @@ function news_extractor_update_motivation_analysis_formatting() {
   ];
 }
 
+/**
+ * Debug function to see what's happening with formatting.
+ */
+function news_extractor_debug_motivation_analysis_formatting() {
+  $nids = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->accessCheck(FALSE)
+    ->range(0, 3) // Just check first 3 nodes for debugging
+    ->execute();
+
+  foreach ($nids as $nid) {
+    $node = Node::load($nid);
+    
+    if ($node && $node->hasField('field_motivation_analysis') && !$node->get('field_motivation_analysis')->isEmpty()) {
+      $original_analysis = $node->get('field_motivation_analysis')->value;
+      $formatted_analysis = news_extractor_format_motivation_analysis($original_analysis);
+      
+      echo "\n=== NODE $nid: " . $node->getTitle() . " ===\n";
+      echo "ORIGINAL LENGTH: " . strlen($original_analysis) . "\n";
+      echo "FORMATTED LENGTH: " . strlen($formatted_analysis) . "\n";
+      echo "CONTENT CHANGED: " . ($formatted_analysis !== $original_analysis ? 'YES' : 'NO') . "\n";
+      echo "ORIGINAL (first 300 chars): " . substr($original_analysis, 0, 300) . "...\n";
+      echo "FORMATTED (first 300 chars): " . substr($formatted_analysis, 0, 300) . "...\n";
+      echo "\n";
+      
+      if ($formatted_analysis !== $original_analysis) {
+        echo "DIFFERENCE DETECTED - This node would be updated.\n";
+      }
+    }
+  }
+}
+
