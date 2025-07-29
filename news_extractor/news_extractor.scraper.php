@@ -208,22 +208,28 @@ function news_extractor_update_articles_missing_body_from_diffbot() {
  * Format the motivation analysis text with proper line breaks.
  */
 function news_extractor_format_motivation_analysis($text) {
-  // Add line breaks before "Entities mentioned:" section
-  $text = preg_replace('/(\s*)Entities mentioned:/i', "\n\nEntities mentioned:", $text);
+  // Handle the specific format where sections run together
+  // Add line breaks before "Entities mentioned:" when it follows other text
+  $text = preg_replace('/([^\n])\s*Entities mentioned:/i', "$1\n\nEntities mentioned:", $text);
   
-  // Add line breaks before "Motivations:" section  
-  $text = preg_replace('/(\s*)Motivations:/i', "\n\nMotivations:", $text);
+  // Add line breaks before "Motivations:" when it follows other text
+  $text = preg_replace('/([^\n])\s*Motivations:/i', "$1\n\nMotivations:", $text);
   
-  // Add line breaks before "Key metric:" section
-  $text = preg_replace('/(\s*)Key metric:/i', "\n\nKey metric:", $text);
+  // Add line breaks before "Key metric:" when it follows other text (handles HTML tags)
+  $text = preg_replace('/([^\n])\s*Key metric:/i', "$1\n\nKey metric:", $text);
   
-  // Add extra spacing after the key metric line before the analysis paragraph
-  $text = preg_replace('/(Key metric:.*?)(\s*As a social scientist)/i', "$1\n\n$2", $text);
+  // Special handling for when sections immediately follow each other
+  // This handles cases where there are HTML links between sections
+  $text = preg_replace('/(<\/a>)\s*Motivations:/i', "$1\n\nMotivations:", $text);
+  $text = preg_replace('/(<\/a>)\s*Key metric:/i', "$1\n\nKey metric:", $text);
   
-  // Clean up any triple+ line breaks to double line breaks
-  $text = preg_replace('/\n{3,}/', "\n\n", $text);
+  // Add extra spacing after key metric before the analysis paragraph
+  $text = preg_replace('/(Key metric:[^\n]*)\s*([A-Z])/i', "$1\n\n\n$2", $text);
   
-  // Trim leading/trailing whitespace but preserve the structure
+  // Clean up excessive line breaks
+  $text = preg_replace('/\n{4,}/', "\n\n\n", $text);
+  
+  // Trim whitespace
   $text = trim($text);
 
   return $text;
@@ -392,6 +398,34 @@ function news_extractor_debug_motivation_analysis_formatting() {
       if ($formatted_analysis !== $original_analysis) {
         echo "DIFFERENCE DETECTED - This node would be updated.\n";
       }
+    }
+  }
+}
+
+/**
+ * Debug function to check the newest nodes for formatting issues.
+ */
+function news_extractor_debug_newest_motivation_analysis() {
+  $nids = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->accessCheck(FALSE)
+    ->sort('created', 'DESC') // Get newest first
+    ->range(0, 5) // Check last 5 nodes
+    ->execute();
+
+  foreach ($nids as $nid) {
+    $node = Node::load($nid);
+    
+    if ($node && $node->hasField('field_motivation_analysis') && !$node->get('field_motivation_analysis')->isEmpty()) {
+      $analysis = $node->get('field_motivation_analysis')->value;
+      
+      echo "\n=== NEWEST NODE $nid: " . $node->getTitle() . " ===\n";
+      echo "CREATED: " . date('Y-m-d H:i:s', $node->getCreatedTime()) . "\n";
+      echo "CONTENT LENGTH: " . strlen($analysis) . "\n";
+      
+      // Show more content to see the structure
+      echo "FULL CONTENT:\n" . $analysis . "\n";
+      echo "=" . str_repeat("=", 80) . "\n";
     }
   }
 }
