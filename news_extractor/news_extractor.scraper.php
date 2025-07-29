@@ -35,39 +35,41 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
       // --- Generate Motivation Analysis ---
       $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
       if ($ai_summary && $entity->hasField('field_motivation_analysis')) {
-        // Format the Motivation Analysis for readability
+        // Extract and store structured data FIRST
+        if ($entity->hasField('field_motivation_data')) {
+          $structured_data = _news_extractor_extract_structured_data($ai_summary);
+          $entity->set('field_motivation_data', json_encode($structured_data));
+        }
+
+        // Create simple tags for browsing
+        if (isset($structured_data)) {
+          $simple_tags = [];
+          foreach ($structured_data['entities'] as $entity_data) {
+            $simple_tags[] = $entity_data['name']; // Entity tag
+            foreach ($entity_data['motivations'] as $motivation) {
+              $simple_tags[] = $motivation; // Motivation tag
+            }
+          }
+          $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
+
+          // Create taxonomy terms
+          $tag_ids = [];
+          foreach (array_unique($simple_tags) as $tag) {
+            $tid = _news_extractor_get_or_create_tag($tag);
+            if ($tid) $tag_ids[] = $tid;
+          }
+
+          if (!empty($tag_ids)) {
+            $entity->set('field_tags', $tag_ids);
+          }
+        }
+
+        // Format the Motivation Analysis for readability LAST
         $motivation_analysis = news_extractor_format_motivation_analysis($ai_summary);
         $entity->set('field_motivation_analysis', [
           'value' => $motivation_analysis,
           'format' => 'basic_html',
         ]);
-
-        // Extract and store structured data
-        if ($entity->hasField('field_motivation_data')) {
-          $structured_data = _news_extractor_extract_structured_data($motivation_analysis);
-          $entity->set('field_motivation_data', json_encode($structured_data));
-        }
-
-        // Create simple tags for browsing
-        $simple_tags = [];
-        foreach ($structured_data['entities'] as $entity_data) {
-          $simple_tags[] = $entity_data['name']; // Entity tag
-          foreach ($entity_data['motivations'] as $motivation) {
-            $simple_tags[] = $motivation; // Motivation tag
-          }
-        }
-        $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
-
-        // Create taxonomy terms
-        $tag_ids = [];
-        foreach (array_unique($simple_tags) as $tag) {
-          $tid = _news_extractor_get_or_create_tag($tag);
-          if ($tid) $tag_ids[] = $tid;
-        }
-
-        if (!empty($tag_ids)) {
-          $entity->set('field_tags', $tag_ids);
-        }
 
         $entity->save();
         \Drupal::logger('news_extractor')->info('Generated Motivation Analysis for: @title', [
@@ -208,6 +210,9 @@ function news_extractor_update_articles_missing_body_from_diffbot() {
  * Format the motivation analysis text with proper line breaks.
  */
 function news_extractor_format_motivation_analysis($text) {
+  // Remove any existing <p> tags and clean up HTML
+  $text = strip_tags($text, '<a>');
+  
   // Handle the specific format where sections run together
   // Add line breaks before "Entities mentioned:" when it follows other text
   $text = preg_replace('/([^\n])\s*Entities mentioned:/i', "$1\n\nEntities mentioned:", $text);
@@ -215,7 +220,7 @@ function news_extractor_format_motivation_analysis($text) {
   // Add line breaks before "Motivations:" when it follows other text
   $text = preg_replace('/([^\n])\s*Motivations:/i', "$1\n\nMotivations:", $text);
   
-  // Add line breaks before "Key metric:" when it follows other text (handles HTML tags)
+  // Add line breaks before "Key metric:" when it follows other text
   $text = preg_replace('/([^\n])\s*Key metric:/i', "$1\n\nKey metric:", $text);
   
   // Special handling for when sections immediately follow each other
@@ -224,7 +229,7 @@ function news_extractor_format_motivation_analysis($text) {
   $text = preg_replace('/(<\/a>)\s*Key metric:/i', "$1\n\nKey metric:", $text);
   
   // Add extra spacing after key metric before the analysis paragraph
-  $text = preg_replace('/(Key metric:[^\n]*)\s*([A-Z])/i', "$1\n\n\n$2", $text);
+  $text = preg_replace('/(Key metric:[^\n]*)\s*(As a social scientist)/i', "$1\n\n\n$2", $text);
   
   // Clean up excessive line breaks
   $text = preg_replace('/\n{4,}/', "\n\n\n", $text);
