@@ -46,6 +46,18 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         ]);
       }
 
+      // Generate Motivation Analysis
+      if ($ai_summary && $entity->hasField('field_motivation_analysis')) {
+        $entity->set('field_motivation_analysis', [
+          'value' => $ai_summary,
+          'format' => 'basic_html',
+        ]);
+        $entity->save();
+        \Drupal::logger('news_extractor')->info('Generated Motivation Analysis for: @title', [
+          '@title' => $entity->getTitle(),
+        ]);
+      }
+
       \Drupal::logger('news_extractor')->info('Successfully processed article: @title', [
         '@title' => $entity->getTitle(),
       ]);
