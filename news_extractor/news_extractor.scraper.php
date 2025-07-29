@@ -35,13 +35,13 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
       // --- Generate Motivation Analysis ---
       $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
       if ($ai_summary && $entity->hasField('field_motivation_analysis')) {
-        // Extract and store structured data FIRST
+        // Extract and store structured data FIRST (for JSON field)
         if ($entity->hasField('field_motivation_data')) {
           $structured_data = _news_extractor_extract_structured_data($ai_summary);
           $entity->set('field_motivation_data', json_encode($structured_data));
         }
 
-        // Create simple tags for browsing
+        // Create simple tags for browsing (entities + motivations + metrics)
         if (isset($structured_data)) {
           $simple_tags = [];
           foreach ($structured_data['entities'] as $entity_data) {
@@ -64,7 +64,7 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           }
         }
 
-        // Format the Motivation Analysis for readability LAST
+        // Format the Motivation Analysis for display (with proper <br> spacing)
         $motivation_analysis = news_extractor_format_motivation_analysis($ai_summary);
         $entity->set('field_motivation_analysis', [
           'value' => $motivation_analysis,
@@ -217,15 +217,11 @@ function news_extractor_format_motivation_analysis($text) {
   // Add line breaks before "Entities mentioned:" when it follows other text
   $text = preg_replace('/([^\n])\s*Entities mentioned:/i', "$1<br><br>Entities mentioned:", $text);
   
-  // Add line breaks before "Motivations:" when it follows other text
-  $text = preg_replace('/([^\n])\s*Motivations:/i', "$1<br><br>Motivations:", $text);
-  
   // Add line breaks before "Key metric:" when it follows other text
   $text = preg_replace('/([^\n])\s*Key metric:/i', "$1<br><br>Key metric:", $text);
   
   // Special handling for when sections immediately follow each other
   // This handles cases where there are HTML links between sections
-  $text = preg_replace('/(<\/a>)\s*Motivations:/i', "$1<br><br>Motivations:", $text);
   $text = preg_replace('/(<\/a>)\s*Key metric:/i', "$1<br><br>Key metric:", $text);
   
   // Add extra spacing after key metric before the analysis paragraph
@@ -250,34 +246,25 @@ function _news_extractor_extract_structured_data($motivation_analysis) {
     'metrics' => []
   ];
 
-  // Extract entities and their motivations
-  if (preg_match_all('/- (.+?):\s*(.+?)(?=\n-|\nMotivations:|\nKey metric:|$)/s', $motivation_analysis, $matches, PREG_SET_ORDER)) {
-    foreach ($matches as $match) {
-      $entity = trim($match[1]);
-      $motivations_text = trim($match[2]);
-      $motivations = array_map('trim', explode(',', $motivations_text));
-      
-      $data['entities'][] = [
-        'name' => $entity,
-        'motivations' => $motivations
-      ];
-      
-      // Also collect unique motivations
-      foreach ($motivations as $motivation) {
-        if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
-          $data['motivations'][] = $motivation;
+  // Extract entities with their motivations: "- Entity Name: Motivation1, Motivation2, Motivation3"
+  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $motivation_analysis, $matches)) {
+    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
+      if (preg_match('/-\s*(.+?):\s*(.+)/', $line, $m)) {
+        $entity = trim($m[1]);
+        $motivations_text = trim($m[2]);
+        $motivations = array_map('trim', explode(',', $motivations_text));
+        
+        $data['entities'][] = [
+          'name' => $entity,
+          'motivations' => $motivations
+        ];
+        
+        // Also collect unique motivations
+        foreach ($motivations as $motivation) {
+          if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
+            $data['motivations'][] = $motivation;
+          }
         }
-      }
-    }
-  }
-
-  // Extract general motivations section (if different format)
-  if (preg_match('/Motivations:(.*?)(?:Key metric:|$)/is', $motivation_analysis, $matches)) {
-    preg_match_all('/- (.+)/', $matches[1], $motivation_matches);
-    foreach ($motivation_matches[1] as $motivation) {
-      $motivation = trim($motivation);
-      if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
-        $data['motivations'][] = $motivation;
       }
     }
   }
@@ -288,40 +275,6 @@ function _news_extractor_extract_structured_data($motivation_analysis) {
   }
 
   return $data;
-}
-
-/**
- * Format structured motivation data for display.
- */
-function news_extractor_format_structured_display($json_data) {
-  $data = json_decode($json_data, TRUE);
-  if (!$data) return '';
-
-  $output = '';
-
-  // Entities section
-  if (!empty($data['entities'])) {
-    $output .= "\nEntities mentioned:\n";
-    foreach ($data['entities'] as $entity) {
-      $motivations = implode(', ', $entity['motivations']);
-      $output .= "- {$entity['name']}: {$motivations}\n";
-    }
-  }
-
-  // General motivations (if any not tied to entities)
-  if (!empty($data['motivations'])) {
-    $output .= "\nMotivations:\n";
-    foreach ($data['motivations'] as $motivation) {
-      $output .= "- {$motivation}\n";
-    }
-  }
-
-  // Key metrics
-  if (!empty($data['metrics'])) {
-    $output .= "\nKey metric: " . implode(', ', $data['metrics']) . "\n\n";
-  }
-
-  return $output;
 }
 
 /**
