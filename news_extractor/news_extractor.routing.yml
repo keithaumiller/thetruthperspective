@@ -1,0 +1,7 @@
+news_extractor.settings:
+  path: '/admin/config/services/news-extractor'
+  defaults:
+    _form: '\Drupal\news_extractor\Form\NewsExtractorSettingsForm'
+    _title: 'News Extractor Settings'
+  requirements:
+    _permission: 'administer site configuration'

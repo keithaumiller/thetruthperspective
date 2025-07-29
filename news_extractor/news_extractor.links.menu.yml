@@ -1,0 +1,6 @@
+news_extractor.settings:
+  title: 'News Extractor Settings'
+  description: 'Configure the Diffbot API token for News Extractor.'
+  parent: system.admin_config_services
+  route_name: news_extractor.settings
+  weight: 100
