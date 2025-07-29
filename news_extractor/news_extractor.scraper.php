@@ -430,3 +430,48 @@ function news_extractor_debug_newest_motivation_analysis() {
   }
 }
 
+/**
+ * Simple test function to verify the update is working.
+ */
+function news_extractor_test_update() {
+  echo "Starting update test...\n";
+  
+  $nids = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->accessCheck(FALSE)
+    ->range(0, 5) // Just test 5 nodes
+    ->execute();
+
+  echo "Found " . count($nids) . " article nodes\n";
+
+  $processed = 0;
+  $updated = 0;
+
+  foreach ($nids as $nid) {
+    $node = Node::load($nid);
+    echo "Checking node $nid: " . $node->getTitle() . "\n";
+    
+    if ($node && $node->hasField('field_motivation_analysis') && !$node->get('field_motivation_analysis')->isEmpty()) {
+      $original_analysis = $node->get('field_motivation_analysis')->value;
+      $formatted_analysis = news_extractor_format_motivation_analysis($original_analysis);
+      
+      echo "  - Has motivation analysis: " . strlen($original_analysis) . " chars\n";
+      echo "  - Content changed: " . ($formatted_analysis !== $original_analysis ? 'YES' : 'NO') . "\n";
+      
+      // Show first part of content to see what we're working with
+      echo "  - Content preview: " . substr(str_replace("\n", "\\n", $original_analysis), 0, 150) . "...\n";
+      
+      if ($formatted_analysis !== $original_analysis) {
+        echo "  - WOULD UPDATE NODE $nid\n";
+        $updated++;
+      }
+      
+      $processed++;
+    } else {
+      echo "  - No motivation analysis field or empty\n";
+    }
+  }
+
+  echo "Test complete. Processed: $processed, Would update: $updated\n";
+}
+
