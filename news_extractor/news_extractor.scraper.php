@@ -208,14 +208,23 @@ function news_extractor_update_articles_missing_body_from_diffbot() {
  * Format the motivation analysis text with proper line breaks.
  */
 function news_extractor_format_motivation_analysis($text) {
-  // Add a line break before and after "Entities mentioned:" and its list
-  $text = preg_replace('/(Entities mentioned:)(.*?)(Motivations:)/s', "\n$1$2\n\n$3", $text);
-
-  // Add a line break after "Motivations:" and its list
-  $text = preg_replace('/(Motivations:)(.*?)(Key metric:)/s', "\n$1$2\n\n$3", $text);
-
-  // Add a couple lines after "Key metric:" line
-  $text = preg_replace('/(Key metric:.*?)(\n|$)/', "\n$1\n\n\n", $text);
+  // Add line breaks before "Entities mentioned:" section
+  $text = preg_replace('/(\s*)Entities mentioned:/i', "\n\nEntities mentioned:", $text);
+  
+  // Add line breaks before "Motivations:" section  
+  $text = preg_replace('/(\s*)Motivations:/i', "\n\nMotivations:", $text);
+  
+  // Add line breaks before "Key metric:" section
+  $text = preg_replace('/(\s*)Key metric:/i', "\n\nKey metric:", $text);
+  
+  // Add extra spacing after the key metric line before the analysis paragraph
+  $text = preg_replace('/(Key metric:.*?)(\s*As a social scientist)/i', "$1\n\n$2", $text);
+  
+  // Clean up any triple+ line breaks to double line breaks
+  $text = preg_replace('/\n{3,}/', "\n\n", $text);
+  
+  // Trim leading/trailing whitespace but preserve the structure
+  $text = trim($text);
 
   return $text;
 }
