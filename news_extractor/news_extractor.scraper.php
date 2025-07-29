@@ -41,6 +41,34 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           'value' => $motivation_analysis,
           'format' => 'basic_html',
         ]);
+
+        // Extract and store structured data
+        if ($entity->hasField('field_motivation_data')) {
+          $structured_data = _news_extractor_extract_structured_data($motivation_analysis);
+          $entity->set('field_motivation_data', json_encode($structured_data));
+        }
+
+        // Create simple tags for browsing
+        $simple_tags = [];
+        foreach ($structured_data['entities'] as $entity_data) {
+          $simple_tags[] = $entity_data['name']; // Entity tag
+          foreach ($entity_data['motivations'] as $motivation) {
+            $simple_tags[] = $motivation; // Motivation tag
+          }
+        }
+        $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
+
+        // Create taxonomy terms
+        $tag_ids = [];
+        foreach (array_unique($simple_tags) as $tag) {
+          $tid = _news_extractor_get_or_create_tag($tag);
+          if ($tid) $tag_ids[] = $tid;
+        }
+
+        if (!empty($tag_ids)) {
+          $entity->set('field_tags', $tag_ids);
+        }
+
         $entity->save();
         \Drupal::logger('news_extractor')->info('Generated Motivation Analysis for: @title', [
           '@title' => $entity->getTitle(),
@@ -189,5 +217,89 @@ function news_extractor_format_motivation_analysis($text) {
   $text = preg_replace('/(Key metric:.*?)(\n|$)/', "\n$1\n\n\n\n", $text);
 
   return $text;
+}
+
+/**
+ * Extract structured motivation data from AI summary.
+ */
+function _news_extractor_extract_structured_data($motivation_analysis) {
+  $data = [
+    'entities' => [],
+    'motivations' => [],
+    'metrics' => []
+  ];
+
+  // Extract entities and their motivations
+  if (preg_match_all('/- (.+?):\s*(.+?)(?=\n-|\nMotivations:|\nKey metric:|$)/s', $motivation_analysis, $matches, PREG_SET_ORDER)) {
+    foreach ($matches as $match) {
+      $entity = trim($match[1]);
+      $motivations_text = trim($match[2]);
+      $motivations = array_map('trim', explode(',', $motivations_text));
+      
+      $data['entities'][] = [
+        'name' => $entity,
+        'motivations' => $motivations
+      ];
+      
+      // Also collect unique motivations
+      foreach ($motivations as $motivation) {
+        if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
+          $data['motivations'][] = $motivation;
+        }
+      }
+    }
+  }
+
+  // Extract general motivations section (if different format)
+  if (preg_match('/Motivations:(.*?)(?:Key metric:|$)/is', $motivation_analysis, $matches)) {
+    preg_match_all('/- (.+)/', $matches[1], $motivation_matches);
+    foreach ($motivation_matches[1] as $motivation) {
+      $motivation = trim($motivation);
+      if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
+        $data['motivations'][] = $motivation;
+      }
+    }
+  }
+
+  // Extract key metric
+  if (preg_match('/Key metric:\s*(.+)/i', $motivation_analysis, $matches)) {
+    $data['metrics'][] = trim($matches[1]);
+  }
+
+  return $data;
+}
+
+/**
+ * Format structured motivation data for display.
+ */
+function news_extractor_format_structured_display($json_data) {
+  $data = json_decode($json_data, TRUE);
+  if (!$data) return '';
+
+  $output = '';
+
+  // Entities section
+  if (!empty($data['entities'])) {
+    $output .= "\nEntities mentioned:\n";
+    foreach ($data['entities'] as $entity) {
+      $motivations = implode(', ', $entity['motivations']);
+      $output .= "- {$entity['name']}: {$motivations}\n";
+    }
+  }
+
+  // General motivations (if any not tied to entities)
+  if (!empty($data['motivations'])) {
+    $output .= "\nMotivations:\n";
+    foreach ($data['motivations'] as $motivation) {
+      $output .= "- {$motivation}\n";
+    }
+  }
+
+  // Key metrics
+  if (!empty($data['metrics'])) {
+    $output .= "\nKey metric: " . implode(', ', $data['metrics']) . "\n\n";
+  }
+
+  return $output;
 }
 
