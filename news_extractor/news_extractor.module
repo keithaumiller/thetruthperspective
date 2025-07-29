@@ -109,6 +109,8 @@ function news_extractor_node_insert(EntityInterface $entity) {
       }
     }
     // --- End tagging logic ---
+    // Post-process to fetch and set external image URL
+    news_extractor_postprocess_article_image($entity);
   }
 }
 
@@ -514,4 +516,67 @@ function _news_extractor_extract_tags_from_summary($ai_summary) {
     'motivations' => $motivations,
     'metrics' => $metrics,
   ];
+}
+
+/**
+ * Post-process article node to fetch and set external image URL from Diffbot.
+ */
+function news_extractor_postprocess_article_image(Node $node) {
+  // Only process article nodes with an original URL.
+  if ($node->bundle() !== 'article' || !$node->hasField('field_original_url')) {
+    return;
+  }
+
+  $original_url = $node->get('field_original_url')->uri ?? '';
+  if (empty($original_url)) {
+    return;
+  }
+
+  // Get Diffbot token from config (set this in your module config).
+  $diffbot_token = news_extractor_get_diffbot_token();
+  if (empty($diffbot_token)) {
+    \Drupal::logger('news_extractor')->error('Diffbot token not set in configuration.');
+    return;
+  }
+
+  $api_url = 'https://api.diffbot.com/v3/article?token=' . urlencode($diffbot_token) . '&url=' . urlencode($original_url);
+
+  try {
+    $response = \Drupal::httpClient()->get($api_url, ['timeout' => 10]);
+    $data = json_decode($response->getBody(), TRUE);
+
+    // Check for images in the Diffbot response.
+    if (!empty($data['objects'][0]['images']) && is_array($data['objects'][0]['images'])) {
+      $first_image = $data['objects'][0]['images'][0]['url'] ?? '';
+      if (!empty($first_image) && filter_var($first_image, FILTER_VALIDATE_URL)) {
+        // Set the image URL in the node's field_external_image_url.
+        if ($node->hasField('field_external_image_url')) {
+          $node->set('field_external_image_url', [
+            'uri' => $first_image,
+            'title' => $node->getTitle(),
+          ]);
+          $node->save();
+          \Drupal::logger('news_extractor')->info('Set external image URL for node @nid: @url', [
+            '@nid' => $node->id(),
+            '@url' => $first_image,
+          ]);
+        }
+      }
+    }
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error fetching Diffbot image for node @nid: @msg', [
+      '@nid' => $node->id(),
+      '@msg' => $e->getMessage(),
+    ]);
+  }
+}
+
+/**
+ * Helper to get the Diffbot API token from config.
+ *
+ * @return string
+ *   The Diffbot API token, or an empty string if not set.
+ */
+function news_extractor_get_diffbot_token() {
+  return \Drupal::config('news_extractor.settings')->get('diffbot_token') ?: '';
 }

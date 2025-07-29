@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/news_extractor.module';
 
 use Drupal\Core\Entity\EntityInterface;
 use GuzzleHttp\Client;
@@ -8,7 +9,11 @@ use Drupal\node\Entity\Node;
  * Extract full article content using Diffbot API and generate AI summary.
  */
 function _news_extractor_extract_content(EntityInterface $entity, $url) {
-  $api_token = '8488710a556cedc9ff2ad6547bbbecaf';
+  $api_token = news_extractor_get_diffbot_token();
+  if (empty($api_token)) {
+    \Drupal::logger('news_extractor')->error('Diffbot token not set in configuration.');
+    return;
+  }
   $api_url = 'https://api.diffbot.com/v3/article';
   $request_url = $api_url . '?' . http_build_query([
     'token' => $api_token,
