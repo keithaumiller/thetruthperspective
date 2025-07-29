@@ -74,6 +74,18 @@ jobs:
           
           echo "=== All three modules deployed successfully ==="
           
+          # === Copy custom node--article.html.twig to Olivero theme ===
+          OLIVERO_PATH="/var/www/html/drupal/core/themes/olivero"
+          CUSTOM_TWIG_SRC="/var/www/html/drupal/modules/custom/news_extractor/templates/node--article.html.twig"
+          CUSTOM_TWIG_DEST="$OLIVERO_PATH/templates/node--article.html.twig"
+          sudo mkdir -p "$OLIVERO_PATH/templates"
+          if [ -f "$CUSTOM_TWIG_SRC" ]; then
+            sudo cp "$CUSTOM_TWIG_SRC" "$CUSTOM_TWIG_DEST"
+            echo "Custom node--article.html.twig copied to Olivero theme."
+          else
+            echo "Custom node--article.html.twig not found at $CUSTOM_TWIG_SRC"
+          fi
+
     - name: Clear Drupal cache
       uses: appleboy/ssh-action@v0.1.5
       with:
