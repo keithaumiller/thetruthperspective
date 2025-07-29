@@ -179,14 +179,14 @@ function news_extractor_update_articles_missing_body_from_diffbot() {
  * Format the motivation analysis text with proper line breaks.
  */
 function news_extractor_format_motivation_analysis($text) {
-  // Add a line break after "Entities mentioned:" and its list
-  $text = preg_replace('/(Entities mentioned:)(.*?)(Motivations:)/s', "$1$2\n\n$3", $text);
+  // Add a line break before and after "Entities mentioned:" and its list
+  $text = preg_replace('/(Entities mentioned:)(.*?)(Motivations:)/s', "\n$1$2\n\n$3", $text);
 
   // Add a line break after "Motivations:" and its list
-  $text = preg_replace('/(Motivations:)(.*?)(Key metric:)/s', "$1$2\n\n$3", $text);
+  $text = preg_replace('/(Motivations:)(.*?)(Key metric:)/s', "\n$1$2\n\n$3", $text);
 
   // Add a line break after "Key metric:" line
-  $text = preg_replace('/(Key metric:.*?)(\n|$)/', "$1\n\n", $text);
+  $text = preg_replace('/(Key metric:.*?)(\n|$)/', "\n$1\n\n\n\n", $text);
 
   return $text;
 }
