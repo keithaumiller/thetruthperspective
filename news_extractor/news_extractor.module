@@ -93,10 +93,10 @@ function news_extractor_node_insert(EntityInterface $entity) {
     _news_extractor_extract_content($entity, $original_url);
 
     // --- Tagging logic ---
-    // Get the AI summary from the entity
-    $ai_summary = $entity->get('field_ai_summary')->value ?? '';
-    if (!empty($ai_summary)) {
-      $tags = _news_extractor_extract_tags_from_summary($ai_summary);
+    // Get the Motivation Analysis from the entity
+    $motivation_analysis = $entity->get('field_motivation_analysis')->value ?? '';
+    if (!empty($motivation_analysis)) {
+      $tags = _news_extractor_extract_tags_from_summary($motivation_analysis);
       $all_tags = array_merge($tags['entities'], $tags['motivations'], $tags['metrics']);
       $tag_ids = [];
       foreach ($all_tags as $tag) {
@@ -108,16 +108,16 @@ function news_extractor_node_insert(EntityInterface $entity) {
         $entity->save();
       }
 
-      // --- Linkify tags in AI summary ---
+      // --- Linkify tags in Motivation Analysis ---
       // Load tag entities for linkifying
       $tag_entities = [];
       if (!empty($tag_ids)) {
         $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
       }
-      $ai_summary_linked = news_extractor_linkify_summary_tags($ai_summary, $tag_entities);
-      $entity->set('field_ai_summary', [
-        'value' => $ai_summary_linked,
-        'format' => $entity->get('field_ai_summary')->format,
+      $motivation_analysis_linked = news_extractor_linkify_summary_tags($motivation_analysis, $tag_entities);
+      $entity->set('field_motivation_analysis', [
+        'value' => $motivation_analysis_linked,
+        'format' => $entity->get('field_motivation_analysis')->format,
       ]);
       $entity->save();
       // --- End linkify ---
