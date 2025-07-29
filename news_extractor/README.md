@@ -1,116 +1,174 @@
 # News Extractor Module
 
-## 🎯 Overview
+A Drupal module that automatically extracts full article content using the Diffbot API and generates AI-powered motivation analysis with entity-motivation pairing for political and news content.
 
-The News Extractor module is a powerful Drupal module that automatically extracts and processes news articles from various sources using AI-powered content analysis. cool
+## Features
 
-## ✨ Features
+### Content Extraction
+- **Diffbot Integration**: Automatically extracts full article text, title, and metadata from news URLs
+- **Smart Filtering**: Filters out non-article content (podcasts, videos, ads, galleries)
+- **Automatic Processing**: Processes articles during feed imports or manually via Drush commands
 
-- **Automated Article Extraction**: Extracts article content from URLs
-- **AI-Powered Summarization**: Uses AWS Bedrock Claude to generate intelligent summaries
-- **Content Processing**: Automatically cleans and formats extracted content
-- **Taxonomy Integration**: Creates and assigns appropriate tags to articles
-- **Scheduled Processing**: Supports bulk processing of multiple articles
+### AI-Powered Analysis
+- **Motivation Analysis**: Uses AWS Bedrock Claude 3.5 Sonnet to analyze articles from a social scientist perspective
+- **Entity-Motivation Pairing**: Identifies key entities (people, organizations) and their motivations in the context of each article
+- **Performance Metrics**: Selects relevant US performance metrics and analyzes potential impact
+- **Structured Data**: Stores both human-readable and machine-readable (JSON) versions of the analysis
 
-## 🔧 Technical Details
+### Taxonomy & Tagging
+- **Automatic Tagging**: Creates taxonomy terms for entities, motivations, and metrics
+- **Smart Linking**: Automatically links entities and motivations to their taxonomy pages
+- **Browseable Content**: Users can browse articles by entity or motivation
 
-### AI Integration
-- **Service**: AWS Bedrock Runtime
-- **Model**: `anthropic.claude-3-5-sonnet-20240620-v1:0`
-- **Region**: `us-west-2`
-- **Max Tokens**: 1000 for summaries
+## Installation
 
-### Core Functions
+1. Place the module in your `modules/custom/news_extractor/` directory
+2. Enable the module: `drush en news_extractor`
+3. Configure API tokens (see Configuration section)
 
-#### `_news_extractor_generate_ai_summary($article_text, $article_title)`
-Generates AI-powered summaries of news articles using AWS Bedrock Claude.
+## Configuration
 
-#### `_news_extractor_get_or_create_tag($tag_name)`
-Automatically creates or retrieves taxonomy terms for article tagging.
+### Required API Tokens
 
-### Content Processing
-- Extracts clean article text from web pages
-- Removes ads, navigation, and other non-content elements
-- Generates concise, informative summaries
-- Assigns relevant tags based on content analysis
+Set these in your Drupal configuration:
 
-## 🚀 Installation
+```php
+// Diffbot API Token
+$config['news_extractor.settings']['diffbot_token'] = 'your_diffbot_token';
 
-1. Enable the module in Drupal admin
-2. Configure AWS credentials for Bedrock access
-3. Set up content types with appropriate fields
-4. Configure taxonomy vocabularies for tagging
+// AWS Credentials for Bedrock
+$config['news_extractor.settings']['aws_access_key'] = 'your_aws_access_key';
+$config['news_extractor.settings']['aws_secret_key'] = 'your_aws_secret_key';
+$config['news_extractor.settings']['aws_region'] = 'us-east-1';
+```
 
-## 📋 Requirements
+### Required Fields
 
-- Drupal 9, 10, or 11
-- AWS SDK for PHP
-- AWS Bedrock access with Claude model permissions
-- Node module (for content type support)
+The module expects these fields on your Article content type:
 
-## 🔑 Configuration
+- `field_original_url` (Link field) - Source URL
+- `field_motivation_analysis` (Text, Basic HTML) - Human-readable analysis
+- `field_motivation_data` (Text, plain) - JSON structured data
+- `field_tags` (Entity reference to Taxonomy terms) - Auto-generated tags
+- `body` (Text, Basic HTML) - Full article content
 
-### AWS Setup
-Ensure your server has AWS credentials configured with access to:
-- AWS Bedrock Runtime
-- Claude 3.5 Sonnet model permissions
+## Usage
 
-### Content Types
-The module works with news article content types containing:
-- Title field
-- Body/content field
-- URL source field
-- Summary field (for AI-generated content)
-- Tags field (taxonomy reference)
+### Automatic Processing
 
-## 📊 Usage
+The module automatically processes articles when:
+- New articles are imported via Feeds module
+- Articles are created with a `field_original_url` but no body content
 
 ### Manual Processing
-Articles can be processed individually through the Drupal admin interface.
 
-### Bulk Processing
-The module supports processing multiple articles in batches for efficiency.
+Process articles missing body content:
+```bash
+drush php-eval "require_once './modules/custom/news_extractor/news_extractor.scraper.php'; news_extractor_update_articles_missing_body_from_diffbot();"
+```
 
-### API Integration
-Can be integrated with external news feeds and content aggregation systems.
+Update formatting for existing motivation analysis:
+```bash
+drush php-eval "require_once './modules/custom/news_extractor/news_extractor.scraper.php'; news_extractor_update_motivation_analysis_formatting();"
+```
 
-## 🔍 Logging
+## AI Analysis Format
 
-The module logs all activities including:
-- Successful article extractions
-- AI summary generation events
-- Error conditions and failures
+The AI generates analysis in this structured format:
+
+```
+Entities mentioned:
+- Donald Trump: Ambition, Power, Recognition
+- Joe Biden: Legacy, Unity, Justice
+- Department of Justice: Professional pride, Duty
+
+Key metric: Public Trust in Government
+
+As a social scientist, I speculate that this article will impact...
+[Analysis paragraph continues]
+```
+
+## Motivation Categories
+
+The system uses these core motivations:
+- Ambition, Competitive spirit, Righteousness, Moral outrage
+- Loyalty, Pride, Determination, Fear, Greed, Power, Control
+- Revenge, Justice, Self-preservation, Recognition, Legacy
+- Influence, Security, Freedom, Unity, Professional pride
+- Duty, Curiosity, Enthusiasm, Wariness, Anxiety
+- Self-respect, Obligation, Indignation
+
+## Data Structure
+
+### Human-Readable (field_motivation_analysis)
+Formatted with proper spacing and links to taxonomy terms for web display.
+
+### Machine-Readable (field_motivation_data)
+JSON structure for programmatic access:
+
+```json
+{
+  "entities": [
+    {
+      "name": "Donald Trump",
+      "motivations": ["Ambition", "Power", "Recognition"]
+    }
+  ],
+  "motivations": ["Ambition", "Power", "Recognition"],
+  "metrics": ["Public Trust in Government"]
+}
+```
+
+### Taxonomy Tags (field_tags)
+Automatically created taxonomy terms for:
+- Entity names
+- Motivation keywords  
 - Performance metrics
 
-Access logs through: **Reports > Recent log messages > news_extractor**
+## Debugging
 
-## 🛠️ Troubleshooting
+Debug newest articles:
+```bash
+drush php-eval "require_once './modules/custom/news_extractor/news_extractor.scraper.php'; news_extractor_debug_newest_motivation_analysis();"
+```
 
-### Common Issues
+Test formatting updates:
+```bash
+drush php-eval "require_once './modules/custom/news_extractor/news_extractor.scraper.php'; news_extractor_test_update();"
+```
 
-**AI Summary Generation Fails**
-- Check AWS Bedrock permissions
-- Verify network connectivity
-- Review error logs for specific error messages
+## File Structure
 
-**Article Extraction Issues**
-- Ensure source URLs are accessible
-- Check for content extraction library dependencies
-- Verify content type field configurations
+```
+news_extractor/
+├── news_extractor.info.yml       # Module definition
+├── news_extractor.module          # Core functions, AI integration
+├── news_extractor.scraper.php     # Content extraction, formatting
+└── README.md                      # This file
+```
 
-**Tag Creation Problems**
-- Confirm taxonomy vocabulary exists
-- Check permissions for taxonomy term creation
-- Review field mapping configurations
+## Key Functions
 
-## 🔄 Updates and Maintenance
+### news_extractor.module
+- `_news_extractor_generate_ai_summary()` - AWS Bedrock integration
+- `_news_extractor_build_ai_prompt()` - AI prompt construction
+- `_news_extractor_extract_tags_from_summary()` - Tag extraction
+- `news_extractor_linkify_summary_tags()` - Auto-linking
 
-The module is designed to work with evolving AI models and can be updated to use newer versions of Claude or other AI services by modifying the model ID in the code.
+### news_extractor.scraper.php  
+- `_news_extractor_extract_content()` - Main content processing
+- `news_extractor_format_motivation_analysis()` - Text formatting
+- `_news_extractor_extract_structured_data()` - JSON data extraction
+- `news_extractor_update_motivation_analysis_formatting()` - Bulk updates
 
-## 📞 Support
+## Requirements
 
-For issues or questions:
-1. Check the Drupal logs for error details
-2. Verify AWS service status
-3. Review module configuration settings
-4. Test with simple article extractions first
+- Drupal 9+
+- Feeds module (for automatic article imports)
+- Diffbot API account
+- AWS account with Bedrock access
+- Taxonomy module (core)
+
+## License
+
+This module is provided as-is for educational and research purposes.

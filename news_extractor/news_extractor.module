@@ -97,12 +97,16 @@ function news_extractor_node_insert(EntityInterface $entity) {
     $motivation_analysis = $entity->get('field_motivation_analysis')->value ?? '';
     if (!empty($motivation_analysis)) {
       $tags = _news_extractor_extract_tags_from_summary($motivation_analysis);
+      
+      // Create simple tags: entities + motivations + metrics
       $all_tags = array_merge($tags['entities'], $tags['motivations'], $tags['metrics']);
+      
       $tag_ids = [];
       foreach ($all_tags as $tag) {
         $tid = _news_extractor_get_or_create_tag($tag);
         if ($tid) $tag_ids[] = $tid;
       }
+      
       if (!empty($tag_ids)) {
         $entity->set('field_tags', $tag_ids);
         $entity->save();
@@ -477,45 +481,38 @@ function _news_extractor_get_motivation_category($motivation) {
  * Helper function to build AI prompt for social scientist perspective.
  */
 function _news_extractor_build_ai_prompt($article_title, $article_text) {
-  $motivation_map = _news_extractor_get_motivation_map();
-  $allowed_motivations = implode(", ", array_keys($motivation_map));
+  $allowed_motivations = "Ambition, Competitive spirit, Righteousness, Moral outrage, Loyalty, Pride, Determination, Fear, Greed, Power, Control, Revenge, Justice, Self-preservation, Recognition, Legacy, Influence, Security, Freedom, Unity, Professional pride, Duty, Curiosity, Enthusiasm, Wariness, Anxiety, Self-respect, Obligation, Indignation";
 
-  return "Write this from the perspective of a scientist that puts things in the context of key performance metrics of the United States.\n\n" .
+  return "Write this from the perspective of a social scientist that puts things in the context of key performance metrics of the United States.\n\n" .
          "Select the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\n" .
-         "List out each of the entities mentioned in the article including the author and their perceived motivations in the context of this article.\n\n" .
-         "Only use motivations/emotions from the following list: $allowed_motivations\n\n" .
-         "Format your response exactly as follows:\n\n" .
-         "Entities mentioned:\n- Entity 1\n- Entity 2\n\n" .
-         "Motivations:\n- Motivation 1\n- Motivation 2\n\n" .
+         "For each entity mentioned in the article, identify their top 3 motivations from the allowed list below.\n\n" .
+         "Only use motivations from this list: $allowed_motivations\n\n" .
+         "Format your response EXACTLY as follows:\n\n" .
+         "Entities mentioned:\n" .
+         "- Entity Name: Motivation1, Motivation2, Motivation3\n" .
+         "- Entity Name: Motivation1, Motivation2, Motivation3\n\n" .
          "Key metric: Metric Name\n\n" .
+         "[Your analysis paragraph explaining how this will impact the key metric]\n\n" .
          "Article Title: " . $article_title . "\n\n" .
          "Article Text: " . $article_text;
 }
 
 /**
  * Extract entities, motivations, and metrics from the AI summary.
- * Assumes the AI summary lists these in a structured way.
  */
 function _news_extractor_extract_tags_from_summary($ai_summary) {
   $entities = [];
   $motivations = [];
   $metrics = [];
 
-  // Example extraction logic (adjust to your AI summary format):
-  // Entities: lines starting with "- " under "Entities mentioned:"
-  if (preg_match('/Entities mentioned:(.*?)(?:Motivations:|Key metric:|$)/is', $ai_summary, $matches)) {
+  // Extract entity-motivation pairings: "- Entity Name: Motivation1, Motivation2, Motivation3"
+  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $ai_summary, $matches)) {
     foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
-      if (preg_match('/-\s*(.+)/', $line, $m)) {
-        $entities[] = trim($m[1]);
-      }
-    }
-  }
-
-  // Motivations: lines starting with "- " under "Motivations:"
-  if (preg_match('/Motivations:(.*?)(?:Entities mentioned:|Key metric:|$)/is', $ai_summary, $matches)) {
-    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
-      if (preg_match('/-\s*(.+)/', $line, $m)) {
-        $motivations[] = trim($m[1]);
+      if (preg_match('/-\s*(.+?):\s*(.+)/', $line, $m)) {
+        $entity_name = trim($m[1]);
+        $entity_motivations = array_map('trim', explode(',', $m[2]));
+        $entities[] = $entity_name;
+        $motivations = array_merge($motivations, $entity_motivations);
       }
     }
   }
@@ -525,11 +522,56 @@ function _news_extractor_extract_tags_from_summary($ai_summary) {
     $metrics[] = trim($matches[1]);
   }
 
+  // Remove duplicates
+  $entities = array_unique($entities);
+  $motivations = array_unique($motivations);
+
   return [
     'entities' => $entities,
     'motivations' => $motivations,
     'metrics' => $metrics,
   ];
+}
+
+/**
+ * Extract structured motivation data from AI summary for JSON field.
+ */
+function _news_extractor_extract_structured_data($motivation_analysis) {
+  $data = [
+    'entities' => [],
+    'motivations' => [],
+    'metrics' => []
+  ];
+
+  // Extract entities and their motivations
+  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $motivation_analysis, $matches)) {
+    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
+      if (preg_match('/-\s*(.+?):\s*(.+)/', $line, $m)) {
+        $entity = trim($m[1]);
+        $motivations_text = trim($m[2]);
+        $motivations = array_map('trim', explode(',', $motivations_text));
+        
+        $data['entities'][] = [
+          'name' => $entity,
+          'motivations' => $motivations
+        ];
+        
+        // Also collect unique motivations
+        foreach ($motivations as $motivation) {
+          if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
+            $data['motivations'][] = $motivation;
+          }
+        }
+      }
+    }
+  }
+
+  // Extract key metric
+  if (preg_match('/Key metric:\s*(.+)/i', $motivation_analysis, $matches)) {
+    $data['metrics'][] = trim($matches[1]);
+  }
+
+  return $data;
 }
 
 /**
