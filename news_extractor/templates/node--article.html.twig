@@ -9,4 +9,15 @@
   <img src="{{ node.field_external_image_url.0.uri }}" alt="{{ node.title.value }}" />
 {% endif %}
 
-{{content}}
+{% if node.field_tags is defined and node.field_tags|length > 0 %}
+  <div class="tags">
+    <strong>Tags:</strong>
+    {% for tag in node.field_tags %}
+      <a href="{{ path('entity.taxonomy_term.canonical', {'taxonomy_term': tag.target_id}) }}">
+        {{ tag.entity.name.value }}
+      </a>{% if not loop.last %}, {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
+
+{{ content }}
