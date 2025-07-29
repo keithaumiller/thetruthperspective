@@ -191,11 +191,3 @@ function news_extractor_format_motivation_analysis($text) {
   return $text;
 }
 
-// Additional processing for motivation analysis
-$motivation_analysis_raw = $entity->get('field_motivation_analysis')->value;
-$motivation_analysis = news_extractor_format_motivation_analysis($motivation_analysis_raw);
-$entity->set('field_motivation_analysis', [
-  'value' => $motivation_analysis,
-  'format' => 'basic_html', // or your preferred format
-]);
-
