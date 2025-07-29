@@ -213,8 +213,8 @@ function news_extractor_format_motivation_analysis($text) {
   // Add a line break after "Motivations:" and its list
   $text = preg_replace('/(Motivations:)(.*?)(Key metric:)/s', "\n$1$2\n\n$3", $text);
 
-  // Add a line break after "Key metric:" line
-  $text = preg_replace('/(Key metric:.*?)(\n|$)/', "\n$1\n\n\n\n", $text);
+  // Add a couple lines after "Key metric:" line
+  $text = preg_replace('/(Key metric:.*?)(\n|$)/', "\n$1\n\n\n", $text);
 
   return $text;
 }
