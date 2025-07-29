@@ -215,24 +215,24 @@ function news_extractor_format_motivation_analysis($text) {
   
   // Handle the specific format where sections run together
   // Add line breaks before "Entities mentioned:" when it follows other text
-  $text = preg_replace('/([^\n])\s*Entities mentioned:/i', "$1\n\nEntities mentioned:", $text);
+  $text = preg_replace('/([^\n])\s*Entities mentioned:/i', "$1<br><br>Entities mentioned:", $text);
   
   // Add line breaks before "Motivations:" when it follows other text
-  $text = preg_replace('/([^\n])\s*Motivations:/i', "$1\n\nMotivations:", $text);
+  $text = preg_replace('/([^\n])\s*Motivations:/i', "$1<br><br>Motivations:", $text);
   
   // Add line breaks before "Key metric:" when it follows other text
-  $text = preg_replace('/([^\n])\s*Key metric:/i', "$1\n\nKey metric:", $text);
+  $text = preg_replace('/([^\n])\s*Key metric:/i', "$1<br><br>Key metric:", $text);
   
   // Special handling for when sections immediately follow each other
   // This handles cases where there are HTML links between sections
-  $text = preg_replace('/(<\/a>)\s*Motivations:/i', "$1\n\nMotivations:", $text);
-  $text = preg_replace('/(<\/a>)\s*Key metric:/i', "$1\n\nKey metric:", $text);
+  $text = preg_replace('/(<\/a>)\s*Motivations:/i', "$1<br><br>Motivations:", $text);
+  $text = preg_replace('/(<\/a>)\s*Key metric:/i', "$1<br><br>Key metric:", $text);
   
   // Add extra spacing after key metric before the analysis paragraph
-  $text = preg_replace('/(Key metric:[^\n]*)\s*(As a social scientist)/i', "$1\n\n\n$2", $text);
+  $text = preg_replace('/(Key metric:[^\n]*)\s*(As a social scientist)/i', "$1<br><br><br>$2", $text);
   
-  // Clean up excessive line breaks
-  $text = preg_replace('/\n{4,}/', "\n\n\n", $text);
+  // Clean up excessive line breaks (convert multiple <br> tags to consistent spacing)
+  $text = preg_replace('/(<br>\s*){4,}/', '<br><br><br>', $text);
   
   // Trim whitespace
   $text = trim($text);
