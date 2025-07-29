@@ -178,10 +178,12 @@ function _news_extractor_is_article_url($url) {
 /**
  * Loop through all article nodes and update their body from Diffbot,
  * but only process articles that do not have a body set.
+ * Testing mode: only process one article per run.
  */
 function news_extractor_update_articles_missing_body_from_diffbot() {
   $nids = \Drupal::entityQuery('node')
     ->condition('type', 'article')
+    ->range(0, 1) // Limit to 1 result for testing
     ->execute();
 
   foreach ($nids as $nid) {
@@ -198,9 +200,18 @@ function news_extractor_update_articles_missing_body_from_diffbot() {
       )
     ) {
       $original_url = $node->get('field_original_url')->uri;
+      \Drupal::logger('news_extractor')->info('Testing mode: Processing single article: @title (@url)', [
+        '@title' => $node->getTitle(),
+        '@url' => $original_url,
+      ]);
       _news_extractor_extract_content($node, $original_url);
+      
+      // Exit after processing one article (testing mode)
+      break;
     }
   }
+  
+  \Drupal::logger('news_extractor')->info('Testing mode: Completed processing one article.');
 }
 
 /**
