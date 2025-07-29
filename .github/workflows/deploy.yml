@@ -81,6 +81,8 @@ jobs:
           sudo mkdir -p "$OLIVERO_PATH/templates"
           if [ -f "$CUSTOM_TWIG_SRC" ]; then
             sudo cp "$CUSTOM_TWIG_SRC" "$CUSTOM_TWIG_DEST"
+            sudo chown www-data:www-data "$CUSTOM_TWIG_DEST"
+            sudo chmod 644 "$CUSTOM_TWIG_DEST"
             echo "Custom node--article.html.twig copied to Olivero theme."
           else
             echo "Custom node--article.html.twig not found at $CUSTOM_TWIG_SRC"
