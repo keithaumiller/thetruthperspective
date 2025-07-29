@@ -107,6 +107,20 @@ function news_extractor_node_insert(EntityInterface $entity) {
         $entity->set('field_tags', $tag_ids);
         $entity->save();
       }
+
+      // --- Linkify tags in AI summary ---
+      // Load tag entities for linkifying
+      $tag_entities = [];
+      if (!empty($tag_ids)) {
+        $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
+      }
+      $ai_summary_linked = news_extractor_linkify_summary_tags($ai_summary, $tag_entities);
+      $entity->set('field_ai_summary', [
+        'value' => $ai_summary_linked,
+        'format' => $entity->get('field_ai_summary')->format,
+      ]);
+      $entity->save();
+      // --- End linkify ---
     }
     // --- End tagging logic ---
     // Post-process to fetch and set external image URL
@@ -579,4 +593,32 @@ function news_extractor_postprocess_article_image(Node $node) {
  */
 function news_extractor_get_diffbot_token() {
   return \Drupal::config('news_extractor.settings')->get('diffbot_token') ?: '';
+}
+
+/**
+ * Linkify tags in the AI summary.
+ *
+ * @param string $summary
+ *   The AI summary text.
+ * @param array $tags
+ *   Array of taxonomy term entities or arrays with 'name' and 'tid'.
+ * @return string
+ *   The summary with tags linked.
+ */
+function news_extractor_linkify_summary_tags($summary, array $tags) {
+  foreach ($tags as $tag) {
+    // Get tag name and tid
+    $tag_name = is_object($tag) ? $tag->getName() : $tag['name'];
+    $tid = is_object($tag) ? $tag->id() : $tag['tid'];
+    $url = '/taxonomy/term/' . $tid;
+    // Replace only whole words, case-insensitive
+    $summary = preg_replace_callback(
+      '/\b(' . preg_quote($tag_name, '/') . ')\b/u',
+      function ($matches) use ($url) {
+        return '<a href="' . $url . '">' . $matches[1] . '</a>';
+      },
+      $summary
+    );
+  }
+  return $summary;
 }
