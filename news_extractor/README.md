@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-The News Extractor module is a powerful Drupal module that automatically extracts and processes news articles from various sources using AI-powered content analysis.
+The News Extractor module is a powerful Drupal module that automatically extracts and processes news articles from various sources using AI-powered content analysis. cool
 
 ## ✨ Features
 
