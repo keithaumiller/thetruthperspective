@@ -62,6 +62,32 @@ jobs:
           echo "Files in repository:"
           ls -la
           
+          # === ADD THIS VERIFICATION SECTION ===
+          echo "=== Verifying key_metric_management deployment ==="
+          if [ -d "key_metric_management" ]; then
+            echo "✅ key_metric_management directory found"
+            
+            echo "Directory structure:"
+            find key_metric_management/ -type f | head -20
+            
+            if [ -d "key_metric_management/templates" ]; then
+              echo "✅ Templates directory exists:"
+              ls -la key_metric_management/templates/
+            else
+              echo "❌ Templates directory missing!"
+            fi
+            
+            if [ -d "key_metric_management/src/Plugin/Block" ]; then
+              echo "✅ Block plugin directory exists:"
+              ls -la key_metric_management/src/Plugin/Block/
+            else
+              echo "❌ Block plugin directory missing!"
+            fi
+          else
+            echo "❌ key_metric_management directory not found!"
+          fi
+          # === END VERIFICATION SECTION ===
+          
           # Set proper permissions for all modules
           sudo chown -R ubuntu:ubuntu .git
           sudo chown -R www-data:www-data news_extractor ai_conversation job_application_automation key_metric_management
@@ -110,6 +136,31 @@ jobs:
           cd /var/www/html/drupal
           sudo -u www-data drush en news_extractor -y || echo "news_extractor already enabled"
           sudo -u www-data drush en key_metric_management -y || echo "key_metric_management already enabled"
+          
+          # === ADD THIS TEMPLATE VERIFICATION ===
+          echo "=== Verifying key_metric_management templates ==="
+          sudo -u www-data drush php-eval "
+          echo 'Checking template discovery...\n';
+          \$theme_registry = \Drupal::service('theme.registry')->get();
+          
+          \$templates = ['key_metric_stats', 'key_metric_detail', 'key_metric_stats_block'];
+          foreach (\$templates as \$template) {
+            if (isset(\$theme_registry[\$template])) {
+              echo '✅ ' . \$template . ' template found\n';
+            } else {
+              echo '❌ ' . \$template . ' template missing\n';
+            }
+          }
+          
+          \$block_manager = \Drupal::service('plugin.manager.block');
+          \$definitions = \$block_manager->getDefinitions();
+          if (isset(\$definitions['key_metric_stats_block'])) {
+            echo '✅ Block plugin discovered\n';
+          } else {
+            echo '❌ Block plugin not discovered\n';
+          }
+          " || echo "Verification failed"
+          # === END TEMPLATE VERIFICATION ===
           
           # Clear Drupal cache as www-data user
           if ! sudo -u www-data drush cr; then
