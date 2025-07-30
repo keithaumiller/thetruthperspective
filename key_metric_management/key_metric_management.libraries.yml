@@ -2,3 +2,9 @@ global-styling:
   css:
     theme:
       css/key-metric-management.css: {}
+
+block-styling:
+  css:
+    theme:
+      css/key-metric-management.css: {}
+      css/key-metric-block.css: {}

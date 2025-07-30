@@ -1,23 +1,48 @@
 key_metric_management.dashboard:
+  path: '/key-metrics'
+  defaults:
+    _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::dashboard'
+    _title: 'Key Metrics Dashboard'
+  requirements:
+    _access: 'TRUE'
+
+key_metric_management.metric_detail:
+  path: '/key-metrics/{metric}'
+  defaults:
+    _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::metricDetail'
+    _title_callback: '\Drupal\key_metric_management\Controller\KeyMetricController::metricDetailTitle'
+  requirements:
+    _access: 'TRUE'
+
+key_metric_management.taxonomy_metrics:
+  path: '/key-metrics/taxonomy'
+  defaults:
+    _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::taxonomyMetrics'
+    _title: 'Metrics & Taxonomy'
+  requirements:
+    _access: 'TRUE'
+
+# Keep admin routes for configuration
+key_metric_management.admin_dashboard:
   path: '/admin/config/content/key-metrics'
   defaults:
     _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::dashboard'
-    _title: 'Key Metric Dashboard'
+    _title: 'Key Metrics Administration'
   requirements:
-    _permission: 'administer nodes'
+    _permission: 'administer site configuration'
 
-key_metric_management.metric_detail:
+key_metric_management.admin_metric_detail:
   path: '/admin/config/content/key-metrics/{metric}'
   defaults:
     _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::metricDetail'
-    _title: 'Metric Details'
+    _title_callback: '\Drupal\key_metric_management\Controller\KeyMetricController::metricDetailTitle'
   requirements:
-    _permission: 'administer nodes'
+    _permission: 'administer site configuration'
 
-key_metric_management.taxonomy_metrics:
+key_metric_management.admin_taxonomy_metrics:
   path: '/admin/config/content/key-metrics-taxonomy'
   defaults:
     _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::taxonomyMetrics'
-    _title: 'Key Metric Taxonomy Terms'
+    _title: 'Metrics & Taxonomy Administration'
   requirements:
-    _permission: 'administer nodes'
+    _permission: 'administer site configuration'

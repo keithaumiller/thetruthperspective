@@ -276,6 +276,32 @@ key_metric_management/
 - **Individual Metric**: `/admin/config/content/key-metrics/{metric}`
 - **Taxonomy Integration**: `/admin/config/content/key-metrics-taxonomy`
 
+## Public Access
+
+### Public Routes
+The module now provides public access to key metrics:
+- **Dashboard**: `/key-metrics`
+- **Individual Metrics**: `/key-metrics/{metric-name}`
+- **Taxonomy Integration**: `/key-metrics/taxonomy`
+
+### Block Widget
+A configurable block is available that displays:
+- Total unique metrics count
+- Total articles with metrics
+- Top 5 metrics with counts
+- Link to full dashboard
+
+**To add the block:**
+1. Go to `/admin/structure/block`
+2. Place "Key Metric Statistics" block in desired region
+3. Configure display options as needed
+
+### Admin Access (Protected)
+Administrative routes remain protected:
+- **Admin Dashboard**: `/admin/config/content/key-metrics`
+- **Admin Individual Metrics**: `/admin/config/content/key-metrics/{metric}`
+- **Admin Taxonomy**: `/admin/config/content/key-metrics-taxonomy`
+
 ## License
 
 This module follows the same license as Drupal core (GPL-2.0+).

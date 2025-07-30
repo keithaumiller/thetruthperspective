@@ -60,6 +60,11 @@ function key_metric_management_theme($existing, $type, $theme, $path) {
       'template' => 'key-metric-detail',
       'path' => $path . '/templates',
     ],
+    'key_metric_stats_block' => [
+      'variables' => ['stats' => [], 'dashboard_url' => ''],
+      'template' => 'key-metric-stats-block',
+      'path' => $path . '/templates',
+    ],
   ];
 }
 

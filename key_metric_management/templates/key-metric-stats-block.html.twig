@@ -1,0 +1,53 @@
+{#
+/**
+ * @file
+ * Template for the Key Metric Statistics block.
+ *
+ * Available variables:
+ * - stats: Array containing metric statistics
+ * - dashboard_url: URL to the full dashboard page
+ */
+#}
+
+<div class="key-metrics-block">
+  <div class="block-header">
+    <h3>{{ 'Key Metrics'|t }}</h3>
+    {% if dashboard_url %}
+      <a href="{{ dashboard_url }}" class="view-all-link">{{ 'View All'|t }}</a>
+    {% endif %}
+  </div>
+  
+  {% if stats %}
+    <div class="metric-summary">
+      <div class="metric-item">
+        <span class="metric-number">{{ stats.total_metrics|default(0) }}</span>
+        <span class="metric-label">{{ 'Unique Metrics'|t }}</span>
+      </div>
+      
+      <div class="metric-item">
+        <span class="metric-number">{{ stats.total_articles_with_metrics|default(0) }}</span>
+        <span class="metric-label">{{ 'Articles'|t }}</span>
+      </div>
+    </div>
+    
+    {% if stats.top_metrics %}
+      <div class="top-metrics-preview">
+        <h4>{{ 'Top Metrics'|t }}</h4>
+        <ul class="metric-list">
+          {% for metric, count in stats.top_metrics|slice(0, 5) %}
+            <li class="metric-item-list">
+              <a href="/key-metrics/{{ metric|url_encode }}" class="metric-link">
+                <span class="metric-name">{{ metric }}</span>
+                <span class="metric-count-badge">{{ count }}</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="no-metrics">
+      <p>{{ 'No metrics available yet.'|t }}</p>
+    </div>
+  {% endif %}
+</div>

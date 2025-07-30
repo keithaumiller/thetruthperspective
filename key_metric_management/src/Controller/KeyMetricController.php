@@ -109,6 +109,13 @@ class KeyMetricController extends ControllerBase {
   }
 
   /**
+   * Title callback for metric detail pages.
+   */
+  public function metricDetailTitle(string $metric): string {
+    return $this->t('Key Metric: @metric', ['@metric' => $metric]);
+  }
+
+  /**
    * Page showing key metric taxonomy terms.
    */
   public function taxonomyMetrics(): array {

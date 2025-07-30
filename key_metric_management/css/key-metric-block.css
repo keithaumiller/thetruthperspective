@@ -1,0 +1,147 @@
+/* Key Metric Block Styling */
+.key-metrics-block {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.key-metrics-block .block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+.key-metrics-block .block-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.key-metrics-block .view-all-link {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 0.9em;
+  font-weight: 500;
+  padding: 5px 12px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.key-metrics-block .view-all-link:hover {
+  background: #007bff;
+  color: white;
+  text-decoration: none;
+}
+
+.key-metrics-block .metric-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.key-metrics-block .metric-item {
+  text-align: center;
+  padding: 15px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.key-metrics-block .metric-number {
+  display: block;
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #007bff;
+  line-height: 1;
+}
+
+.key-metrics-block .metric-label {
+  display: block;
+  font-size: 0.85em;
+  color: #6c757d;
+  margin-top: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.key-metrics-block .top-metrics-preview h4 {
+  margin: 0 0 10px 0;
+  color: #495057;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.key-metrics-block .metric-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.key-metrics-block .metric-item-list {
+  margin-bottom: 8px;
+}
+
+.key-metrics-block .metric-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #495057;
+  transition: all 0.3s ease;
+  border-left: 3px solid #007bff;
+}
+
+.key-metrics-block .metric-link:hover {
+  background: #e3f2fd;
+  color: #1976d2;
+  text-decoration: none;
+  transform: translateX(3px);
+}
+
+.key-metrics-block .metric-name {
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.key-metrics-block .metric-count-badge {
+  background: #007bff;
+  color: white;
+  font-size: 0.75em;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.key-metrics-block .no-metrics {
+  text-align: center;
+  padding: 20px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 576px) {
+  .key-metrics-block .metric-summary {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .key-metrics-block .block-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+}
