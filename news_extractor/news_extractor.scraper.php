@@ -73,7 +73,7 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
           
           // Apply linkification to the formatted motivation analysis
-          $motivation_analysis_linked = news_extractor_linkify_summary_tags($motivation_analysis, $tag_entities);
+          $motivation_analysis_linked = news_extractor_linkify_summary_tags_enhanced($motivation_analysis, $tag_entities);
           
           $entity->set('field_motivation_analysis', [
             'value' => $motivation_analysis_linked,
@@ -439,7 +439,7 @@ function news_extractor_update_motivation_analysis_links() {
         $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
         
         // Apply linkification
-        $linked_analysis = news_extractor_linkify_summary_tags($original_analysis, $tag_entities);
+        $linked_analysis = news_extractor_linkify_summary_tags_enhanced($original_analysis, $tag_entities);
         
         // Only update if content changed
         if ($linked_analysis !== $original_analysis) {

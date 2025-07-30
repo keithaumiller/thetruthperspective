@@ -660,9 +660,51 @@ function news_extractor_linkify_summary_tags($summary, array $tags) {
     $link_html = '<a href="' . $term_url . '">' . $term_name . '</a>';
     
     // Replace exact matches (case-insensitive, whole words only)
-    // Avoid replacing text that's already inside HTML tags
-    $pattern = '/\b' . preg_quote($term_name, '/') . '\b(?![^<]*>|[^<]*<\/a>)/i';
-    $summary = preg_replace($pattern, $link_html, $summary, 1); // Only replace first occurrence
+    // Avoid replacing text that's already inside HTML tags or links
+    $pattern = '/\b' . preg_quote($term_name, '/') . '\b(?![^<]*>)(?![^<]*<\/a>)/i';
+    
+    // Replace ALL occurrences, not just the first one
+    $summary = preg_replace($pattern, $link_html, $summary);
+  }
+  
+  return $summary;
+}
+
+/**
+ * Enhanced linkification that handles case mismatches.
+ */
+function news_extractor_linkify_summary_tags_enhanced($summary, array $tags) {
+  // Create a mapping of lowercase term names to actual terms
+  $term_map = [];
+  foreach ($tags as $tag) {
+    $term_name = $tag->getName();
+    $key = strtolower($term_name);
+    if (!isset($term_map[$key])) {
+      $term_map[$key] = [
+        'term' => $tag,
+        'name' => $term_name,
+        'url' => \Drupal\Core\Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tag->id()])->toString()
+      ];
+    }
+  }
+  
+  // Find all potential matches in the text
+  foreach ($term_map as $key => $data) {
+    $term_name = $data['name'];
+    $term_url = $data['url'];
+    $link_html = '<a href="' . $term_url . '">' . $term_name . '</a>';
+    
+    // Create multiple patterns to catch different capitalizations
+    $patterns = [
+      '/\b' . preg_quote($term_name, '/') . '\b(?![^<]*>)(?![^<]*<\/a>)/i', // Original case
+      '/\b' . preg_quote(ucfirst(strtolower($term_name)), '/') . '\b(?![^<]*>)(?![^<]*<\/a>)/', // Title case
+      '/\b' . preg_quote(strtolower($term_name), '/') . '\b(?![^<]*>)(?![^<]*<\/a>)/', // Lowercase
+      '/\b' . preg_quote(strtoupper($term_name), '/') . '\b(?![^<]*>)(?![^<]*<\/a>)/', // Uppercase
+    ];
+    
+    foreach ($patterns as $pattern) {
+      $summary = preg_replace($pattern, $link_html, $summary);
+    }
   }
   
   return $summary;
