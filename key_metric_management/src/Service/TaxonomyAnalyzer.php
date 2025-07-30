@@ -1,7 +1,4 @@
 <?php
-# Create TaxonomyAnalyzer service
-cat > key_metric_management/src/Service/TaxonomyAnalyzer.php << 'EOF'
-<?php
 
 namespace Drupal\key_metric_management\Service;
 
@@ -107,4 +104,3 @@ class TaxonomyAnalyzer {
   }
 
 }
-EOF

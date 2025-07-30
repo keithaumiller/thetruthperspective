@@ -1,7 +1,4 @@
 <?php
-# Create MetricAnalyzer service
-cat > key_metric_management/src/Service/MetricAnalyzer.php << 'EOF'
-<?php
 
 namespace Drupal\key_metric_management\Service;
 
@@ -75,6 +72,17 @@ class MetricAnalyzer {
     }
 
     $metrics = [];
+
+    try {
+      // Check if field exists before proceeding
+      $this->database->query("SELECT 1 FROM node__field_motivation_data LIMIT 1")->execute();
+    }
+    catch (\Exception $e) {
+      // Field doesn't exist - return empty array
+      $this->loggerFactory->get('key_metric_management')
+        ->warning('Field field_motivation_data does not exist yet. Module will work once field is created.');
+      return [];
+    }
 
     try {
       $nids = $this->getArticleNodeIds();
@@ -256,4 +264,3 @@ class MetricAnalyzer {
   }
 
 }
-EOF

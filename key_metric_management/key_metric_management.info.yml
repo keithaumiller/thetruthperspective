@@ -1,12 +1,8 @@
 name: 'Key Metric Management'
 type: module
-description: 'Analyze and chart key performance metrics identified in news articles'
-core_version_requirement: ^9 || ^10 || ^11
+description: 'Analyze and manage key performance metrics from news articles with AI analysis integration.'
 package: 'Custom'
-dependencies:
-  - drupal:node
-  - drupal:taxonomy
-  - news_extractor
-
-libraries:
-  - key_metric_management/global-styling
+version: '2.0'
+core_version_requirement: '^11'
+# dependencies:
+#   - news_extractor
