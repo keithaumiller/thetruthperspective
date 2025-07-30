@@ -64,11 +64,11 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           }
         }
 
-        // Format the Motivation Analysis for display (with proper <br> spacing)
+        // Format the Motivation Analysis for display (basic HTML format)
         $motivation_analysis = news_extractor_format_motivation_analysis($ai_summary);
         $entity->set('field_motivation_analysis', [
           'value' => $motivation_analysis,
-          'format' => 'basic_html',
+          'format' => 'basic_html',  // Back to basic_html format
         ]);
 
         $entity->save();
@@ -207,28 +207,19 @@ function news_extractor_update_articles_missing_body_from_diffbot() {
 }
 
 /**
- * Format the motivation analysis text with proper line breaks.
+ * Format the motivation analysis text - now handles basic HTML input.
  */
 function news_extractor_format_motivation_analysis($text) {
-  // Remove any existing <p> tags and clean up HTML
-  $text = strip_tags($text, '<a>');
+  // The text is already in HTML format from AI, just clean it up
   
-  // Handle the specific format where sections run together
-  // Add line breaks before "Entities mentioned:" when it follows other text
-  $text = preg_replace('/([^\n])\s*Entities mentioned:/i', "$1<br><br>Entities mentioned:", $text);
+  // Ensure proper spacing between paragraphs
+  $text = preg_replace('/<\/p>\s*<p>/', '</p><p>', $text);
   
-  // Add line breaks before "Key metric:" when it follows other text
-  $text = preg_replace('/([^\n])\s*Key metric:/i', "$1<br><br>Key metric:", $text);
+  // Add extra spacing after key metric paragraph
+  $text = preg_replace('/(<p><strong>Key metric:<\/strong>[^<]*<\/p>)\s*(<p>As a social scientist)/i', '$1<p></p>$2', $text);
   
-  // Special handling for when sections immediately follow each other
-  // This handles cases where there are HTML links between sections
-  $text = preg_replace('/(<\/a>)\s*Key metric:/i', "$1<br><br>Key metric:", $text);
-  
-  // Add extra spacing after key metric before the analysis paragraph
-  $text = preg_replace('/(Key metric:[^\n]*)\s*(As a social scientist)/i', "$1<br><br><br>$2", $text);
-  
-  // Clean up excessive line breaks (convert multiple <br> tags to consistent spacing)
-  $text = preg_replace('/(<br>\s*){4,}/', '<br><br><br>', $text);
+  // Clean up any excessive spacing
+  $text = preg_replace('/<p><\/p>\s*<p><\/p>/', '<p></p>', $text);
   
   // Trim whitespace
   $text = trim($text);

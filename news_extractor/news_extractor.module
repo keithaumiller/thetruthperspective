@@ -113,7 +113,8 @@ function news_extractor_node_insert(EntityInterface $entity) {
       }
 
       // --- Linkify tags in Motivation Analysis ---
-      // Load tag entities for linkifying
+      // Skip linkifying for plain text format
+      /*
       $tag_entities = [];
       if (!empty($tag_ids)) {
         $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
@@ -124,6 +125,7 @@ function news_extractor_node_insert(EntityInterface $entity) {
         'format' => $entity->get('field_motivation_analysis')->format,
       ]);
       $entity->save();
+      */
       // --- End linkify ---
     }
     // --- End tagging logic ---
@@ -483,30 +485,36 @@ function _news_extractor_get_motivation_category($motivation) {
 function _news_extractor_build_ai_prompt($article_title, $article_text) {
   $allowed_motivations = "Ambition, Competitive spirit, Righteousness, Moral outrage, Loyalty, Pride, Determination, Fear, Greed, Power, Control, Revenge, Justice, Self-preservation, Recognition, Legacy, Influence, Security, Freedom, Unity, Professional pride, Duty, Curiosity, Enthusiasm, Wariness, Anxiety, Self-respect, Obligation, Indignation";
 
-  return "Write this from the perspective of a social scientist that puts things in the context of key performance metrics of the United States.\n\n" .
-         "Select the most appropriate key metric and speculate as a social scientist how the information in this article will affect that key performance metric.\n\n" .
-         "For each entity mentioned in the article, identify their top 3 motivations from the allowed list below.\n\n" .
-         "Only use motivations from this list: $allowed_motivations\n\n" .
-         "Format your response EXACTLY as follows:\n\n" .
-         "Entities mentioned:\n" .
-         "- Entity Name: Motivation1, Motivation2, Motivation3\n" .
-         "- Entity Name: Motivation1, Motivation2, Motivation3\n\n" .
-         "Key metric: Metric Name\n\n" .
-         "[Your analysis paragraph explaining how this will impact the key metric]\n\n" .
+  return "As a social scientist, analyze this article in the context of key performance metrics for the United States.\n\n" .
+         "Instructions:\n" .
+         "1. Identify each entity (person, organization, institution) mentioned in the article\n" .
+         "2. For each entity, select their top 2-3 motivations from the allowed list\n" .
+         "3. Choose the most relevant US performance metric this article impacts\n" .
+         "4. Provide analysis of how this affects that metric\n\n" .
+         "Use ONLY motivations from this list: $allowed_motivations\n\n" .
+         "Format your response EXACTLY as follows using basic HTML:\n\n" .
+         "<p><strong>Entities mentioned:</strong><br>\n" .
+         "- Entity Name: Motivation1, Motivation2<br>\n" .
+         "- Entity Name: Motivation1, Motivation2, Motivation3</p>\n\n" .
+         "<p><strong>Key metric:</strong> [Specific Metric Name]</p>\n\n" .
+         "<p>As a social scientist, I analyze that [your detailed analysis of how this article impacts the key metric].</p>\n\n" .
          "Article Title: " . $article_title . "\n\n" .
          "Article Text: " . $article_text;
 }
 
 /**
- * Extract entities, motivations, and metrics from the AI summary.
+ * Extract entities, motivations, and metrics from the AI summary (now with HTML).
  */
 function _news_extractor_extract_tags_from_summary($ai_summary) {
   $entities = [];
   $motivations = [];
   $metrics = [];
 
+  // Strip HTML for parsing, but preserve structure
+  $text_content = strip_tags($ai_summary);
+
   // Extract entity-motivation pairings: "- Entity Name: Motivation1, Motivation2, Motivation3"
-  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $ai_summary, $matches)) {
+  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $text_content, $matches)) {
     foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
       if (preg_match('/-\s*(.+?):\s*(.+)/', $line, $m)) {
         $entity_name = trim($m[1]);
@@ -518,7 +526,7 @@ function _news_extractor_extract_tags_from_summary($ai_summary) {
   }
 
   // Key metric: single line after "Key metric:"
-  if (preg_match('/Key metric:\s*(.+)/i', $ai_summary, $matches)) {
+  if (preg_match('/Key metric:\s*(.+)/i', $text_content, $matches)) {
     $metrics[] = trim($matches[1]);
   }
 
@@ -534,7 +542,7 @@ function _news_extractor_extract_tags_from_summary($ai_summary) {
 }
 
 /**
- * Extract structured motivation data from AI summary for JSON field.
+ * Extract structured motivation data from AI summary for JSON field (handles HTML).
  */
 function _news_extractor_extract_structured_data($motivation_analysis) {
   $data = [
@@ -543,8 +551,11 @@ function _news_extractor_extract_structured_data($motivation_analysis) {
     'metrics' => []
   ];
 
+  // Strip HTML for parsing
+  $text_content = strip_tags($motivation_analysis);
+
   // Extract entities and their motivations
-  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $motivation_analysis, $matches)) {
+  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $text_content, $matches)) {
     foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
       if (preg_match('/-\s*(.+?):\s*(.+)/', $line, $m)) {
         $entity = trim($m[1]);
@@ -567,7 +578,7 @@ function _news_extractor_extract_structured_data($motivation_analysis) {
   }
 
   // Extract key metric
-  if (preg_match('/Key metric:\s*(.+)/i', $motivation_analysis, $matches)) {
+  if (preg_match('/Key metric:\s*(.+)/i', $text_content, $matches)) {
     $data['metrics'][] = trim($matches[1]);
   }
 
@@ -635,32 +646,4 @@ function news_extractor_postprocess_article_image(Node $node) {
  */
 function news_extractor_get_diffbot_token() {
   return \Drupal::config('news_extractor.settings')->get('diffbot_token') ?: '';
-}
-
-/**
- * Linkify tags in the AI summary.
- *
- * @param string $summary
- *   The AI summary text.
- * @param array $tags
- *   Array of taxonomy term entities or arrays with 'name' and 'tid'.
- * @return string
- *   The summary with tags linked.
- */
-function news_extractor_linkify_summary_tags($summary, array $tags) {
-  foreach ($tags as $tag) {
-    // Get tag name and tid
-    $tag_name = is_object($tag) ? $tag->getName() : $tag['name'];
-    $tid = is_object($tag) ? $tag->id() : $tag['tid'];
-    $url = '/taxonomy/term/' . $tid;
-    // Replace only whole words, case-insensitive
-    $summary = preg_replace_callback(
-      '/\b(' . preg_quote($tag_name, '/') . ')\b/u',
-      function ($matches) use ($url) {
-        return '<a href="' . $url . '">' . $matches[1] . '</a>';
-      },
-      $summary
-    );
-  }
-  return $summary;
 }
