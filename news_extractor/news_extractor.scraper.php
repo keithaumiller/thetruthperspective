@@ -66,10 +66,26 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
 
         // Format the Motivation Analysis for display (basic HTML format)
         $motivation_analysis = news_extractor_format_motivation_analysis($ai_summary);
-        $entity->set('field_motivation_analysis', [
-          'value' => $motivation_analysis,
-          'format' => 'basic_html',  // Back to basic_html format
-        ]);
+        
+        // --- Linkify taxonomy terms in the motivation analysis ---
+        if (!empty($tag_ids)) {
+          // Load the created taxonomy terms
+          $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
+          
+          // Apply linkification to the formatted motivation analysis
+          $motivation_analysis_linked = news_extractor_linkify_summary_tags($motivation_analysis, $tag_entities);
+          
+          $entity->set('field_motivation_analysis', [
+            'value' => $motivation_analysis_linked,
+            'format' => 'basic_html',
+          ]);
+        } else {
+          // No tags created, save without links
+          $entity->set('field_motivation_analysis', [
+            'value' => $motivation_analysis,
+            'format' => 'basic_html',
+          ]);
+        }
 
         $entity->save();
         \Drupal::logger('news_extractor')->info('Generated Motivation Analysis for: @title', [
@@ -381,5 +397,78 @@ function news_extractor_test_update() {
   }
 
   echo "Test complete. Processed: $processed, Would update: $updated\n";
+}
+
+/**
+ * Update existing motivation analysis content with taxonomy term links.
+ */
+function news_extractor_update_motivation_analysis_links() {
+  $nids = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->accessCheck(FALSE)
+    ->execute();
+
+  $processed = 0;
+  $updated = 0;
+
+  foreach ($nids as $nid) {
+    $node = Node::load($nid);
+    
+    if ($node && 
+        $node->hasField('field_motivation_analysis') && 
+        !$node->get('field_motivation_analysis')->isEmpty() &&
+        $node->hasField('field_tags') && 
+        !$node->get('field_tags')->isEmpty()) {
+      
+      $original_analysis = $node->get('field_motivation_analysis')->value;
+      
+      // Skip if already has links
+      if (strpos($original_analysis, '<a href=') !== false) {
+        $processed++;
+        continue;
+      }
+      
+      // Get the taxonomy terms for this node
+      $tag_ids = [];
+      foreach ($node->get('field_tags') as $tag_item) {
+        $tag_ids[] = $tag_item->target_id;
+      }
+      
+      if (!empty($tag_ids)) {
+        // Load taxonomy terms
+        $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
+        
+        // Apply linkification
+        $linked_analysis = news_extractor_linkify_summary_tags($original_analysis, $tag_entities);
+        
+        // Only update if content changed
+        if ($linked_analysis !== $original_analysis) {
+          $node->set('field_motivation_analysis', [
+            'value' => $linked_analysis,
+            'format' => 'basic_html',
+          ]);
+          $node->save();
+          $updated++;
+          
+          \Drupal::logger('news_extractor')->info('Added taxonomy links to motivation analysis for: @title (nid: @nid)', [
+            '@title' => $node->getTitle(),
+            '@nid' => $nid,
+          ]);
+        }
+      }
+      
+      $processed++;
+    }
+  }
+
+  \Drupal::logger('news_extractor')->info('Motivation analysis linking update complete. Processed: @processed, Updated: @updated', [
+    '@processed' => $processed,
+    '@updated' => $updated,
+  ]);
+
+  return [
+    'processed' => $processed,
+    'updated' => $updated,
+  ];
 }
 
