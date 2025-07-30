@@ -647,3 +647,23 @@ function news_extractor_postprocess_article_image(Node $node) {
 function news_extractor_get_diffbot_token() {
   return \Drupal::config('news_extractor.settings')->get('diffbot_token') ?: '';
 }
+
+/**
+ * Linkify entity and motivation terms in the motivation analysis.
+ */
+function news_extractor_linkify_summary_tags($summary, array $tags) {
+  foreach ($tags as $tag) {
+    $term_name = $tag->getName();
+    $term_url = \Drupal\Core\Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $tag->id()])->toString();
+    
+    // Create the link HTML
+    $link_html = '<a href="' . $term_url . '">' . $term_name . '</a>';
+    
+    // Replace exact matches (case-insensitive, whole words only)
+    // Avoid replacing text that's already inside HTML tags
+    $pattern = '/\b' . preg_quote($term_name, '/') . '\b(?![^<]*>|[^<]*<\/a>)/i';
+    $summary = preg_replace($pattern, $link_html, $summary, 1); // Only replace first occurrence
+  }
+  
+  return $summary;
+}
