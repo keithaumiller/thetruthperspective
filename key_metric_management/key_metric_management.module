@@ -53,10 +53,12 @@ function key_metric_management_theme($existing, $type, $theme, $path) {
     'key_metric_stats' => [
       'variables' => ['stats' => []],
       'template' => 'key-metric-stats',
+      'path' => $path . '/templates',
     ],
     'key_metric_detail' => [
-      'variables' => ['metric' => '', 'count' => 0, 'back_url' => NULL],
+      'variables' => ['metric' => '', 'count' => 0, 'back_url' => NULL], 
       'template' => 'key-metric-detail',
+      'path' => $path . '/templates',
     ],
   ];
 }

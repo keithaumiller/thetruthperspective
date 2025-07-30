@@ -1,0 +1,41 @@
+{#
+/**
+ * @file
+ * Template for displaying individual metric details.
+ *
+ * Available variables:
+ * - metric: The metric name
+ * - count: Number of articles with this metric
+ * - back_url: URL to return to dashboard
+ */
+#}
+
+<div class="metric-detail-container">
+  {% if back_url %}
+    <div class="back-link">
+      <a href="{{ back_url }}" class="button button--secondary">&larr; {{ 'Back to Dashboard'|t }}</a>
+    </div>
+  {% endif %}
+  
+  <div class="metric-header">
+    <h1>{{ 'Key Metric: @metric'|t({'@metric': metric|default('Unknown')}) }}</h1>
+  </div>
+  
+  <div class="metric-count-display">
+    <div class="count-number">{{ count|default(0) }}</div>
+    <div class="count-label">{{ 'articles reference this metric'|t }}</div>
+  </div>
+  
+  {% if count > 0 %}
+    <div class="metric-info">
+      <p>{{ 'This metric appears in @count article@plural.'|t({
+        '@count': count,
+        '@plural': count != 1 ? 's' : ''
+      }) }}</p>
+    </div>
+  {% else %}
+    <div class="no-articles">
+      <p>{{ 'No articles found containing this metric.'|t }}</p>
+    </div>
+  {% endif %}
+</div>

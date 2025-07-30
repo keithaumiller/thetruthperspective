@@ -1,0 +1,50 @@
+{#
+/**
+ * @file
+ * Template for displaying key metric statistics dashboard.
+ *
+ * Available variables:
+ * - stats: Array containing metric statistics
+ */
+#}
+
+<div class="metric-stats-container">
+  <h2>{{ 'Key Metric Statistics'|t }}</h2>
+  
+  {% if stats %}
+    <div class="metric-stats-grid">
+      <div class="stat-card">
+        <div class="stat-number">{{ stats.total_metrics|default(0) }}</div>
+        <div class="stat-label">{{ 'Total Unique Metrics'|t }}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-number">{{ stats.total_articles_with_metrics|default(0) }}</div>
+        <div class="stat-label">{{ 'Articles with Metrics'|t }}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-number">{{ stats.most_common_metric|default('None') }}</div>
+        <div class="stat-label">{{ 'Most Common Metric'|t }}</div>
+      </div>
+    </div>
+    
+    {% if stats.top_metrics %}
+      <div class="top-metrics-section">
+        <h3>{{ 'Top Metrics'|t }}</h3>
+        <div class="metrics-table">
+          {% for metric, count in stats.top_metrics %}
+            <div class="metric-row">
+              <span class="metric-name">{{ metric }}</span>
+              <span class="metric-count">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="no-data">
+      <p>{{ 'No metric data available. Ensure articles have the field_motivation_data field with metrics.'|t }}</p>
+    </div>
+  {% endif %}
+</div>
