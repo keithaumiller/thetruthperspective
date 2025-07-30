@@ -1,0 +1,14 @@
+# modules/custom/key_metric_management/key_metric_management.services.yml
+
+services:
+  key_metric_management.metric_analyzer:
+    class: Drupal\key_metric_management\Service\MetricAnalyzer
+    arguments: ['@entity_type.manager', '@database', '@cache.default', '@logger.factory']
+
+  key_metric_management.taxonomy_analyzer:
+    class: Drupal\key_metric_management\Service\TaxonomyAnalyzer
+    arguments: ['@entity_type.manager', '@cache.default', '@logger.factory', '@key_metric_management.metric_analyzer']
+
+  key_metric_management.cache_manager:
+    class: Drupal\key_metric_management\Service\CacheManager
+    arguments: ['@cache.default']

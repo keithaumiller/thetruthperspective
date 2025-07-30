@@ -1,0 +1,4 @@
+global-styling:
+  css:
+    theme:
+      css/key-metric-management.css: {}

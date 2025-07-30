@@ -1,0 +1,23 @@
+key_metric_management.dashboard:
+  path: '/admin/config/content/key-metrics'
+  defaults:
+    _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::dashboard'
+    _title: 'Key Metric Dashboard'
+  requirements:
+    _permission: 'administer nodes'
+
+key_metric_management.metric_detail:
+  path: '/admin/config/content/key-metrics/{metric}'
+  defaults:
+    _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::metricDetail'
+    _title: 'Metric Details'
+  requirements:
+    _permission: 'administer nodes'
+
+key_metric_management.taxonomy_metrics:
+  path: '/admin/config/content/key-metrics-taxonomy'
+  defaults:
+    _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::taxonomyMetrics'
+    _title: 'Key Metric Taxonomy Terms'
+  requirements:
+    _permission: 'administer nodes'

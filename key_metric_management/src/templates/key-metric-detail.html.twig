@@ -1,0 +1,10 @@
+# Create key-metric-detail template
+cat > key_metric_management/templates/key-metric-detail.html.twig << 'EOF'
+{# Key metric detail page #}
+<h1>{{ 'Key Metric: @metric'|t({'@metric': metric}) }}</h1>
+<div class="metric-count-display">
+  <div class="count-number">{{ count }}</div>
+  <div class="count-label">{{ 'articles reference this metric'|t }}</div>
+</div>
+<p><a href="{{ back_url }}">&larr; {{ 'Back to Dashboard'|t }}</a></p>
+EOF

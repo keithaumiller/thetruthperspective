@@ -1,0 +1,64 @@
+<?php
+
+/**
+ * @file
+ * Key Metric Management module - Analyze and chart key performance metrics from news articles.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_help().
+ */
+function key_metric_management_help($route_name, \Drupal\Core\Routing\RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.key_metric_management':
+      return '<p>' . t('This module analyzes key performance metrics identified in news articles and provides charting capabilities.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function key_metric_management_node_update(EntityInterface $entity) {
+  if ($entity instanceof NodeInterface && $entity->bundle() === 'article') {
+    \Drupal::service('key_metric_management.cache_manager')->invalidateMetricCaches();
+  }
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function key_metric_management_node_insert(EntityInterface $entity) {
+  if ($entity instanceof NodeInterface && $entity->bundle() === 'article') {
+    \Drupal::service('key_metric_management.cache_manager')->invalidateMetricCaches();
+  }
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function key_metric_management_node_delete(EntityInterface $entity) {
+  if ($entity instanceof NodeInterface && $entity->bundle() === 'article') {
+    \Drupal::service('key_metric_management.cache_manager')->invalidateMetricCaches();
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function key_metric_management_theme($existing, $type, $theme, $path) {
+  return [
+    'key_metric_stats' => [
+      'variables' => ['stats' => []],
+      'template' => 'key-metric-stats',
+    ],
+    'key_metric_detail' => [
+      'variables' => ['metric' => '', 'count' => 0, 'back_url' => NULL],
+      'template' => 'key-metric-detail',
+    ],
+  ];
+}
+
+// NO WRAPPER FUNCTIONS - Use services directly via controller
