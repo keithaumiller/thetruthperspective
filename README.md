@@ -1,144 +1,222 @@
-# The Truth Perspective - Drupal Modules 
+# The Truth Perspective - Drupal Modules
 
 **Version**: 1.0.0  
 **Last Updated**: July 2025  
-**Drupal Version**: 9.x / 10.x  
+**Drupal Version**: 9.x / 10.x / 11.x
 **PHP Version**: 7.4+  
 
 ## Overview
 
-This repository contains custom Drupal modules for The Truth Perspective website, providing AI-powered content processing and conversational interfaces.
+This repository contains custom Drupal modules for The Truth Perspective website, providing AI-powered content processing, conversational interfaces, automated workflows, and key metric analysis.
 
 ## Modules
 
-### 1. News Extractor Module
-**Version**: 1.2.0  
-**Location**: `/news_extractor/`  
-**Purpose**: Extracts and processes news content using AI analysis
+### 1. 🗞️ News Extractor Module
+**Version**: 1.2.0 | **Location**: [`/news_extractor/`](./news_extractor/README.md)
 
-**Features**:
-- Automated news content extraction
-- AI-powered content analysis
-- AWS Bedrock integration
-- Claude 3.5 Sonnet processing
+Automated news content extraction and AI-powered analysis system.
 
-### 2. AI Conversation Module  
-**Version**: 1.0.0  
-**Location**: `/ai_conversation/`  
-**Purpose**: Provides conversational AI interface for authenticated users
+**Key Features**:
+- Extracts news content from URLs and RSS feeds
+- AI content analysis using Claude 3.5 Sonnet
+- Custom article template with motivation data fields
+- AWS Bedrock integration for processing
 
-**Features**:
-- Persistent AI conversations
-- Real-time chat interface
-- Multiple Claude model support
-- AWS Bedrock integration
-- Context-aware responses
+**Usage**: Content managers can input news URLs for automatic extraction and AI analysis.
 
-## Technical Stack
+---
 
-- **Backend**: Drupal 9.x/10.x, PHP 7.4+
-- **AI Provider**: AWS Bedrock (Anthropic Claude)
-- **Default Model**: `anthropic.claude-3-5-sonnet-20240620-v1:0`
-- **Frontend**: JavaScript, CSS, Twig templates
-- **Deployment**: GitHub Actions with SSH deployment
+### 2. 💬 AI Conversation Module  
+**Version**: 1.0.0 | **Location**: [`/ai_conversation/`](./ai_conversation/README.md)
 
-## Installation
+Interactive conversational AI interface for authenticated users.
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/keithaumiller/thetruthperspective.git
-   ```
+**Key Features**:
+- Persistent conversation history per user
+- Real-time chat interface with typing indicators
+- Multiple Claude model support (3.5 Sonnet, 3 Haiku, 3 Opus)
+- Context-aware responses with conversation memory
 
-2. **Enable modules**:
-   ```bash
-   drush en news_extractor ai_conversation
-   ```
+**Usage**: Authenticated users can engage in AI conversations at `/ai-conversation`.
 
-3. **Configure AWS credentials** in each module's settings page
+---
 
-## Configuration
+### 3. 🤖 Job Application Automation
+**Version**: 1.0.0 | **Location**: [`/job_application_automation/`](./job_application_automation/README.md)
 
-### News Extractor
-- Configure at: `/admin/config/news-extractor`
-- Requires: AWS Bedrock access, IAM permissions
+Automated job search and application processing system.
 
-### AI Conversation
-- Configure at: `/admin/config/ai-conversation`
-- Requires: AWS Bedrock access, IAM permissions
+**Key Features**:
+- Job posting discovery and extraction
+- AI-powered application letter generation
+- Automated form filling and submission
+- Application tracking and status management
 
-## AWS Requirements
+**Usage**: Automates job search workflows for configured user profiles.
 
-Both modules require:
+---
+
+### 4. 📊 Key Metric Management
+**Version**: 1.0.0 | **Location**: [`/key_metric_management/`](./key_metric_management/README.md)
+
+Advanced metric tracking and analysis system for content insights.
+
+**Key Features**:
+- Extracts key metrics from article motivation data
+- Interactive dashboard with statistics and trends
+- Public metric browsing at `/key-metrics`
+- Configurable block widget for site integration
+
+**Usage**: Analyze and display key metrics from news articles for public insight.
+
+## Quick Start
+
+### Installation
+```bash
+# Clone repository
+git clone https://github.com/keithaumiller/thetruthperspective.git
+
+# Navigate to Drupal modules directory
+cd /path/to/drupal/modules/custom/
+
+# Copy modules
+cp -r thetruthperspective/* .
+
+# Enable modules
+drush en news_extractor ai_conversation job_application_automation key_metric_management
+```
+
+### Configuration Requirements
+
+#### AWS Bedrock (Required for AI modules)
 - AWS account with Bedrock access
-- IAM user with `bedrock:InvokeModel` permissions
-- Access to Claude models in AWS Bedrock
+- IAM user with `bedrock:InvokeModel` permissions  
+- Access to Anthropic Claude models
 - Supported regions: us-east-1, us-west-2, eu-west-1
+
+#### Module-Specific Setup
+- **News Extractor**: Configure at `/admin/config/news-extractor`
+- **AI Conversation**: Configure at `/admin/config/ai-conversation`  
+- **Job Application**: Configure automation settings
+- **Key Metrics**: Enable and place block widgets
+
+## Technical Architecture
+
+### AI Processing Stack
+- **Primary AI**: AWS Bedrock with Claude 3.5 Sonnet
+- **Fallback Models**: Claude 3 Haiku, Claude 3 Opus
+- **Processing**: Server-side API integration
+- **Security**: Encrypted AWS credential storage
+
+### Frontend Technologies
+- **Templates**: Twig with custom themes
+- **Styling**: Responsive CSS with modern design
+- **JavaScript**: Vanilla JS with AJAX for real-time features
+- **UI/UX**: Professional admin interfaces
+
+### Backend Architecture
+- **Services**: Dependency injection with Drupal services
+- **Caching**: Smart caching with TTL and invalidation
+- **Database**: Drupal entities and custom tables
+- **Security**: CSRF protection, user authentication, input validation
 
 ## Deployment
 
-Automated deployment via GitHub Actions:
+### Automated CI/CD
+- **Platform**: GitHub Actions
 - **Trigger**: Push to `main` branch
-- **Target**: Custom modules directory on server
-- **Process**: Git pull + file deployment + cache clear
+- **Process**: Git deployment → file sync → permission setting → cache clear
+- **Configuration**: [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml)
+
+### Manual Deployment
+```bash
+# Pull latest changes
+git pull origin main
+
+# Clear Drupal cache
+drush cr
+
+# Enable any new modules
+drush en module_name
+```
+
+## Public Features
+
+### News Analysis
+- AI-processed news articles with insights
+- Motivation data extraction and display
+- Professional article templates
+
+### Interactive AI Chat  
+- Public-facing conversational interface
+- Context-aware AI responses
+- Conversation history for logged-in users
+
+### Key Metrics Dashboard
+- Public metrics at `/key-metrics`
+- Interactive charts and statistics
+- Embeddable widgets for other pages
 
 ## Directory Structure
 
 ```
 thetruthperspective/
 ├── .github/workflows/
-│   └── deploy.yml              # Automated deployment
-├── news_extractor/
-│   ├── news_extractor.info.yml
-│   ├── news_extractor.module
-│   └── [other module files]
-├── ai_conversation/
-│   ├── ai_conversation.info.yml
-│   ├── ai_conversation.module
-│   ├── src/
-│   │   ├── Controller/
-│   │   ├── Service/
-│   │   └── Form/
+│   └── deploy.yml                    # CI/CD automation
+├── news_extractor/                   # News processing module
+│   ├── README.md                     # Detailed documentation
+│   ├── src/Controller/
 │   ├── templates/
-│   ├── css/
-│   └── js/
-└── README.md                   # This file
+│   └── [module files]
+├── ai_conversation/                  # AI chat module  
+│   ├── README.md                     # Detailed documentation
+│   ├── src/Service/
+│   ├── js/conversation.js
+│   └── [module files]
+├── job_application_automation/       # Job automation module
+│   ├── README.md                     # Detailed documentation
+│   └── [module files]
+├── key_metric_management/            # Metrics analysis module
+│   ├── README.md                     # Detailed documentation
+│   ├── src/Plugin/Block/
+│   ├── templates/
+│   └── [module files]
+└── README.md                        # This overview file
 ```
+
+## Module Documentation
+
+Each module contains comprehensive documentation:
+
+- **[News Extractor README](./news_extractor/README.md)** - Content extraction and AI analysis
+- **[AI Conversation README](./ai_conversation/README.md)** - Interactive chat system  
+- **[Job Application README](./job_application_automation/README.md)** - Automation workflows
+- **[Key Metrics README](./key_metric_management/README.md)** - Metric tracking and analysis
 
 ## Version History
 
 ### v1.0.0 (July 2025)
-- Initial release of AI Conversation module
-- AWS Bedrock integration for both modules
-- Automated deployment pipeline
-- Updated News Extractor to use Bedrock
+- ✅ News Extractor v1.2.0 with AWS Bedrock
+- ✅ AI Conversation v1.0.0 initial release
+- ✅ Job Application Automation v1.0.0
+- ✅ Key Metric Management v1.0.0  
+- ✅ Automated deployment pipeline
+- ✅ Comprehensive documentation
 
-### News Extractor Changelog
-- **v1.2.0**: AWS Bedrock integration
-- **v1.1.0**: Enhanced content processing
-- **v1.0.0**: Initial release
+## Security & Compliance
 
-### AI Conversation Changelog
-- **v1.0.0**: Initial release with AWS Bedrock support
+- **AWS Integration**: Secure credential management
+- **User Privacy**: Conversation data isolation  
+- **CSRF Protection**: All AJAX endpoints protected
+- **Input Validation**: Comprehensive sanitization
+- **Access Control**: Drupal permission integration
 
-## Security
-
-- AWS credentials stored in Drupal configuration
-- User-specific conversation access
-- CSRF protection on all AJAX requests
-- Server-side API key handling
-
-## Maintenance
-
-- **Monitoring**: Check AWS CloudWatch for Bedrock usage
-- **Updates**: Monitor for new Claude model releases
-- **Backups**: Regular Drupal database backups recommended
-- **Logs**: Check `/admin/reports/dblog` for module errors
-
-## Support
+## Support & Maintenance
 
 - **Repository**: https://github.com/keithaumiller/thetruthperspective
-- **Issues**: Use GitHub Issues for bug reports
-- **Documentation**: See individual module README files
+- **Issues**: Use GitHub Issues for bug reports and feature requests
+- **Documentation**: Individual module README files contain detailed setup instructions
+- **Monitoring**: AWS CloudWatch for AI usage tracking
 
 ## License
 
@@ -148,4 +226,4 @@ GPL-2.0 (Compatible with Drupal licensing)
 
 **Maintained by**: Keith Aumiller  
 **Organization**: The Truth Perspective  
-**Contact**: [Contact information]
+**Last Updated**: July 30, 2025
