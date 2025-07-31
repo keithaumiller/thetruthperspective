@@ -295,7 +295,7 @@ class KeyMetricController extends ControllerBase {
       '#count' => $count,
       '#category' => $category,
       '#taxonomy_url' => $taxonomy_url,
-      '#back_url' => Url::fromRoute('key_metric_management.dashboard'),
+      '#back_url' => Url::fromRoute('key_metric_management.dashboard')->toString(),
       '#attached' => [
         'library' => ['key_metric_management/global-styling'],
       ],
