@@ -485,22 +485,25 @@ function _news_extractor_get_motivation_category($motivation) {
 function _news_extractor_build_ai_prompt($article_title, $article_text) {
   $allowed_motivations = "Ambition, Competitive spirit, Righteousness, Moral outrage, Loyalty, Pride, Determination, Fear, Greed, Power, Control, Revenge, Justice, Self-preservation, Recognition, Legacy, Influence, Security, Freedom, Unity, Professional pride, Duty, Curiosity, Enthusiasm, Wariness, Anxiety, Self-respect, Obligation, Indignation";
 
+  $allowed_metrics = "Presidential Approval Rating, Congressional Approval Rating, Trust in Government Index, Government Effectiveness Score, Transparency Index, Bills Passed Per Session, Bipartisan Legislation Rate, Committee Productivity, Filibuster Usage Rate, Executive Order Frequency, Voter Turnout Rate, Voter Registration Rate, Electoral Competitiveness, Campaign Finance Totals, Lobbying Expenditures, Federal Judicial Confirmation Rate, Government Shutdown Days, Federal Employee Satisfaction, Congressional Ethics Violations, Polarization Index, GDP Growth Rate, Unemployment Rate, Inflation Rate (CPI), Federal Funds Rate, Labor Force Participation Rate, National Debt, Federal Budget Deficit/Surplus, Debt-to-GDP Ratio, Tax Revenue Growth, Government Spending Growth, Trade Balance, Current Account Balance, Dollar Index (DXY), Manufacturing Output, Productivity Growth, Median Household Income, Poverty Rate, Income Inequality (Gini Coefficient), Consumer Confidence Index, Housing Price Index";
+
   return "As a social scientist, analyze this article in the context of key performance metrics for the United States.\n\n" .
          "Instructions:\n" .
          "1. Identify each entity (person, organization, institution) mentioned in the article\n" .
          "2. For each entity, select their top 2-3 motivations from the allowed list\n" .
-         "3. Choose the most relevant US performance metric this article impacts\n" .
+         "3. Choose the SINGLE most relevant US performance metric this article impacts from the allowed metrics list\n" .
          "4. Provide credibility score (0-100, 100=perfect trust, 0=no credibility)\n" .
          "5. Provide bias rating (0=Extreme Left, 25=Lean Left, 50=Center, 75=Lean Right, 100=Extreme Right)\n" .
          "6. Provide bias analysis (two lines explaining the rating)\n" .
          "7. Provide article sentiment score (0-100, 100=most positive, 0=most negative)\n" .
          "8. Provide analysis of how this affects that metric\n\n" .
-         "Use ONLY motivations from this list: $allowed_motivations\n\n" .
+         "IMPORTANT: Use ONLY motivations from this list: $allowed_motivations\n\n" .
+         "IMPORTANT: Choose ONLY ONE metric from this list: $allowed_metrics\n\n" .
          "Format your response EXACTLY as follows using basic HTML:\n\n" .
          "<p><strong>Entities mentioned:</strong><br>\n" .
          "- Entity Name: Motivation1, Motivation2<br>\n" .
          "- Entity Name: Motivation1, Motivation2, Motivation3</p>\n\n" .
-         "<p><strong>Key metric:</strong> [Specific Metric Name]</p>\n\n" .
+         "<p><strong>Key metric:</strong> [Select ONE from allowed metrics list]</p>\n\n" .
          "<p><strong>Credibility Score:</strong> [0-100]</p>\n\n" .
          "<p><strong>Bias Rating:</strong> [0-100]</p>\n\n" .
          "<p><strong>Bias Analysis:</strong><br>\n" .
