@@ -28,11 +28,6 @@ class TaxonomyAnalyzer {
   protected LoggerChannelFactoryInterface $loggerFactory;
 
   /**
-   * The metric analyzer service.
-   */
-  protected MetricAnalyzer $metricAnalyzer;
-
-  /**
    * Cache TTL (1 hour).
    */
   const CACHE_TTL = 3600;
@@ -43,13 +38,11 @@ class TaxonomyAnalyzer {
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
     CacheBackendInterface $cache,
-    LoggerChannelFactoryInterface $logger_factory,
-    MetricAnalyzer $metric_analyzer
+    LoggerChannelFactoryInterface $logger_factory
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->cache = $cache;
     $this->loggerFactory = $logger_factory;
-    $this->metricAnalyzer = $metric_analyzer;
   }
 
   /**
