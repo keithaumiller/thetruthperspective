@@ -6,6 +6,8 @@
  * Available variables:
  * - metric: The metric name
  * - count: Number of articles with this metric
+ * - category: The metric category
+ * - taxonomy_url: URL to the taxonomy term page
  * - back_url: URL to return to dashboard
  */
 #}
@@ -19,6 +21,12 @@
   
   <div class="metric-header">
     <h1>{{ 'Key Metric: @metric'|t({'@metric': metric|default('Unknown')}) }}</h1>
+    {% if category %}
+      <div class="metric-category">
+        <span class="category-label">{{ 'Category:'|t }}</span> 
+        <span class="category-name">{{ category }}</span>
+      </div>
+    {% endif %}
   </div>
   
   <div class="metric-count-display">
@@ -28,14 +36,177 @@
   
   {% if count > 0 %}
     <div class="metric-info">
-      <p>{{ 'This metric appears in @count article@plural.'|t({
+      <p>{{ 'This metric appears in @count article@plural, providing insights into federal government performance.'|t({
         '@count': count,
         '@plural': count != 1 ? 's' : ''
       }) }}</p>
     </div>
+    
+    {% if taxonomy_url %}
+      <div class="taxonomy-link-section">
+        <h3>{{ 'Browse Related Articles'|t }}</h3>
+        <p>{{ 'View all articles tagged with this metric in our content taxonomy system.'|t }}</p>
+        <a href="{{ taxonomy_url }}" class="button button--primary taxonomy-button" 
+           title="{{ 'Browse all articles tagged with @metric'|t({'@metric': metric}) }}">
+          {{ 'View Tagged Articles →'|t }}
+        </a>
+      </div>
+    {% endif %}
+    
   {% else %}
     <div class="no-articles">
       <p>{{ 'No articles found containing this metric.'|t }}</p>
     </div>
   {% endif %}
 </div>
+
+<style>
+.metric-detail-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.back-link {
+  margin-bottom: 1.5rem;
+}
+
+.metric-header h1 {
+  color: #1e3a8a;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.metric-category {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #f0f9ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 0 4px 4px 0;
+}
+
+.category-label {
+  font-weight: bold;
+  color: #374151;
+}
+
+.category-name {
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.metric-count-display {
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.count-number {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.count-label {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.metric-info {
+  background-color: #f9fafb;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid #e5e7eb;
+}
+
+.taxonomy-link-section {
+  background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.taxonomy-link-section h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #92400e;
+  font-size: 1.5rem;
+}
+
+.taxonomy-link-section p {
+  color: #78350f;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.button--primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+.button--primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+}
+
+.button--secondary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.button--secondary:hover {
+  background-color: #4b5563;
+  transform: translateY(-1px);
+}
+
+.taxonomy-button {
+  font-size: 1.1rem;
+  padding: 1rem 2rem;
+}
+
+.no-articles {
+  text-align: center;
+  padding: 2rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #991b1b;
+}
+
+@media (max-width: 768px) {
+  .metric-detail-container {
+    padding: 1rem;
+  }
+  
+  .count-number {
+    font-size: 2rem;
+  }
+  
+  .taxonomy-link-section {
+    padding: 1.5rem;
+  }
+}
+</style>
