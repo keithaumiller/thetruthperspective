@@ -50,6 +50,13 @@
            title="{{ 'Browse all articles tagged with @metric'|t({'@metric': metric}) }}">
           {{ 'View Tagged Articles →'|t }}
         </a>
+        <div class="taxonomy-url-display">
+          <small>{{ 'Direct link:'|t }} <a href="{{ taxonomy_url }}">{{ taxonomy_url }}</a></small>
+        </div>
+      </div>
+    {% else %}
+      <div class="no-taxonomy">
+        <p>{{ 'No taxonomy term found for this metric. Articles may be tagged differently.'|t }}</p>
       </div>
     {% endif %}
     
@@ -80,7 +87,6 @@
 .metric-category {
   margin-bottom: 1.5rem;
   padding: 0.75rem 1rem;
-  background-color: #f0f9ff;
   border-left: 4px solid #3b82f6;
   border-radius: 0 4px 4px 0;
 }
@@ -98,27 +104,24 @@
 .metric-count-display {
   text-align: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  border: 2px solid #e5e7eb;
   border-radius: 12px;
   margin-bottom: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .count-number {
   font-size: 3rem;
   font-weight: bold;
   margin-bottom: 0.5rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: #1e40af;
 }
 
 .count-label {
   font-size: 1.1rem;
-  opacity: 0.9;
+  color: #374151;
 }
 
 .metric-info {
-  background-color: #f9fafb;
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;
@@ -126,13 +129,11 @@
 }
 
 .taxonomy-link-section {
-  background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
   border: 2px solid #f59e0b;
   border-radius: 12px;
   padding: 2rem;
   margin-bottom: 2rem;
   text-align: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .taxonomy-link-section h3 {
@@ -148,6 +149,25 @@
   font-size: 1.1rem;
 }
 
+.taxonomy-url-display {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.taxonomy-url-display small {
+  color: #6b7280;
+}
+
+.taxonomy-url-display a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.taxonomy-url-display a:hover {
+  text-decoration: underline;
+}
+
 .button {
   display: inline-block;
   padding: 0.75rem 1.5rem;
@@ -161,15 +181,13 @@
 }
 
 .button--primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background-color: #3b82f6;
   color: white;
-  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
 }
 
 .button--primary:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  background-color: #2563eb;
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
 }
 
 .button--secondary {
@@ -187,10 +205,9 @@
   padding: 1rem 2rem;
 }
 
-.no-articles {
+.no-articles, .no-taxonomy {
   text-align: center;
   padding: 2rem;
-  background-color: #fef2f2;
   border: 1px solid #fecaca;
   border-radius: 8px;
   color: #991b1b;
