@@ -130,6 +130,33 @@ function _news_extractor_update_article(EntityInterface $entity, array $article_
     $updated = TRUE;
   }
 
+  // Set original author from Diffbot data
+  if (!empty($article_data['author']) && $entity->hasField('field_original_author')) {
+    $entity->set('field_original_author', $article_data['author']);
+    $updated = TRUE;
+  }
+
+  // Set publication date from Diffbot data
+  if (!empty($article_data['date']) && $entity->hasField('field_publication_date')) {
+    $date = date('Y-m-d', strtotime($article_data['date']));
+    $entity->set('field_publication_date', $date);
+    $updated = TRUE;
+  }
+
+  // Set news source from Diffbot data
+  if (!empty($article_data['siteName']) && $entity->hasField('field_news_source')) {
+    $entity->set('field_news_source', $article_data['siteName']);
+    $updated = TRUE;
+  }
+
+  // Generate article hash for deduplication
+  if ($entity->hasField('field_article_hash')) {
+    $hash_content = ($article_data['title'] ?? '') . ($article_data['text'] ?? '');
+    $article_hash = md5($hash_content);
+    $entity->set('field_article_hash', $article_hash);
+    $updated = TRUE;
+  }
+
   // Truncate field_original_url_title for DB safety
   if ($entity->hasField('field_original_url_title')) {
     $title_value = $entity->getTitle();

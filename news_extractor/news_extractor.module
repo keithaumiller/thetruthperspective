@@ -490,13 +490,23 @@ function _news_extractor_build_ai_prompt($article_title, $article_text) {
          "1. Identify each entity (person, organization, institution) mentioned in the article\n" .
          "2. For each entity, select their top 2-3 motivations from the allowed list\n" .
          "3. Choose the most relevant US performance metric this article impacts\n" .
-         "4. Provide analysis of how this affects that metric\n\n" .
+         "4. Provide credibility score (0-100, 100=perfect trust, 0=no credibility)\n" .
+         "5. Provide bias rating (0=Extreme Left, 25=Lean Left, 50=Center, 75=Lean Right, 100=Extreme Right)\n" .
+         "6. Provide bias analysis (two lines explaining the rating)\n" .
+         "7. Provide article sentiment score (0-100, 100=most positive, 0=most negative)\n" .
+         "8. Provide analysis of how this affects that metric\n\n" .
          "Use ONLY motivations from this list: $allowed_motivations\n\n" .
          "Format your response EXACTLY as follows using basic HTML:\n\n" .
          "<p><strong>Entities mentioned:</strong><br>\n" .
          "- Entity Name: Motivation1, Motivation2<br>\n" .
          "- Entity Name: Motivation1, Motivation2, Motivation3</p>\n\n" .
          "<p><strong>Key metric:</strong> [Specific Metric Name]</p>\n\n" .
+         "<p><strong>Credibility Score:</strong> [0-100]</p>\n\n" .
+         "<p><strong>Bias Rating:</strong> [0-100]</p>\n\n" .
+         "<p><strong>Bias Analysis:</strong><br>\n" .
+         "- [First line explaining the bias rating]<br>\n" .
+         "- [Second line explaining the bias rating]</p>\n\n" .
+         "<p><strong>Article Sentiment Score:</strong> [0-100]</p>\n\n" .
          "<p>As a social scientist, I analyze that [your detailed analysis of how this article impacts the key metric].</p>\n\n" .
          "Article Title: " . $article_title . "\n\n" .
          "Article Text: " . $article_text;
@@ -548,7 +558,11 @@ function _news_extractor_extract_structured_data($motivation_analysis) {
   $data = [
     'entities' => [],
     'motivations' => [],
-    'metrics' => []
+    'metrics' => [],
+    'credibility_score' => null,
+    'bias_rating' => null,
+    'bias_analysis' => [],
+    'sentiment_score' => null
   ];
 
   // Strip HTML for parsing
@@ -580,6 +594,31 @@ function _news_extractor_extract_structured_data($motivation_analysis) {
   // Extract key metric
   if (preg_match('/Key metric:\s*(.+)/i', $text_content, $matches)) {
     $data['metrics'][] = trim($matches[1]);
+  }
+
+  // Extract credibility score
+  if (preg_match('/Credibility Score:\s*(\d+)/i', $text_content, $matches)) {
+    $data['credibility_score'] = (int)$matches[1];
+  }
+
+  // Extract bias rating
+  if (preg_match('/Bias Rating:\s*(\d+)/i', $text_content, $matches)) {
+    $data['bias_rating'] = (int)$matches[1];
+  }
+
+  // Extract bias analysis lines
+  if (preg_match('/Bias Analysis:(.*?)(?:Article Sentiment Score:|$)/is', $text_content, $matches)) {
+    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
+      $line = trim($line);
+      if (preg_match('/^-\s*(.+)/', $line, $m)) {
+        $data['bias_analysis'][] = trim($m[1]);
+      }
+    }
+  }
+
+  // Extract sentiment score
+  if (preg_match('/Article Sentiment Score:\s*(\d+)/i', $text_content, $matches)) {
+    $data['sentiment_score'] = (int)$matches[1];
   }
 
   return $data;
