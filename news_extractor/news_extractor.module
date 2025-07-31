@@ -751,3 +751,231 @@ function news_extractor_linkify_summary_tags_enhanced($summary, array $tags) {
   
   return $summary;
 }
+
+/**
+ * Update existing articles with new AI analysis fields.
+ */
+function news_extractor_update_existing_articles_with_new_fields() {
+  $batch_size = 10;
+  $processed = 0;
+  
+  // Find articles that have AI summary but missing new fields
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_ai_summary.value', '', '<>')
+    ->accessCheck(FALSE);
+    
+  // Add condition to find articles missing any of the new fields
+  $or_group = $query->orConditionGroup()
+    ->condition('field_credibility_score.value', '', '=')
+    ->condition('field_bias_rating.value', '', '=')
+    ->condition('field_bias_analysis.value', '', '=')
+    ->condition('field_article_sentiment_score.value', '', '=');
+  
+  $query->condition($or_group);
+  $query->range(0, $batch_size);
+  
+  $nids = $query->execute();
+  
+  if (empty($nids)) {
+    \Drupal::logger('news_extractor')->info('No articles found that need updating with new fields.');
+    return;
+  }
+  
+  $nodes = \Drupal\node\Entity\Node::loadMultiple($nids);
+  
+  foreach ($nodes as $node) {
+    try {
+      // Get existing AI summary
+      $ai_summary = $node->get('field_ai_summary')->value;
+      
+      if (empty($ai_summary)) {
+        continue;
+      }
+      
+      // Extract structured data from existing AI summary
+      $structured_data = _news_extractor_extract_structured_data($ai_summary);
+      
+      // Update motivation_data field with new structure
+      if ($node->hasField('field_motivation_data')) {
+        $node->set('field_motivation_data', json_encode($structured_data));
+      }
+      
+      // Populate individual score fields
+      if ($node->hasField('field_credibility_score') && !is_null($structured_data['credibility_score'])) {
+        $node->set('field_credibility_score', (string)$structured_data['credibility_score']);
+      }
+      
+      if ($node->hasField('field_bias_rating') && !is_null($structured_data['bias_rating'])) {
+        $node->set('field_bias_rating', (string)$structured_data['bias_rating']);
+      }
+      
+      if ($node->hasField('field_bias_analysis') && !empty($structured_data['bias_analysis'])) {
+        $node->set('field_bias_analysis', implode("\n", $structured_data['bias_analysis']));
+      }
+      
+      if ($node->hasField('field_article_sentiment_score') && !is_null($structured_data['sentiment_score'])) {
+        $node->set('field_article_sentiment_score', (string)$structured_data['sentiment_score']);
+      }
+      
+      $node->save();
+      $processed++;
+      
+      \Drupal::logger('news_extractor')->info('Updated article @nid (@title) with new analysis fields', [
+        '@nid' => $node->id(),
+        '@title' => $node->getTitle(),
+      ]);
+      
+    } catch (\Exception $e) {
+      \Drupal::logger('news_extractor')->error('Error updating article @nid: @message', [
+        '@nid' => $node->id(),
+        '@message' => $e->getMessage(),
+      ]);
+    }
+  }
+  
+  \Drupal::logger('news_extractor')->info('Updated @count articles with new analysis fields. Run again if more articles need processing.', [
+    '@count' => $processed,
+  ]);
+}
+
+/**
+ * Re-generate AI analysis for existing articles using new prompt format.
+ */
+function news_extractor_regenerate_ai_analysis_for_existing_articles() {
+  $batch_size = 5; // Smaller batch for AI processing
+  $processed = 0;
+  
+  // Find articles with body content but missing new analysis fields
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('body.value', '', '<>')
+    ->accessCheck(FALSE);
+    
+  // Add condition for articles missing new fields or old format
+  $or_group = $query->orConditionGroup()
+    ->condition('field_credibility_score.value', '', '=')
+    ->condition('field_bias_rating.value', '', '=')
+    ->condition('field_article_sentiment_score.value', '', '=');
+  
+  $query->condition($or_group);
+  $query->range(0, $batch_size);
+  
+  $nids = $query->execute();
+  
+  if (empty($nids)) {
+    \Drupal::logger('news_extractor')->info('No articles found that need AI analysis regeneration.');
+    return;
+  }
+  
+  $nodes = \Drupal\node\Entity\Node::loadMultiple($nids);
+  
+  foreach ($nodes as $node) {
+    try {
+      $body_content = $node->get('body')->value;
+      $title = $node->getTitle();
+      
+      if (empty($body_content) || strlen(strip_tags($body_content)) < 100) {
+        continue;
+      }
+      
+      // Generate new AI summary with updated prompt
+      $ai_summary = _news_extractor_generate_ai_summary(strip_tags($body_content), $title);
+      
+      if ($ai_summary) {
+        // Store raw AI summary
+        if ($node->hasField('field_ai_summary')) {
+          $node->set('field_ai_summary', $ai_summary);
+        }
+        
+        // Extract and store structured data
+        if ($node->hasField('field_motivation_data')) {
+          $structured_data = _news_extractor_extract_structured_data($ai_summary);
+          $node->set('field_motivation_data', json_encode($structured_data));
+          
+          // Populate individual fields
+          if ($node->hasField('field_credibility_score') && !is_null($structured_data['credibility_score'])) {
+            $node->set('field_credibility_score', (string)$structured_data['credibility_score']);
+          }
+          
+          if ($node->hasField('field_bias_rating') && !is_null($structured_data['bias_rating'])) {
+            $node->set('field_bias_rating', (string)$structured_data['bias_rating']);
+          }
+          
+          if ($node->hasField('field_bias_analysis') && !empty($structured_data['bias_analysis'])) {
+            $node->set('field_bias_analysis', implode("\n", $structured_data['bias_analysis']));
+          }
+          
+          if ($node->hasField('field_article_sentiment_score') && !is_null($structured_data['sentiment_score'])) {
+            $node->set('field_article_sentiment_score', (string)$structured_data['sentiment_score']);
+          }
+          
+          // Create tags from new analysis
+          $simple_tags = [];
+          foreach ($structured_data['entities'] as $entity_data) {
+            $simple_tags[] = $entity_data['name'];
+            $simple_tags = array_merge($simple_tags, $entity_data['motivations']);
+          }
+          $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
+          
+          // Create taxonomy terms
+          $tag_ids = [];
+          foreach (array_unique($simple_tags) as $tag) {
+            if (!empty(trim($tag))) {
+              $tid = _news_extractor_get_or_create_tag(trim($tag));
+              if ($tid) $tag_ids[] = $tid;
+            }
+          }
+          
+          if (!empty($tag_ids) && $node->hasField('field_tags')) {
+            $node->set('field_tags', $tag_ids);
+          }
+        }
+        
+        // Format motivation analysis for display
+        $motivation_analysis = news_extractor_format_motivation_analysis($ai_summary);
+        
+        // Apply linkification if we have tags
+        if (!empty($tag_ids)) {
+          $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
+          $motivation_analysis_linked = news_extractor_linkify_summary_tags_enhanced($motivation_analysis, $tag_entities);
+          
+          if ($node->hasField('field_motivation_analysis')) {
+            $node->set('field_motivation_analysis', [
+              'value' => $motivation_analysis_linked,
+              'format' => 'basic_html',
+            ]);
+          }
+        } else {
+          if ($node->hasField('field_motivation_analysis')) {
+            $node->set('field_motivation_analysis', [
+              'value' => $motivation_analysis,
+              'format' => 'basic_html',
+            ]);
+          }
+        }
+        
+        $node->save();
+        $processed++;
+        
+        \Drupal::logger('news_extractor')->info('Regenerated AI analysis for article @nid (@title)', [
+          '@nid' => $node->id(),
+          '@title' => $node->getTitle(),
+        ]);
+        
+        // Add delay to avoid rate limiting
+        sleep(2);
+      }
+      
+    } catch (\Exception $e) {
+      \Drupal::logger('news_extractor')->error('Error regenerating AI analysis for article @nid: @message', [
+        '@nid' => $node->id(),
+        '@message' => $e->getMessage(),
+      ]);
+    }
+  }
+  
+  \Drupal::logger('news_extractor')->info('Regenerated AI analysis for @count articles. Run again if more articles need processing.', [
+    '@count' => $processed,
+  ]);
+}
