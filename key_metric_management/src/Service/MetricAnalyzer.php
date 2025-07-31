@@ -47,14 +47,14 @@ class MetricAnalyzer {
 
     $metrics = [];
     
+    // Query articles for metrics from motivation_data field
+    $query = $this->database->select('node__field_motivation_data', 'fmd');
+    $query->addField('fmd', 'field_motivation_data_value');
+    $query->join('node_field_data', 'nfd', 'fmd.entity_id = nfd.nid');
+    $query->condition('nfd.type', 'article');
+    $query->condition('nfd.status', 1);
+    
     try {
-      // Query articles for metrics from motivation_data field
-      $query = $this->database->select('node__field_motivation_data', 'fmd');
-      $query->addField('fmd', 'field_motivation_data_value');
-      $query->join('node_field_data', 'nfd', 'fmd.entity_id = nfd.nid');
-      $query->condition('nfd.type', 'article');
-      $query->condition('nfd.status', 1);
-      
       $result = $query->execute();
 
       foreach ($result as $row) {
@@ -75,6 +75,9 @@ class MetricAnalyzer {
       return [];
     }
 
+    // Sort by count (highest first)
+    arsort($metrics);
+
     $this->cache->set($cache_key, $metrics, time() + 3600);
     return $metrics;
   }
@@ -93,12 +96,50 @@ class MetricAnalyzer {
   public function getMetricStats(): array {
     $metrics = $this->getAllMetrics();
     
+    if (empty($metrics)) {
+      return [
+        'total_metrics' => 0,
+        'total_articles' => 0,
+        'top_metric' => '',
+        'avg_articles_per_metric' => 0,
+      ];
+    }
+
+    $total_article_references = array_sum($metrics);
+    $top_metric = array_key_first($metrics);
+    
     return [
       'total_metrics' => count($metrics),
-      'total_articles' => array_sum($metrics),
-      'top_metrics' => array_slice($metrics, 0, 10, TRUE),
-      'most_common_metric' => !empty($metrics) ? array_keys($metrics)[0] : 'None',
+      'total_articles' => $total_article_references,
+      'top_metric' => $top_metric,
+      'avg_articles_per_metric' => round($total_article_references / count($metrics), 1),
     ];
+  }
+
+  /**
+   * Get articles by metric with pagination.
+   */
+  public function getArticlesByMetric(string $metric, int $limit = 20, int $offset = 0): array {
+    try {
+      $query = $this->database->select('node__field_motivation_data', 'fmd');
+      $query->addField('fmd', 'entity_id');
+      $query->join('node_field_data', 'nfd', 'fmd.entity_id = nfd.nid');
+      $query->condition('nfd.type', 'article');
+      $query->condition('nfd.status', 1);
+      $query->condition('fmd.field_motivation_data_value', '%' . $metric . '%', 'LIKE');
+      $query->range($offset, $limit);
+      
+      $nids = $query->execute()->fetchCol();
+      
+      if (empty($nids)) {
+        return [];
+      }
+      
+      return $this->entityTypeManager->getStorage('node')->loadMultiple($nids);
+    }
+    catch (\Exception $e) {
+      return [];
+    }
   }
 
 }
