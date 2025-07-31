@@ -91,7 +91,7 @@ class MetricAnalyzer {
   }
 
   /**
-   * Get metric statistics.
+   * Get metric statistics matching template expectations.
    */
   public function getMetricStats(): array {
     $metrics = $this->getAllMetrics();
@@ -99,20 +99,28 @@ class MetricAnalyzer {
     if (empty($metrics)) {
       return [
         'total_metrics' => 0,
-        'total_articles' => 0,
-        'top_metric' => '',
-        'avg_articles_per_metric' => 0,
+        'total_articles_with_metrics' => 0,
+        'most_common_metric' => 'None',
+        'top_metrics' => [],
       ];
     }
 
-    $total_article_references = array_sum($metrics);
-    $top_metric = array_key_first($metrics);
+    // Get count of unique articles with metrics
+    $query = $this->database->select('node__field_motivation_data', 'fmd');
+    $query->join('node_field_data', 'nfd', 'fmd.entity_id = nfd.nid');
+    $query->condition('nfd.type', 'article');
+    $query->condition('nfd.status', 1);
+    $query->condition('fmd.field_motivation_data_value', '%"metrics"%', 'LIKE');
+    $articles_with_metrics = $query->countQuery()->execute()->fetchField();
+
+    $most_common_metric = array_key_first($metrics);
+    $top_metrics = array_slice($metrics, 0, 10, true); // Top 10 metrics
     
     return [
       'total_metrics' => count($metrics),
-      'total_articles' => $total_article_references,
-      'top_metric' => $top_metric,
-      'avg_articles_per_metric' => round($total_article_references / count($metrics), 1),
+      'total_articles_with_metrics' => (int) $articles_with_metrics,
+      'most_common_metric' => $most_common_metric,
+      'top_metrics' => $top_metrics,
     ];
   }
 
