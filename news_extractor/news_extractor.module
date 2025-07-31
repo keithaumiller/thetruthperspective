@@ -538,14 +538,21 @@ function _news_extractor_extract_tags_from_summary($ai_summary) {
     }
   }
 
-  // Key metric: single line after "Key metric:"
-  if (preg_match('/Key metric:\s*(.+)/i', $text_content, $matches)) {
-    $metrics[] = trim($matches[1]);
+  // Key metric: extract ONLY the metric name, stop at newline or next section
+  if (preg_match('/Key metric:\s*(.+?)(?:\n|Credibility Score:|Bias Rating:|$)/is', $text_content, $matches)) {
+    $metric = trim($matches[1]);
+    // Clean up any trailing punctuation or HTML remnants
+    $metric = preg_replace('/[^\w\s\(\)%-].*$/', '', $metric);
+    $metric = trim($metric);
+    if (!empty($metric)) {
+      $metrics[] = $metric;
+    }
   }
 
-  // Remove duplicates
-  $entities = array_unique($entities);
-  $motivations = array_unique($motivations);
+  // Remove duplicates and clean up
+  $entities = array_unique(array_filter($entities));
+  $motivations = array_unique(array_filter($motivations));
+  $metrics = array_unique(array_filter($metrics));
 
   return [
     'entities' => $entities,
