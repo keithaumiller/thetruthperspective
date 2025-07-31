@@ -1,6 +1,5 @@
 <?php
 
-//wtf is wrong with this file?
 
 namespace Drupal\key_metric_management\Controller;
 

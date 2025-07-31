@@ -1,10 +1,10 @@
 key_metric_management.dashboard:
-  path: '/admin/key-metrics'
+  path: '/key-metrics'
   defaults:
     _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::dashboard'
-    _title: 'Key Metrics Dashboard'
+    _title: 'Federal Performance Metrics Dashboard'
   requirements:
-    _permission: 'administer key metrics'
+    _permission: 'access content'
 
 key_metric_management.metric_detail:
   path: '/key-metrics/{metric}'
@@ -15,12 +15,12 @@ key_metric_management.metric_detail:
     _permission: 'access content'
 
 key_metric_management.taxonomy_metrics:
-  path: '/admin/key-metrics/taxonomy'
+  path: '/key-metrics/taxonomy'
   defaults:
     _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::taxonomyMetrics'
-    _title: 'Metric Taxonomy Terms'
+    _title: 'Federal Performance Metrics - Taxonomy Overview'
   requirements:
-    _permission: 'administer key metrics'
+    _permission: 'access content'
 
 # Keep admin routes for configuration
 key_metric_management.admin_dashboard:
