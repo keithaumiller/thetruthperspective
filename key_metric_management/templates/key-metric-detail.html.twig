@@ -42,7 +42,41 @@
       }) }}</p>
     </div>
     
-    {% if taxonomy_url and taxonomy_url != '' %}
+    {# Enhanced Debug Section #}
+    <div class="debug-info" style="background: #f0f0f0; padding: 1rem; margin: 1rem 0; border: 1px solid #ccc; font-family: monospace; font-size: 0.9rem;">
+      <strong>Complete Debug Information:</strong><br><br>
+      
+      <strong>Template Variables Received:</strong><br>
+      • metric: "{{ metric|default('NULL') }}"<br>
+      • count: {{ count|default('NULL') }}<br>
+      • category: "{{ category|default('NULL') }}"<br>
+      • taxonomy_url: "{{ taxonomy_url|default('NULL') }}"<br>
+      • back_url: "{{ back_url|default('NULL') }}"<br><br>
+      
+      <strong>Taxonomy URL Analysis:</strong><br>
+      • Raw value: {{ taxonomy_url|json_encode|raw }}<br>
+      • Is empty check: {{ taxonomy_url is empty ? 'TRUE (empty)' : 'FALSE (has value)' }}<br>
+      • Is null check: {{ taxonomy_url is null ? 'TRUE (null)' : 'FALSE (not null)' }}<br>
+      • Length: {{ taxonomy_url|length|default('N/A') }}<br>
+      • Type: {{ taxonomy_url is iterable ? 'iterable' : (taxonomy_url is number ? 'number' : 'string/other') }}<br>
+      • Equals empty string: {{ taxonomy_url == '' ? 'TRUE' : 'FALSE' }}<br>
+      • String 'NULL' check: {{ taxonomy_url == 'NULL' ? 'TRUE' : 'FALSE' }}<br><br>
+      
+      <strong>Expected Behavior:</strong><br>
+      • Looking for taxonomy_url with value like "/taxonomy/term/3183"<br>
+      • Controller metricDetail() should pass #taxonomy_url to template<br>
+      • TaxonomyAnalyzer->getTermByName('{{ metric }}') should find term ID 3183<br>
+      • URL generation via entity.taxonomy_term.canonical route<br><br>
+      
+      <strong>All Available Template Variables:</strong><br>
+      {% for key, value in _context %}
+        {% if key not in ['_context', 'app'] %}
+          • {{ key }}: {{ value|json_encode|raw|slice(0, 100) }}{% if value|json_encode|length > 100 %}...{% endif %}<br>
+        {% endif %}
+      {% endfor %}
+    </div>
+    
+    {% if taxonomy_url and taxonomy_url != '' and taxonomy_url != 'NULL' %}
       <div class="taxonomy-link-section">
         <h3>{{ 'Browse Related Articles'|t }}</h3>
         <p>{{ 'View all articles tagged with this metric in our content taxonomy system.'|t }}</p>
@@ -55,13 +89,9 @@
         </div>
       </div>
     {% else %}
-      <div class="debug-info" style="background: #f0f0f0; padding: 1rem; margin: 1rem 0; border: 1px solid #ccc;">
-        <strong>Debug Info:</strong><br>
-        taxonomy_url: {{ taxonomy_url|default('NULL') }}<br>
-        taxonomy_url type: {{ taxonomy_url is empty ? 'empty' : 'has value' }}
-      </div>
       <div class="no-taxonomy">
         <p>{{ 'No taxonomy term found for this metric. Articles may be tagged differently.'|t }}</p>
+        <p><small>{{ 'Expected: Controller should find taxonomy term "Presidential Approval Rating" (ID: 3183) and generate URL "/taxonomy/term/3183"'|t }}</small></p>
       </div>
     {% endif %}
     
@@ -132,6 +162,12 @@
   border-radius: 8px;
   margin-bottom: 2rem;
   border: 1px solid #e5e7eb;
+}
+
+.debug-info {
+  max-height: 400px;
+  overflow-y: auto;
+  white-space: pre-line;
 }
 
 .taxonomy-link-section {
