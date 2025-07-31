@@ -50,9 +50,6 @@
            title="{{ 'Browse all articles tagged with @metric'|t({'@metric': metric}) }}">
           {{ 'View Tagged Articles →'|t }}
         </a>
-        <div class="taxonomy-url-display">
-          <small>{{ 'Direct link:'|t }} <a href="{{ taxonomy_url }}" target="_blank">https://thetruthperspective.org{{ taxonomy_url }}</a></small>
-        </div>
       </div>
     {% else %}
       <div class="no-taxonomy">
@@ -148,25 +145,6 @@
   color: #78350f;
   margin-bottom: 1.5rem;
   font-size: 1.1rem;
-}
-
-.taxonomy-url-display {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #f3f4f6;
-}
-
-.taxonomy-url-display small {
-  color: #6b7280;
-}
-
-.taxonomy-url-display a {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.taxonomy-url-display a:hover {
-  text-decoration: underline;
 }
 
 .button {
