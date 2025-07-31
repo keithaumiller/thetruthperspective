@@ -42,16 +42,6 @@
       }) }}</p>
     </div>
     
-    {# Simple Debug Section #}
-    <div class="debug-info" style="background: #f0f0f0; padding: 1rem; margin: 1rem 0; border: 1px solid #ccc; font-family: monospace; font-size: 0.9rem;">
-      <strong>Debug Info:</strong><br>
-      taxonomy_url: {{ taxonomy_url|default('NULL') }}<br>
-      taxonomy_url type: {% if taxonomy_url is empty %}empty{% else %}has value{% endif %}<br>
-      metric: {{ metric|default('NULL') }}<br>
-      count: {{ count|default('NULL') }}<br>
-      category: {{ category|default('NULL') }}<br>
-    </div>
-    
     {% if taxonomy_url and taxonomy_url != '' and taxonomy_url != 'NULL' %}
       <div class="taxonomy-link-section">
         <h3>{{ 'Browse Related Articles'|t }}</h3>
@@ -137,11 +127,6 @@
   border-radius: 8px;
   margin-bottom: 2rem;
   border: 1px solid #e5e7eb;
-}
-
-.debug-info {
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .taxonomy-link-section {
