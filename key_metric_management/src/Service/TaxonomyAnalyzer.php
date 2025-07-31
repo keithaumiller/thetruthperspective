@@ -57,17 +57,44 @@ class TaxonomyAnalyzer {
    *   The taxonomy term or null if not found.
    */
   public function getTermByName(string $name, string $vocabulary = 'tags'): ?object {
+    $cache_key = 'key_metric_management:term_by_name:' . md5($name . ($vocabulary ?? 'tags'));
+    
+    if ($cached = $this->cache->get($cache_key)) {
+      return $cached->data;
+    }
+
     try {
       $term_storage = $this->entityTypeManager->getStorage('taxonomy_term');
       
+      // Search for exact match first
       $terms = $term_storage->loadByProperties([
         'name' => $name,
         'vid' => $vocabulary,
       ]);
       
       if (!empty($terms)) {
-        return reset($terms);
+        $term = reset($terms);
+        $this->cache->set($cache_key, $term, time() + self::CACHE_TTL);
+        return $term;
       }
+
+      // If no exact match and we're searching in tags, try partial match
+      if ($vocabulary === 'tags') {
+        $query = $term_storage->getQuery()
+          ->accessCheck(FALSE)
+          ->condition('vid', 'tags')
+          ->condition('name', $name, 'CONTAINS');
+        
+        $tids = $query->execute();
+        
+        if (!empty($tids)) {
+          $terms = $term_storage->loadMultiple($tids);
+          $term = reset($terms);
+          $this->cache->set($cache_key, $term, time() + self::CACHE_TTL);
+          return $term;
+        }
+      }
+
     }
     catch (\Exception $e) {
       $this->loggerFactory->get('key_metric_management')
@@ -77,7 +104,8 @@ class TaxonomyAnalyzer {
         ]);
     }
     
-    return NULL;
+    $this->cache->set($cache_key, null, time() + self::CACHE_TTL);
+    return null;
   }
 
   /**
@@ -129,7 +157,7 @@ class TaxonomyAnalyzer {
       usort($metric_terms, fn($a, $b) => $b['count'] <=> $a['count']);
 
       // Cache results
-      $this->cache->set($cache_key, $metric_terms, time() + self::CACHE_TTL, ['taxonomy_term_list']);
+      $this->cache->set($cache_key, $metric_terms, time() + self::CACHE_TTL);
 
     }
     catch (\Exception $e) {
@@ -141,85 +169,21 @@ class TaxonomyAnalyzer {
   }
 
   /**
-   * Get terms that match federal performance metrics.
-   *
-   * @param array $allowed_metrics
-   *   Array of allowed metric names.
-   *
-   * @return array
-   *   Array of terms that match allowed metrics.
-   */
-  public function getMetricTermsByAllowedList(array $allowed_metrics): array {
-    $all_terms = $this->getMetricTaxonomyTerms();
-    
-    return array_filter($all_terms, function($term) use ($allowed_metrics) {
-      return in_array($term['name'], $allowed_metrics);
-    });
-  }
-
-  /**
-   * Get articles tagged with a specific metric term.
-   *
-   * @param string $metric_name
-   *   The metric name.
-   * @param int $limit
-   *   Number of articles to return.
-   * @param int $offset
-   *   Offset for pagination.
-   *
-   * @return array
-   *   Array of node entities.
-   */
-  public function getArticlesByMetricTerm(string $metric_name, int $limit = 20, int $offset = 0): array {
-    $term = $this->getTermByName($metric_name);
-    
-    if (!$term) {
-      return [];
-    }
-    
-    try {
-      $node_storage = $this->entityTypeManager->getStorage('node');
-      
-      $query = $node_storage->getQuery()
-        ->accessCheck(FALSE)
-        ->condition('type', 'article')
-        ->condition('status', 1)
-        ->condition('field_tags', $term->id())
-        ->sort('created', 'DESC')
-        ->range($offset, $limit);
-      
-      $nids = $query->execute();
-      
-      if (empty($nids)) {
-        return [];
-      }
-      
-      return $node_storage->loadMultiple($nids);
-    }
-    catch (\Exception $e) {
-      $this->loggerFactory->get('key_metric_management')
-        ->error('Error loading articles by metric term "@metric": @error', [
-          '@metric' => $metric_name,
-          '@error' => $e->getMessage()
-        ]);
-      
-      return [];
-    }
-  }
-
-  /**
    * Clear taxonomy-related caches.
    */
   public function clearCache(): void {
-    $cache_tags = ['taxonomy_term_list'];
-    $this->cache->invalidateTags($cache_tags);
+    // Clear specific cache keys instead of using invalidateTags
+    $cache_keys = [
+      'key_metric_management:taxonomy_terms:tags',
+    ];
     
-    // Also clear specific cache keys
-    $vocabularies = ['tags', 'news_extractor'];
-    foreach ($vocabularies as $vocabulary) {
-      $cache_key = 'key_metric_management:taxonomy_terms:' . $vocabulary;
+    foreach ($cache_keys as $cache_key) {
       $this->cache->delete($cache_key);
     }
+    
+    // Also clear any term lookup caches by deleting all keys with our prefix
+    // Note: This is a simplified approach since we can't use cache tags
+    $this->cache->deleteAll();
   }
 
 }
