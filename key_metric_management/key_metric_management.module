@@ -56,7 +56,13 @@ function key_metric_management_theme($existing, $type, $theme, $path) {
       'path' => $path . '/templates',
     ],
     'key_metric_detail' => [
-      'variables' => ['metric' => '', 'count' => 0, 'back_url' => NULL], 
+      'variables' => [
+        'metric' => '',
+        'count' => 0,
+        'category' => NULL,
+        'taxonomy_url' => NULL,
+        'back_url' => NULL,
+      ], 
       'template' => 'key-metric-detail',
       'path' => $path . '/templates',
     ],
