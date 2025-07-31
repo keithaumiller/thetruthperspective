@@ -1,10 +1,10 @@
 key_metric_management.dashboard:
-  path: '/key-metrics'
+  path: '/admin/key-metrics'
   defaults:
     _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::dashboard'
     _title: 'Key Metrics Dashboard'
   requirements:
-    _access: 'TRUE'
+    _permission: 'administer key metrics'
 
 key_metric_management.metric_detail:
   path: '/key-metrics/{metric}'
@@ -12,15 +12,15 @@ key_metric_management.metric_detail:
     _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::metricDetail'
     _title_callback: '\Drupal\key_metric_management\Controller\KeyMetricController::metricDetailTitle'
   requirements:
-    _access: 'TRUE'
+    _permission: 'access content'
 
 key_metric_management.taxonomy_metrics:
-  path: '/key-metrics/taxonomy'
+  path: '/admin/key-metrics/taxonomy'
   defaults:
     _controller: '\Drupal\key_metric_management\Controller\KeyMetricController::taxonomyMetrics'
-    _title: 'Metrics & Taxonomy'
+    _title: 'Metric Taxonomy Terms'
   requirements:
-    _access: 'TRUE'
+    _permission: 'administer key metrics'
 
 # Keep admin routes for configuration
 key_metric_management.admin_dashboard:

@@ -3,7 +3,7 @@
 services:
   key_metric_management.metric_analyzer:
     class: Drupal\key_metric_management\Service\MetricAnalyzer
-    arguments: ['@entity_type.manager', '@database', '@cache.default', '@logger.factory']
+    arguments: ['@entity_type.manager', '@database', '@cache.default']
 
   key_metric_management.taxonomy_analyzer:
     class: Drupal\key_metric_management\Service\TaxonomyAnalyzer
@@ -11,4 +11,4 @@ services:
 
   key_metric_management.cache_manager:
     class: Drupal\key_metric_management\Service\CacheManager
-    arguments: ['@cache.default']
+    arguments: ['@cache.default', '@logger.factory']
