@@ -1056,3 +1056,103 @@ function _news_extractor_process_article_with_ai($node, $api_response) {
     ]);
   }
 }
+
+/**
+ * Helper function to update node with extracted data and create taxonomy terms.
+ */
+function _news_extractor_update_node_with_data($node, $structured_data) {
+  // Update the JSON motivation data field
+  if ($node->hasField('field_motivation_data')) {
+    $node->set('field_motivation_data', json_encode($structured_data));
+  }
+
+  // Update Credibility Score field
+  if ($node->hasField('field_credibility_score') && isset($structured_data['credibility_score'])) {
+    $node->set('field_credibility_score', (string)$structured_data['credibility_score']);
+  }
+
+  // Update Bias Rating field
+  if ($node->hasField('field_bias_rating') && isset($structured_data['bias_rating'])) {
+    $node->set('field_bias_rating', (string)$structured_data['bias_rating']);
+  }
+
+  // Update Article Sentiment Score field
+  if ($node->hasField('field_article_sentiment_score') && isset($structured_data['article_sentiment_score'])) {
+    $node->set('field_article_sentiment_score', (string)$structured_data['article_sentiment_score']);
+  }
+
+  // Update Bias Analysis field (text area)
+  if ($node->hasField('field_bias_analysis') && !empty($structured_data['bias_analysis'])) {
+    $bias_text = implode("\n", $structured_data['bias_analysis']);
+    $node->set('field_bias_analysis', $bias_text);
+  }
+
+  // Create taxonomy terms for entities and motivations if they don't exist
+  $vocabulary_id = 'tags'; // Default vocabulary
+  
+  $term_ids = [];
+  
+  // Create terms for entities
+  foreach ($structured_data['entities'] as $entity_data) {
+    $entity_name = $entity_data['name'];
+    $term_id = _news_extractor_get_or_create_taxonomy_term($entity_name, $vocabulary_id);
+    if ($term_id) {
+      $term_ids[] = $term_id;
+    }
+    
+    // Create terms for entity motivations
+    foreach ($entity_data['motivations'] as $motivation) {
+      $term_id = _news_extractor_get_or_create_taxonomy_term($motivation, $vocabulary_id);
+      if ($term_id) {
+        $term_ids[] = $term_id;
+      }
+    }
+  }
+  
+  // Create term for key metric if it exists
+  if (!empty($structured_data['key_metric'])) {
+    $term_id = _news_extractor_get_or_create_taxonomy_term($structured_data['key_metric'], $vocabulary_id);
+    if ($term_id) {
+      $term_ids[] = $term_id;
+    }
+  }
+  
+  // Remove duplicates and assign to taxonomy field
+  $term_ids = array_unique($term_ids);
+  if (!empty($term_ids) && $node->hasField('field_tags')) {
+    $node->set('field_tags', $term_ids);
+  }
+  
+  $node->save();
+}
+
+/**
+ * Helper function to get or create taxonomy term.
+ */
+function _news_extractor_get_or_create_taxonomy_term($term_name, $vocabulary_id) {
+  $term_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+  $terms = $term_storage->loadByProperties([
+    'name' => $term_name,
+    'vid' => $vocabulary_id,
+  ]);
+
+  if (!empty($terms)) {
+    $term = reset($terms);
+    return $term->id();
+  }
+
+  try {
+    $term = $term_storage->create([
+      'name' => $term_name,
+      'vid' => $vocabulary_id,
+    ]);
+    $term->save();
+    return $term->id();
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error creating taxonomy term @term: @message', [
+      '@term' => $term_name,
+      '@message' => $e->getMessage(),
+    ]);
+    return NULL;
+  }
+}

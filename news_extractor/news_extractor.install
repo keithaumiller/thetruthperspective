@@ -1,5 +1,4 @@
 <?php
-<?php
 
 /**
  * @file
@@ -18,36 +17,34 @@ function news_extractor_update_8001() {
   
   $fields = [
     'field_credibility_score' => [
-      'type' => 'integer',
+      'type' => 'string',
       'label' => 'Credibility Score',
       'description' => 'AI-generated credibility score (0-100)',
       'settings' => [
-        'min' => 0,
-        'max' => 100,
+        'max_length' => 3,
       ],
     ],
     'field_bias_rating' => [
-      'type' => 'integer', 
+      'type' => 'string', 
       'label' => 'Bias Rating',
       'description' => 'AI-generated bias rating (0-100, 0=Extreme Left, 50=Center, 100=Extreme Right)',
       'settings' => [
-        'min' => 0,
-        'max' => 100,
+        'max_length' => 3,
       ],
     ],
     'field_article_sentiment_score' => [
-      'type' => 'integer',
+      'type' => 'string',
       'label' => 'Article Sentiment Score', 
       'description' => 'AI-generated sentiment score (0-100, 0=Most Negative, 100=Most Positive)',
       'settings' => [
-        'min' => 0,
-        'max' => 100,
+        'max_length' => 3,
       ],
     ],
     'field_bias_analysis' => [
       'type' => 'text_long',
       'label' => 'Bias Analysis',
       'description' => 'AI-generated bias analysis explanation',
+      'settings' => [],
     ],
   ];
 
@@ -59,7 +56,7 @@ function news_extractor_update_8001() {
         'field_name' => $field_name,
         'entity_type' => $entity_type,
         'type' => $field_info['type'],
-        'settings' => $field_info['settings'] ?? [],
+        'settings' => $field_info['settings'],
       ]);
       $field_storage->save();
     }
