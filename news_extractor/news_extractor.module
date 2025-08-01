@@ -571,20 +571,21 @@ function _news_extractor_extract_tags_from_summary($ai_summary) {
 }
 
 /**
- * Extract structured motivation data from AI summary for JSON field (handles HTML).
+ * Helper function to extract structured data from motivation analysis.
  */
 function _news_extractor_extract_structured_data($motivation_analysis) {
   $data = [
     'entities' => [],
     'motivations' => [],
-    'metrics' => [],
+    'key_metric' => '',
     'credibility_score' => null,
     'bias_rating' => null,
+    'article_sentiment_score' => null,
     'bias_analysis' => [],
-    'sentiment_score' => null
+    'analysis_timestamp' => time(),
+    'created' => date('Y-m-d H:i:s')
   ];
 
-  // Strip HTML for parsing
   $text_content = strip_tags($motivation_analysis);
 
   // Extract entities and their motivations
@@ -600,9 +601,9 @@ function _news_extractor_extract_structured_data($motivation_analysis) {
           'motivations' => $motivations
         ];
         
-        // Also collect unique motivations
+        // Also collect all motivations for the flat list
         foreach ($motivations as $motivation) {
-          if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
+          if (!in_array($motivation, $data['motivations'])) {
             $data['motivations'][] = $motivation;
           }
         }
@@ -612,32 +613,37 @@ function _news_extractor_extract_structured_data($motivation_analysis) {
 
   // Extract key metric
   if (preg_match('/Key metric:\s*(.+)/i', $text_content, $matches)) {
-    $data['metrics'][] = trim($matches[1]);
+    $data['key_metric'] = trim($matches[1]);
   }
 
-  // Extract credibility score
+  // Extract Credibility Score
   if (preg_match('/Credibility Score:\s*(\d+)/i', $text_content, $matches)) {
-    $data['credibility_score'] = (int)$matches[1];
+    $data['credibility_score'] = (int) $matches[1];
   }
 
-  // Extract bias rating
+  // Extract Bias Rating
   if (preg_match('/Bias Rating:\s*(\d+)/i', $text_content, $matches)) {
-    $data['bias_rating'] = (int)$matches[1];
+    $data['bias_rating'] = (int) $matches[1];
   }
 
-  // Extract bias analysis lines
-  if (preg_match('/Bias Analysis:(.*?)(?:Article Sentiment Score:|$)/is', $text_content, $matches)) {
-    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
+  // Extract Article Sentiment Score
+  if (preg_match('/Article Sentiment Score:\s*(\d+)/i', $text_content, $matches)) {
+    $data['article_sentiment_score'] = (int) $matches[1];
+  }
+
+  // Extract Bias Analysis (multiple lines)
+  if (preg_match('/Bias Analysis:\s*(.*?)(?:\n\n|Article Sentiment|$)/is', $text_content, $matches)) {
+    $bias_lines = preg_split('/\r?\n/', trim($matches[1]));
+    foreach ($bias_lines as $line) {
       $line = trim($line);
-      if (preg_match('/^-\s*(.+)/', $line, $m)) {
-        $data['bias_analysis'][] = trim($m[1]);
+      if (!empty($line) && $line !== '-') {
+        // Remove leading dash and clean up
+        $line = preg_replace('/^-\s*/', '', $line);
+        if (!empty($line)) {
+          $data['bias_analysis'][] = $line;
+        }
       }
     }
-  }
-
-  // Extract sentiment score
-  if (preg_match('/Article Sentiment Score:\s*(\d+)/i', $text_content, $matches)) {
-    $data['sentiment_score'] = (int)$matches[1];
   }
 
   return $data;
@@ -994,4 +1000,59 @@ function news_extractor_regenerate_ai_analysis_for_existing_articles() {
   \Drupal::logger('news_extractor')->info('Regenerated AI analysis for @count articles. Run again if more articles need processing.', [
     '@count' => $processed,
   ]);
+}
+
+/**
+ * Process article content with AI analysis.
+ */
+function _news_extractor_process_article_with_ai($node, $api_response) {
+  try {
+    // Extract article content
+    $article_title = $api_response['objects'][0]['title'] ?? $node->getTitle();
+    $article_text = $api_response['objects'][0]['text'] ?? '';
+    
+    if (empty($article_text)) {
+      \Drupal::logger('news_extractor')->warning('No article text found for node @nid', ['@nid' => $node->id()]);
+      return;
+    }
+
+    // Build AI prompt
+    $prompt = _news_extractor_build_ai_prompt($article_title, $article_text);
+    
+    // Get AI analysis
+    $ai_service = \Drupal::service('news_extractor.ai_analysis');
+    $motivation_analysis = $ai_service->analyzeContent($prompt);
+    
+    if (empty($motivation_analysis)) {
+      \Drupal::logger('news_extractor')->error('Failed to get AI analysis for node @nid', ['@nid' => $node->id()]);
+      return;
+    }
+
+    // Store the raw AI analysis
+    if ($node->hasField('field_motivation_analysis')) {
+      $node->set('field_motivation_analysis', $motivation_analysis);
+    }
+
+    // Extract structured data from AI analysis
+    $structured_data = _news_extractor_extract_structured_data($motivation_analysis);
+    
+    // Update node with structured data and create taxonomy terms
+    _news_extractor_update_node_with_data($node, $structured_data);
+    
+    \Drupal::logger('news_extractor')->info('Successfully processed article @title (Node @nid) with AI analysis', [
+      '@title' => $article_title,
+      '@nid' => $node->id()
+    ]);
+    
+    // Log extracted data for debugging
+    \Drupal::logger('news_extractor')->debug('Extracted data for node @nid: @data', [
+      '@nid' => $node->id(),
+      '@data' => json_encode($structured_data, JSON_PRETTY_PRINT)
+    ]);
+    
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error processing article with AI: @message', [
+      '@message' => $e->getMessage()
+    ]);
+  }
 }

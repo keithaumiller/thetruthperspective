@@ -1,0 +1,81 @@
+<?php
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the news_extractor module.
+ */
+
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\field\Entity\FieldConfig;
+
+/**
+ * Add new AI analysis fields to article content type.
+ */
+function news_extractor_update_8001() {
+  $entity_type = 'node';
+  $bundle = 'article';
+  
+  $fields = [
+    'field_credibility_score' => [
+      'type' => 'integer',
+      'label' => 'Credibility Score',
+      'description' => 'AI-generated credibility score (0-100)',
+      'settings' => [
+        'min' => 0,
+        'max' => 100,
+      ],
+    ],
+    'field_bias_rating' => [
+      'type' => 'integer', 
+      'label' => 'Bias Rating',
+      'description' => 'AI-generated bias rating (0-100, 0=Extreme Left, 50=Center, 100=Extreme Right)',
+      'settings' => [
+        'min' => 0,
+        'max' => 100,
+      ],
+    ],
+    'field_article_sentiment_score' => [
+      'type' => 'integer',
+      'label' => 'Article Sentiment Score', 
+      'description' => 'AI-generated sentiment score (0-100, 0=Most Negative, 100=Most Positive)',
+      'settings' => [
+        'min' => 0,
+        'max' => 100,
+      ],
+    ],
+    'field_bias_analysis' => [
+      'type' => 'text_long',
+      'label' => 'Bias Analysis',
+      'description' => 'AI-generated bias analysis explanation',
+    ],
+  ];
+
+  foreach ($fields as $field_name => $field_info) {
+    // Create field storage if it doesn't exist
+    $field_storage = FieldStorageConfig::loadByName($entity_type, $field_name);
+    if (!$field_storage) {
+      $field_storage = FieldStorageConfig::create([
+        'field_name' => $field_name,
+        'entity_type' => $entity_type,
+        'type' => $field_info['type'],
+        'settings' => $field_info['settings'] ?? [],
+      ]);
+      $field_storage->save();
+    }
+
+    // Create field instance if it doesn't exist
+    $field = FieldConfig::loadByName($entity_type, $bundle, $field_name);
+    if (!$field) {
+      $field = FieldConfig::create([
+        'field_storage' => $field_storage,
+        'bundle' => $bundle,
+        'label' => $field_info['label'],
+        'description' => $field_info['description'],
+      ]);
+      $field->save();
+    }
+  }
+  
+  return t('Added AI analysis fields to article content type.');
+}
