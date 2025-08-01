@@ -504,12 +504,21 @@ function _news_extractor_build_ai_prompt($article_title, $article_text) {
          "- Entity Name: Motivation1, Motivation2<br>\n" .
          "- Entity Name: Motivation1, Motivation2, Motivation3</p>\n\n" .
          "<p><strong>Key metric:</strong> [Select ONE from allowed metrics list]</p>\n\n" .
-         "<p><strong>Credibility Score:</strong> [0-100]</p>\n\n" .
-         "<p><strong>Bias Rating:</strong> [0-100]</p>\n\n" .
+         "<p><strong>Credibility Score:</strong> [0-100]<br>\n" .
+         "<em>Scale: 0 = Willful deception/complete unreliability, 100 = Perfect factual accuracy and trustworthiness</em><br>\n" .
+         "This rating evaluates factual accuracy, source attribution, and overall reliability of the reporting.<br>\n" .
+         "Higher scores indicate well-sourced journalism with verifiable claims and transparent methodology.</p>\n\n" .
+         "<p><strong>Bias Rating:</strong> [0-100]<br>\n" .
+         "<em>Scale: 0 = Extreme Left bias, 25 = Lean Left, 50 = Center/Neutral, 75 = Lean Right, 100 = Extreme Right bias</em><br>\n" .
+         "This rating assesses the political perspective and editorial slant present in the article content.<br>\n" .
+         "Ratings consider language choices, source selection, and framing of political issues.</p>\n\n" .
          "<p><strong>Bias Analysis:</strong><br>\n" .
          "- [First line explaining the bias rating]<br>\n" .
          "- [Second line explaining the bias rating]</p>\n\n" .
-         "<p><strong>Article Sentiment Score:</strong> [0-100]</p>\n\n" .
+         "<p><strong>Article Sentiment Score:</strong> [0-100]<br>\n" .
+         "<em>Scale: 0 = Most negative tone and outlook, 100 = Most positive tone and outlook</em><br>\n" .
+         "This rating measures the overall emotional tone and perspective conveyed in the article.<br>\n" .
+         "Scores reflect whether the content presents optimistic, pessimistic, or neutral viewpoints.</p>\n\n" .
          "<p>As a social scientist, I analyze that [your detailed analysis of how this article impacts the key metric].</p>\n\n" .
          "Article Title: " . $article_title . "\n\n" .
          "Article Text: " . $article_text;
