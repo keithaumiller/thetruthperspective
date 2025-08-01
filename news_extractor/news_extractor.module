@@ -823,7 +823,7 @@ function news_extractor_update_existing_articles_with_new_fields() {
         $node->set('field_motivation_data', json_encode($structured_data));
       }
       
-      // Populate individual score fields
+      // Populate individual score fields - FIXED BUG HERE
       if ($node->hasField('field_credibility_score') && !is_null($structured_data['credibility_score'])) {
         $node->set('field_credibility_score', (string)$structured_data['credibility_score']);
       }
@@ -836,8 +836,9 @@ function news_extractor_update_existing_articles_with_new_fields() {
         $node->set('field_bias_analysis', implode("\n", $structured_data['bias_analysis']));
       }
       
-      if ($node->hasField('field_article_sentiment_score') && !is_null($structured_data['sentiment_score'])) {
-        $node->set('field_article_sentiment_score', (string)$structured_data['sentiment_score']);
+      // FIX: Changed from 'sentiment_score' to 'article_sentiment_score'
+      if ($node->hasField('field_article_sentiment_score') && !is_null($structured_data['article_sentiment_score'])) {
+        $node->set('field_article_sentiment_score', (string)$structured_data['article_sentiment_score']);
       }
       
       $node->save();
@@ -915,7 +916,7 @@ function news_extractor_regenerate_ai_analysis_for_existing_articles() {
           $structured_data = _news_extractor_extract_structured_data($ai_summary);
           $node->set('field_motivation_data', json_encode($structured_data));
           
-          // Populate individual fields
+          // Populate individual fields - FIXED BUG HERE TOO
           if ($node->hasField('field_credibility_score') && !is_null($structured_data['credibility_score'])) {
             $node->set('field_credibility_score', (string)$structured_data['credibility_score']);
           }
@@ -928,8 +929,9 @@ function news_extractor_regenerate_ai_analysis_for_existing_articles() {
             $node->set('field_bias_analysis', implode("\n", $structured_data['bias_analysis']));
           }
           
-          if ($node->hasField('field_article_sentiment_score') && !is_null($structured_data['sentiment_score'])) {
-            $node->set('field_article_sentiment_score', (string)$structured_data['sentiment_score']);
+          // FIX: Changed from 'sentiment_score' to 'article_sentiment_score'
+          if ($node->hasField('field_article_sentiment_score') && !is_null($structured_data['article_sentiment_score'])) {
+            $node->set('field_article_sentiment_score', (string)$structured_data['article_sentiment_score']);
           }
           
           // Create tags from new analysis
@@ -938,7 +940,9 @@ function news_extractor_regenerate_ai_analysis_for_existing_articles() {
             $simple_tags[] = $entity_data['name'];
             $simple_tags = array_merge($simple_tags, $entity_data['motivations']);
           }
-          $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
+          if (!empty($structured_data['key_metric'])) {
+            $simple_tags[] = $structured_data['key_metric'];
+          }
           
           // Create taxonomy terms
           $tag_ids = [];
@@ -955,7 +959,7 @@ function news_extractor_regenerate_ai_analysis_for_existing_articles() {
         }
         
         // Format motivation analysis for display
-        $motivation_analysis = news_extractor_format_motivation_analysis($ai_summary);
+        $motivation_analysis = $ai_summary; // Use raw AI summary for now
         
         // Apply linkification if we have tags
         if (!empty($tag_ids)) {
