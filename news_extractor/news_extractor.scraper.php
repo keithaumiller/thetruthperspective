@@ -97,7 +97,9 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           foreach (array_unique($simple_tags) as $tag) {
             if (!empty(trim($tag))) {
               $tid = _news_extractor_get_or_create_tag($tag);
-              if ($tid) $tag_ids[] = $tid;
+              if ($tid) {
+                $tag_ids[] = $tid;
+              }
             }
           }
 
@@ -501,5 +503,130 @@ function news_extractor_format_json_analysis($structured_data) {
   }
 
   return $html;
+}
+
+// Add this function to reprocess from stored ai_raw_response:
+
+/**
+ * Reprocess a single node's fields from stored ai_raw_response data.
+ */
+function news_extractor_reprocess_node_from_raw_response($nid) {
+  $node = Node::load($nid);
+  
+  if (!$node || $node->bundle() !== 'article') {
+    return FALSE;
+  }
+  
+  // Get stored raw AI response
+  if (!$node->hasField('field_ai_raw_response') || $node->get('field_ai_raw_response')->isEmpty()) {
+    \Drupal::logger('news_extractor')->warning('No raw AI response found for node @nid', ['@nid' => $nid]);
+    return FALSE;
+  }
+  
+  $ai_raw_response = $node->get('field_ai_raw_response')->value;
+  
+  // Extract structured data from raw response
+  $structured_data = _news_extractor_extract_structured_data($ai_raw_response);
+  
+  // Update all assessment fields from structured data
+  if (isset($structured_data['credibility_score']) && $node->hasField('field_credibility_score')) {
+    $node->set('field_credibility_score', (string) $structured_data['credibility_score']);
+  }
+  
+  if (isset($structured_data['bias_rating']) && $node->hasField('field_bias_rating')) {
+    $node->set('field_bias_rating', (string) $structured_data['bias_rating']);
+  }
+  
+  if (isset($structured_data['bias_analysis']) && $node->hasField('field_bias_analysis')) {
+    $node->set('field_bias_analysis', $structured_data['bias_analysis']);
+  }
+  
+  if (isset($structured_data['sentiment_score']) && $node->hasField('field_article_sentiment_score')) {
+    $node->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
+  }
+  
+  // Update motivation data field
+  if ($node->hasField('field_motivation_data')) {
+    $node->set('field_motivation_data', json_encode($structured_data));
+  }
+  
+  // Regenerate tags
+  if (!empty($structured_data)) {
+    $simple_tags = [];
+    
+    if (isset($structured_data['entities']) && is_array($structured_data['entities'])) {
+      foreach ($structured_data['entities'] as $entity_data) {
+        if (isset($entity_data['name'])) {
+          $simple_tags[] = $entity_data['name'];
+        }
+        if (isset($entity_data['motivations']) && is_array($entity_data['motivations'])) {
+          foreach ($entity_data['motivations'] as $motivation) {
+            $simple_tags[] = $motivation;
+          }
+        }
+      }
+    }
+    
+    if (isset($structured_data['metrics']) && is_array($structured_data['metrics'])) {
+      $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
+    }
+    
+    $tag_ids = [];
+    foreach (array_unique($simple_tags) as $tag) {
+      if (!empty(trim($tag))) {
+        $tid = _news_extractor_get_or_create_tag($tag);
+        if ($tid) {
+          $tag_ids[] = $tid;
+        }
+      }
+    }
+    
+    if (!empty($tag_ids)) {
+      $node->set('field_tags', $tag_ids);
+    }
+  }
+  
+  // Regenerate formatted analysis
+  $motivation_analysis = news_extractor_format_json_analysis($structured_data);
+  $node->set('field_motivation_analysis', [
+    'value' => $motivation_analysis,
+    'format' => 'basic_html',
+  ]);
+  
+  $node->save();
+  
+  \Drupal::logger('news_extractor')->info('Reprocessed node @nid from raw AI response', ['@nid' => $nid]);
+  return TRUE;
+}
+
+// Add this function for bulk reprocessing:
+
+/**
+ * Reprocess all nodes that have raw AI responses but may need field updates.
+ */
+function news_extractor_bulk_reprocess_from_raw_responses($limit = 50) {
+  $nids = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_ai_raw_response.value', '', '<>')
+    ->accessCheck(FALSE)
+    ->range(0, $limit)
+    ->execute();
+    
+  $processed = 0;
+  $updated = 0;
+  
+  foreach ($nids as $nid) {
+    if (news_extractor_reprocess_node_from_raw_response($nid)) {
+      $updated++;
+    }
+    $processed++;
+  }
+  
+  \Drupal::logger('news_extractor')->info('Bulk reprocessing complete: @processed processed, @updated updated', [
+    '@processed' => $processed,
+    '@updated' => $updated,
+  ]);
+  
+  return ['processed' => $processed, 'updated' => $updated];
 }
 
