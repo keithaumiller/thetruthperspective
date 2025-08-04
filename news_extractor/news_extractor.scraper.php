@@ -35,7 +35,12 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
       $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
       if ($ai_summary && $entity->hasField('field_motivation_analysis')) {
         
-        // Store the RAW AI response first
+        // Store the RAW AI response in new dedicated field
+        if ($entity->hasField('field_ai_raw_response')) {
+          $entity->set('field_ai_raw_response', $ai_summary);
+        }
+        
+        // Keep existing AI Summary field for backward compatibility
         if ($entity->hasField('field_ai_summary')) {
           $entity->set('field_ai_summary', $ai_summary);
         }
@@ -92,8 +97,13 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         ]);
 
         $entity->save();
-        \Drupal::logger('news_extractor')->info('Generated JSON-based Motivation Analysis for: @title', [
+        
+        // Enhanced logging to track what's stored where
+        \Drupal::logger('news_extractor')->info('AI data stored for @title: Raw response (@raw_len chars), Structured data (@struct_items items), Formatted analysis (@format_len chars)', [
           '@title' => $entity->getTitle(),
+          '@raw_len' => strlen($ai_summary),
+          '@struct_items' => count($structured_data['entities'] ?? []),
+          '@format_len' => strlen($motivation_analysis),
         ]);
       }
 
