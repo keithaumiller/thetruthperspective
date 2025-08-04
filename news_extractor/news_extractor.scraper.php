@@ -34,28 +34,49 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
       // --- Generate Motivation Analysis ---
       $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
       if ($ai_summary && $entity->hasField('field_motivation_analysis')) {
-        // Extract and store structured data FIRST (for JSON field)
+        
+        // Store the RAW AI response first
+        if ($entity->hasField('field_ai_summary')) {
+          $entity->set('field_ai_summary', $ai_summary);
+        }
+        
+        // Extract and store structured data (for JSON field)
+        $structured_data = _news_extractor_extract_structured_data($ai_summary);
+        
         if ($entity->hasField('field_motivation_data')) {
-          $structured_data = _news_extractor_extract_structured_data($ai_summary);
           $entity->set('field_motivation_data', json_encode($structured_data));
         }
 
         // Create simple tags for browsing (entities + motivations + metrics)
-        if (isset($structured_data)) {
+        if (!empty($structured_data)) {
           $simple_tags = [];
-          foreach ($structured_data['entities'] as $entity_data) {
-            $simple_tags[] = $entity_data['name']; // Entity tag
-            foreach ($entity_data['motivations'] as $motivation) {
-              $simple_tags[] = $motivation; // Motivation tag
+          
+          // Extract entity names
+          if (isset($structured_data['entities']) && is_array($structured_data['entities'])) {
+            foreach ($structured_data['entities'] as $entity_data) {
+              if (isset($entity_data['name'])) {
+                $simple_tags[] = $entity_data['name']; // Entity tag
+              }
+              if (isset($entity_data['motivations']) && is_array($entity_data['motivations'])) {
+                foreach ($entity_data['motivations'] as $motivation) {
+                  $simple_tags[] = $motivation; // Motivation tag
+                }
+              }
             }
           }
-          $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
+          
+          // Add metrics
+          if (isset($structured_data['metrics']) && is_array($structured_data['metrics'])) {
+            $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
+          }
 
           // Create taxonomy terms
           $tag_ids = [];
           foreach (array_unique($simple_tags) as $tag) {
-            $tid = _news_extractor_get_or_create_tag($tag);
-            if ($tid) $tag_ids[] = $tid;
+            if (!empty(trim($tag))) {
+              $tid = _news_extractor_get_or_create_tag($tag);
+              if ($tid) $tag_ids[] = $tid;
+            }
           }
 
           if (!empty($tag_ids)) {
@@ -63,15 +84,15 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           }
         }
 
-        // Format the Motivation Analysis for display (basic HTML format)
-        $motivation_analysis = news_extractor_format_motivation_analysis($ai_summary);
+        // Format the analysis for human-readable display
+        $motivation_analysis = news_extractor_format_json_analysis($structured_data);
         $entity->set('field_motivation_analysis', [
           'value' => $motivation_analysis,
-          'format' => 'basic_html',  // Back to basic_html format
+          'format' => 'basic_html',
         ]);
 
         $entity->save();
-        \Drupal::logger('news_extractor')->info('Generated Motivation Analysis for: @title', [
+        \Drupal::logger('news_extractor')->info('Generated JSON-based Motivation Analysis for: @title', [
           '@title' => $entity->getTitle(),
         ]);
       }
@@ -380,5 +401,48 @@ function news_extractor_test_update() {
   }
 
   echo "Test complete. Processed: $processed, Would update: $updated\n";
+}
+
+/**
+ * Format JSON structured data for human-readable display.
+ */
+function news_extractor_format_json_analysis($structured_data) {
+  if (empty($structured_data)) {
+    return '<p>No analysis data available.</p>';
+  }
+
+  $html = '';
+
+  // Entities section
+  if (!empty($structured_data['entities']) && is_array($structured_data['entities'])) {
+    $html .= '<p><strong>Entities mentioned:</strong><br>';
+    foreach ($structured_data['entities'] as $entity) {
+      if (isset($entity['name']) && isset($entity['motivations'])) {
+        $name = $entity['name'];
+        $motivations = is_array($entity['motivations']) ? implode(', ', $entity['motivations']) : $entity['motivations'];
+        $html .= "- {$name}: {$motivations}<br>";
+      }
+    }
+    $html .= '</p>';
+  }
+
+  // Key metric section
+  if (!empty($structured_data['metrics']) && is_array($structured_data['metrics'])) {
+    $metric = $structured_data['metrics'][0]; // Take first metric
+    $html .= "<p><strong>Key metric:</strong> {$metric}</p>";
+  }
+
+  // Analysis section
+  if (!empty($structured_data['analysis'])) {
+    $html .= '<p></p>'; // Spacing
+    $html .= '<p>' . $structured_data['analysis'] . '</p>';
+  }
+
+  // Fallback if no structured content
+  if (empty($html)) {
+    $html = '<p>Analysis data processed but no structured content available.</p>';
+  }
+
+  return $html;
 }
 
