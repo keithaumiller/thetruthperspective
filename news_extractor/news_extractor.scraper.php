@@ -52,7 +52,7 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           $entity->set('field_motivation_data', json_encode($structured_data));
         }
         
-        // Store individual assessment fields
+        // Store individual assessment fields FIRST
         if (isset($structured_data['credibility_score']) && $entity->hasField('field_credibility_score')) {
           $entity->set('field_credibility_score', (string) $structured_data['credibility_score']);
         }
@@ -68,8 +68,8 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         if (isset($structured_data['sentiment_score']) && $entity->hasField('field_article_sentiment_score')) {
           $entity->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
         }
-        
-        // Create simple tags for browsing (entities + motivations + metrics)
+
+        // Create simple tags for browsing (entities + motivations + metrics) BEFORE formatting
         if (!empty($structured_data)) {
           $simple_tags = [];
           
@@ -92,7 +92,7 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
             $simple_tags = array_merge($simple_tags, $structured_data['metrics']);
           }
 
-          // Create taxonomy terms
+          // Create taxonomy terms FIRST (so they exist when we create links)
           $tag_ids = [];
           foreach (array_unique($simple_tags) as $tag) {
             if (!empty(trim($tag))) {
@@ -108,17 +108,21 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           }
         }
 
-        // Format the analysis for human-readable display
+        // Save entity FIRST to ensure taxonomy terms are created
+        $entity->save();
+        
+        // NOW format the analysis with taxonomy links (AFTER tags are created and saved)
         $motivation_analysis = news_extractor_format_json_analysis($structured_data);
         $entity->set('field_motivation_analysis', [
           'value' => $motivation_analysis,
           'format' => 'basic_html',
         ]);
 
+        // Save again with the linked motivation analysis
         $entity->save();
         
         // Enhanced logging to track what's stored where
-        \Drupal::logger('news_extractor')->info('AI data stored for @title: Raw response (@raw_len chars), Structured data (@struct_items items), Formatted analysis (@format_len chars)', [
+        \Drupal::logger('news_extractor')->info('AI data stored for @title: Raw response (@raw_len chars), Structured data (@struct_items items), Formatted analysis with links (@format_len chars)', [
           '@title' => $entity->getTitle(),
           '@raw_len' => strlen($ai_summary),
           '@struct_items' => count($structured_data['entities'] ?? []),
@@ -433,7 +437,7 @@ function news_extractor_test_update() {
 }
 
 /**
- * Format JSON structured data for human-readable display - Enhanced with assessments.
+ * Format JSON structured data for human-readable display with taxonomy links.
  */
 function news_extractor_format_json_analysis($structured_data) {
   if (empty($structured_data)) {
@@ -442,14 +446,27 @@ function news_extractor_format_json_analysis($structured_data) {
 
   $html = '';
 
-  // Entities section
+  // Entities section with taxonomy links
   if (!empty($structured_data['entities']) && is_array($structured_data['entities'])) {
     $html .= '<p><strong>Entities mentioned:</strong><br>';
     foreach ($structured_data['entities'] as $entity) {
       if (isset($entity['name']) && isset($entity['motivations'])) {
-        $name = $entity['name'];
-        $motivations = is_array($entity['motivations']) ? implode(', ', $entity['motivations']) : $entity['motivations'];
-        $html .= "- {$name}: {$motivations}<br>";
+        $entity_name = $entity['name'];
+        $motivations = is_array($entity['motivations']) ? $entity['motivations'] : [$entity['motivations']];
+        
+        // Create link for entity name
+        $entity_link = _news_extractor_create_taxonomy_link($entity_name);
+        
+        // Create links for motivations
+        $motivation_links = [];
+        foreach ($motivations as $motivation) {
+          if (!empty(trim($motivation))) {
+            $motivation_links[] = _news_extractor_create_taxonomy_link($motivation);
+          }
+        }
+        
+        $motivation_string = implode(', ', $motivation_links);
+        $html .= "- {$entity_link}: {$motivation_string}<br>";
       }
     }
     $html .= '</p>';
@@ -485,10 +502,11 @@ function news_extractor_format_json_analysis($structured_data) {
     $html .= '<p><strong>Bias Analysis:</strong><br>' . $structured_data['bias_analysis'] . '</p>';
   }
 
-  // Key metric section
+  // Key metric section with taxonomy link
   if (!empty($structured_data['metrics']) && is_array($structured_data['metrics'])) {
     $metric = $structured_data['metrics'][0]; // Take first metric
-    $html .= "<p><strong>Key metric:</strong> {$metric}</p>";
+    $metric_link = _news_extractor_create_taxonomy_link($metric);
+    $html .= "<p><strong>Key metric:</strong> {$metric_link}</p>";
   }
 
   // Analysis section
@@ -503,6 +521,37 @@ function news_extractor_format_json_analysis($structured_data) {
   }
 
   return $html;
+}
+
+/**
+ * Create a taxonomy link for a given term name.
+ */
+function _news_extractor_create_taxonomy_link($term_name) {
+  if (empty(trim($term_name))) {
+    return $term_name;
+  }
+  
+  // Clean the term name
+  $clean_name = trim($term_name);
+  
+  // Try to find existing taxonomy term
+  $term_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+  $terms = $term_storage->loadByProperties([
+    'name' => $clean_name,
+    'vid' => 'tags', // Assuming 'tags' vocabulary
+  ]);
+  
+  if (!empty($terms)) {
+    // Term exists, create link
+    $term = reset($terms);
+    $term_id = $term->id();
+    $term_url = \Drupal\Core\Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $term_id]);
+    $link = \Drupal\Core\Link::fromTextAndUrl($clean_name, $term_url)->toString();
+    return $link;
+  } else {
+    // Term doesn't exist, return plain text
+    return $clean_name;
+  }
 }
 
 // Add this function to reprocess from stored ai_raw_response:
@@ -550,7 +599,7 @@ function news_extractor_reprocess_node_from_raw_response($nid) {
     $node->set('field_motivation_data', json_encode($structured_data));
   }
   
-  // Regenerate tags
+  // Regenerate tags FIRST (before creating links)
   if (!empty($structured_data)) {
     $simple_tags = [];
     
@@ -586,16 +635,20 @@ function news_extractor_reprocess_node_from_raw_response($nid) {
     }
   }
   
-  // Regenerate formatted analysis
+  // Save node FIRST to ensure taxonomy terms exist
+  $node->save();
+  
+  // NOW regenerate formatted analysis with taxonomy links
   $motivation_analysis = news_extractor_format_json_analysis($structured_data);
   $node->set('field_motivation_analysis', [
     'value' => $motivation_analysis,
     'format' => 'basic_html',
   ]);
   
+  // Save again with linked analysis
   $node->save();
   
-  \Drupal::logger('news_extractor')->info('Reprocessed node @nid from raw AI response', ['@nid' => $nid]);
+  \Drupal::logger('news_extractor')->info('Reprocessed node @nid from raw AI response with taxonomy links', ['@nid' => $nid]);
   return TRUE;
 }
 
