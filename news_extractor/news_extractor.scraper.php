@@ -51,7 +51,24 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         if ($entity->hasField('field_motivation_data')) {
           $entity->set('field_motivation_data', json_encode($structured_data));
         }
-
+        
+        // Store individual assessment fields
+        if (isset($structured_data['credibility_score']) && $entity->hasField('field_credibility_score')) {
+          $entity->set('field_credibility_score', (string) $structured_data['credibility_score']);
+        }
+        
+        if (isset($structured_data['bias_rating']) && $entity->hasField('field_bias_rating')) {
+          $entity->set('field_bias_rating', (string) $structured_data['bias_rating']);
+        }
+        
+        if (isset($structured_data['bias_analysis']) && $entity->hasField('field_bias_analysis')) {
+          $entity->set('field_bias_analysis', $structured_data['bias_analysis']);
+        }
+        
+        if (isset($structured_data['sentiment_score']) && $entity->hasField('field_article_sentiment_score')) {
+          $entity->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
+        }
+        
         // Create simple tags for browsing (entities + motivations + metrics)
         if (!empty($structured_data)) {
           $simple_tags = [];
@@ -414,7 +431,7 @@ function news_extractor_test_update() {
 }
 
 /**
- * Format JSON structured data for human-readable display.
+ * Format JSON structured data for human-readable display - Enhanced with assessments.
  */
 function news_extractor_format_json_analysis($structured_data) {
   if (empty($structured_data)) {
@@ -434,6 +451,36 @@ function news_extractor_format_json_analysis($structured_data) {
       }
     }
     $html .= '</p>';
+  }
+
+  // Assessment scores section
+  $html .= '<p><strong>Article Assessment:</strong><br>';
+  
+  if (isset($structured_data['credibility_score'])) {
+    $html .= "Credibility Score: {$structured_data['credibility_score']}/100<br>";
+  }
+  
+  if (isset($structured_data['bias_rating'])) {
+    $bias_label = '';
+    $bias_score = $structured_data['bias_rating'];
+    if ($bias_score <= 20) $bias_label = 'Extreme Left';
+    elseif ($bias_score <= 40) $bias_label = 'Lean Left';
+    elseif ($bias_score <= 60) $bias_label = 'Center';
+    elseif ($bias_score <= 80) $bias_label = 'Lean Right';
+    else $bias_label = 'Extreme Right';
+    
+    $html .= "Bias Rating: {$bias_score}/100 ({$bias_label})<br>";
+  }
+  
+  if (isset($structured_data['sentiment_score'])) {
+    $html .= "Sentiment Score: {$structured_data['sentiment_score']}/100<br>";
+  }
+  
+  $html .= '</p>';
+
+  // Bias analysis
+  if (!empty($structured_data['bias_analysis'])) {
+    $html .= '<p><strong>Bias Analysis:</strong><br>' . $structured_data['bias_analysis'] . '</p>';
   }
 
   // Key metric section

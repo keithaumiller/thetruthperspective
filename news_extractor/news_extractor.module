@@ -480,106 +480,179 @@ function _news_extractor_get_motivation_category($motivation) {
 }
 
 /**
- * Helper function to build AI prompt for social scientist perspective.
+ * Helper function to build AI prompt for social scientist perspective - Enhanced JSON output.
  */
 function _news_extractor_build_ai_prompt($article_title, $article_text) {
   $allowed_motivations = "Ambition, Competitive spirit, Righteousness, Moral outrage, Loyalty, Pride, Determination, Fear, Greed, Power, Control, Revenge, Justice, Self-preservation, Recognition, Legacy, Influence, Security, Freedom, Unity, Professional pride, Duty, Curiosity, Enthusiasm, Wariness, Anxiety, Self-respect, Obligation, Indignation";
 
-  return "As a social scientist, analyze this article in the context of key performance metrics for the United States.\n\n" .
+  return "As a social scientist, analyze this article comprehensively for both content analysis and media assessment.\n\n" .
          "Instructions:\n" .
          "1. Identify each entity (person, organization, institution) mentioned in the article\n" .
          "2. For each entity, select their top 2-3 motivations from the allowed list\n" .
          "3. Choose the most relevant US performance metric this article impacts\n" .
-         "4. Provide analysis of how this affects that metric\n\n" .
+         "4. Provide analysis of how this affects that metric\n" .
+         "5. Assess the article's credibility, bias, and sentiment\n\n" .
          "Use ONLY motivations from this list: $allowed_motivations\n\n" .
-         "Format your response EXACTLY as follows using basic HTML:\n\n" .
-         "<p><strong>Entities mentioned:</strong><br>\n" .
-         "- Entity Name: Motivation1, Motivation2<br>\n" .
-         "- Entity Name: Motivation1, Motivation2, Motivation3</p>\n\n" .
-         "<p><strong>Key metric:</strong> [Specific Metric Name]</p>\n\n" .
-         "<p>As a social scientist, I analyze that [your detailed analysis of how this article impacts the key metric].</p>\n\n" .
+         "CREDIBILITY SCORING (0-100):\n" .
+         "- 0-20: Intentional deceit, false information, propaganda\n" .
+         "- 21-40: Highly questionable sources, unverified claims\n" .
+         "- 41-60: Mixed reliability, some factual issues\n" .
+         "- 61-80: Generally reliable with minor issues\n" .
+         "- 81-100: Highly credible, well-sourced, factual\n\n" .
+         "BIAS RATING (0-100):\n" .
+         "- 0-20: Extreme Left\n" .
+         "- 21-40: Lean Left\n" .
+         "- 41-60: Center\n" .
+         "- 61-80: Lean Right\n" .
+         "- 81-100: Extreme Right\n\n" .
+         "SENTIMENT SCORING (0-100):\n" .
+         "- 0-20: Very negative, doom, crisis\n" .
+         "- 21-40: Negative, critical, pessimistic\n" .
+         "- 41-60: Neutral, balanced reporting\n" .
+         "- 61-80: Positive, optimistic, hopeful\n" .
+         "- 81-100: Very positive, celebratory, triumphant\n\n" .
+         "Return your response as valid JSON in this exact format:\n\n" .
+         "{\n" .
+         "  \"entities\": [\n" .
+         "    {\n" .
+         "      \"name\": \"Entity Name\",\n" .
+         "      \"motivations\": [\"Motivation1\", \"Motivation2\", \"Motivation3\"]\n" .
+         "    }\n" .
+         "  ],\n" .
+         "  \"key_metric\": \"Specific Metric Name\",\n" .
+         "  \"analysis\": \"As a social scientist, I analyze that [your detailed analysis].\",\n" .
+         "  \"credibility_score\": 75,\n" .
+         "  \"bias_rating\": 45,\n" .
+         "  \"bias_analysis\": \"Two-line explanation of why this bias rating was selected based on language, framing, and source presentation.\",\n" .
+         "  \"sentiment_score\": 35\n" .
+         "}\n\n" .
+         "IMPORTANT: Return ONLY the JSON object, no other text or formatting.\n\n" .
          "Article Title: " . $article_title . "\n\n" .
          "Article Text: " . $article_text;
 }
 
 /**
- * Extract entities, motivations, and metrics from the AI summary (now with HTML).
+ * Extract entities, motivations, and metrics from structured JSON data.
  */
-function _news_extractor_extract_tags_from_summary($ai_summary) {
+function _news_extractor_extract_tags_from_summary($structured_data) {
   $entities = [];
   $motivations = [];
   $metrics = [];
 
-  // Strip HTML for parsing, but preserve structure
-  $text_content = strip_tags($ai_summary);
+  // If we get JSON string, parse it first
+  if (is_string($structured_data)) {
+    $structured_data = json_decode($structured_data, true);
+  }
 
-  // Extract entity-motivation pairings: "- Entity Name: Motivation1, Motivation2, Motivation3"
-  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $text_content, $matches)) {
-    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
-      if (preg_match('/-\s*(.+?):\s*(.+)/', $line, $m)) {
-        $entity_name = trim($m[1]);
-        $entity_motivations = array_map('trim', explode(',', $m[2]));
-        $entities[] = $entity_name;
-        $motivations = array_merge($motivations, $entity_motivations);
+  if (is_array($structured_data)) {
+    // Extract entities
+    if (isset($structured_data['entities']) && is_array($structured_data['entities'])) {
+      foreach ($structured_data['entities'] as $entity_data) {
+        if (isset($entity_data['name'])) {
+          $entities[] = $entity_data['name'];
+        }
+        if (isset($entity_data['motivations']) && is_array($entity_data['motivations'])) {
+          $motivations = array_merge($motivations, $entity_data['motivations']);
+        }
       }
+    }
+    
+    // Extract direct motivations array
+    if (isset($structured_data['motivations']) && is_array($structured_data['motivations'])) {
+      $motivations = array_merge($motivations, $structured_data['motivations']);
+    }
+    
+    // Extract metrics
+    if (isset($structured_data['metrics']) && is_array($structured_data['metrics'])) {
+      $metrics = array_merge($metrics, $structured_data['metrics']);
     }
   }
 
-  // Key metric: single line after "Key metric:"
-  if (preg_match('/Key metric:\s*(.+)/i', $text_content, $matches)) {
-    $metrics[] = trim($matches[1]);
-  }
-
-  // Remove duplicates
-  $entities = array_unique($entities);
-  $motivations = array_unique($motivations);
-
   return [
-    'entities' => $entities,
-    'motivations' => $motivations,
-    'metrics' => $metrics,
+    'entities' => array_unique($entities),
+    'motivations' => array_unique($motivations),
+    'metrics' => array_unique($metrics),
   ];
 }
 
 /**
- * Extract structured motivation data from AI summary for JSON field (handles HTML).
+ * Extract structured motivation data from AI JSON response - Enhanced with media assessment.
  */
-function _news_extractor_extract_structured_data($motivation_analysis) {
+function _news_extractor_extract_structured_data($ai_response) {
   $data = [
     'entities' => [],
     'motivations' => [],
-    'metrics' => []
+    'metrics' => [],
+    'credibility_score' => null,
+    'bias_rating' => null,
+    'bias_analysis' => '',
+    'sentiment_score' => null
   ];
 
-  // Strip HTML for parsing
-  $text_content = strip_tags($motivation_analysis);
-
-  // Extract entities and their motivations
-  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $text_content, $matches)) {
-    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
-      if (preg_match('/-\s*(.+?):\s*(.+)/', $line, $m)) {
-        $entity = trim($m[1]);
-        $motivations_text = trim($m[2]);
-        $motivations = array_map('trim', explode(',', $motivations_text));
-        
-        $data['entities'][] = [
-          'name' => $entity,
-          'motivations' => $motivations
-        ];
-        
-        // Also collect unique motivations
-        foreach ($motivations as $motivation) {
-          if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
-            $data['motivations'][] = $motivation;
+  try {
+    // Clean the response - remove any non-JSON content
+    $json_start = strpos($ai_response, '{');
+    $json_end = strrpos($ai_response, '}');
+    
+    if ($json_start !== false && $json_end !== false) {
+      $json_content = substr($ai_response, $json_start, $json_end - $json_start + 1);
+      $parsed = json_decode($json_content, true);
+      
+      if (json_last_error() === JSON_ERROR_NONE && is_array($parsed)) {
+        // Extract entities and motivations
+        if (isset($parsed['entities']) && is_array($parsed['entities'])) {
+          foreach ($parsed['entities'] as $entity_data) {
+            if (isset($entity_data['name']) && isset($entity_data['motivations'])) {
+              $data['entities'][] = [
+                'name' => $entity_data['name'],
+                'motivations' => $entity_data['motivations']
+              ];
+              
+              // Collect unique motivations
+              foreach ($entity_data['motivations'] as $motivation) {
+                if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
+                  $data['motivations'][] = $motivation;
+                }
+              }
+            }
           }
         }
+        
+        // Extract key metric
+        if (isset($parsed['key_metric']) && !empty($parsed['key_metric'])) {
+          $data['metrics'][] = $parsed['key_metric'];
+        }
+        
+        // Store the analysis text for human display
+        if (isset($parsed['analysis'])) {
+          $data['analysis'] = $parsed['analysis'];
+        }
+        
+        // Extract new assessment fields
+        if (isset($parsed['credibility_score']) && is_numeric($parsed['credibility_score'])) {
+          $data['credibility_score'] = (int) $parsed['credibility_score'];
+        }
+        
+        if (isset($parsed['bias_rating']) && is_numeric($parsed['bias_rating'])) {
+          $data['bias_rating'] = (int) $parsed['bias_rating'];
+        }
+        
+        if (isset($parsed['bias_analysis']) && !empty($parsed['bias_analysis'])) {
+          $data['bias_analysis'] = $parsed['bias_analysis'];
+        }
+        
+        if (isset($parsed['sentiment_score']) && is_numeric($parsed['sentiment_score'])) {
+          $data['sentiment_score'] = (int) $parsed['sentiment_score'];
+        }
+        
+      } else {
+        \Drupal::logger('news_extractor')->error('JSON parsing failed: @error', ['@error' => json_last_error_msg()]);
       }
+    } else {
+      \Drupal::logger('news_extractor')->error('No valid JSON found in AI response');
     }
-  }
-
-  // Extract key metric
-  if (preg_match('/Key metric:\s*(.+)/i', $text_content, $matches)) {
-    $data['metrics'][] = trim($matches[1]);
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error parsing AI JSON response: @error', ['@error' => $e->getMessage()]);
   }
 
   return $data;
