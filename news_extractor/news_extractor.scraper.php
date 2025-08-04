@@ -1,5 +1,4 @@
 <?php
-require_once __DIR__ . '/news_extractor.module';
 
 use Drupal\Core\Entity\EntityInterface;
 use GuzzleHttp\Client;
@@ -225,47 +224,6 @@ function news_extractor_format_motivation_analysis($text) {
   $text = trim($text);
 
   return $text;
-}
-
-/**
- * Extract structured motivation data from AI summary.
- */
-function _news_extractor_extract_structured_data($motivation_analysis) {
-  $data = [
-    'entities' => [],
-    'motivations' => [],
-    'metrics' => []
-  ];
-
-  // Extract entities with their motivations: "- Entity Name: Motivation1, Motivation2, Motivation3"
-  if (preg_match('/Entities mentioned:(.*?)(?:Key metric:|$)/is', $motivation_analysis, $matches)) {
-    foreach (preg_split('/\r?\n/', $matches[1]) as $line) {
-      if (preg_match('/-\s*(.+?):\s*(.+)/', $line, $m)) {
-        $entity = trim($m[1]);
-        $motivations_text = trim($m[2]);
-        $motivations = array_map('trim', explode(',', $motivations_text));
-        
-        $data['entities'][] = [
-          'name' => $entity,
-          'motivations' => $motivations
-        ];
-        
-        // Also collect unique motivations
-        foreach ($motivations as $motivation) {
-          if (!empty($motivation) && !in_array($motivation, $data['motivations'])) {
-            $data['motivations'][] = $motivation;
-          }
-        }
-      }
-    }
-  }
-
-  // Extract key metric
-  if (preg_match('/Key metric:\s*(.+)/i', $motivation_analysis, $matches)) {
-    $data['metrics'][] = trim($matches[1]);
-  }
-
-  return $data;
 }
 
 /**
