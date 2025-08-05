@@ -251,7 +251,7 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
 }
 
 /**
- * Update publication date from Diffbot data.
+ * Update publication date from Diffbot data with enhanced date handling.
  * 
  * @param \Drupal\Core\Entity\EntityInterface $entity
  *   The article node entity.
@@ -260,41 +260,80 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
  */
 function _news_extractor_scraper_update_publication_date($entity, $article_data) {
   if (!$entity->hasField('field_publication_date')) {
+    \Drupal::logger('news_extractor')->info('Node @nid does not have field_publication_date field', [
+      '@nid' => $entity->id(),
+    ]);
+    return;
+  }
+
+  // Skip if publication date is already set
+  if (!$entity->get('field_publication_date')->isEmpty()) {
+    \Drupal::logger('news_extractor')->info('Publication date already set for node @nid, skipping', [
+      '@nid' => $entity->id(),
+    ]);
     return;
   }
 
   $date_value = null;
+  $source = null;
   
-  // Try different date fields from Diffbot
+  // Try multiple date fields from Diffbot in order of preference
   if (!empty($article_data['date'])) {
     $date_value = $article_data['date'];
     $source = 'date';
   } elseif (!empty($article_data['estimatedDate'])) {
     $date_value = $article_data['estimatedDate'];
     $source = 'estimatedDate';
+  } elseif (!empty($article_data['publishedAt'])) {
+    $date_value = $article_data['publishedAt'];
+    $source = 'publishedAt';
+  } elseif (!empty($article_data['created'])) {
+    $date_value = $article_data['created'];
+    $source = 'created';
   }
   
   if ($date_value) {
     try {
-      // Convert to proper date format for Drupal
-      $date_obj = new \DateTime($date_value);
-      $formatted_date = $date_obj->format('Y-m-d');
+      // Handle different date formats
+      $date_obj = null;
       
-      $entity->set('field_publication_date', $formatted_date);
+      // Try parsing as timestamp first
+      if (is_numeric($date_value)) {
+        $date_obj = new \DateTime();
+        $date_obj->setTimestamp($date_value);
+      } else {
+        // Try parsing as date string
+        $date_obj = new \DateTime($date_value);
+      }
       
-      \Drupal::logger('news_extractor')->info('Updated publication date @date (from @source) for @title', [
-        '@date' => $formatted_date,
-        '@source' => $source,
-        '@title' => $entity->getTitle(),
-      ]);
+      if ($date_obj) {
+        $formatted_date = $date_obj->format('Y-m-d');
+        
+        $entity->set('field_publication_date', $formatted_date);
+        
+        \Drupal::logger('news_extractor')->info('Updated publication date @date (from @source) for @title', [
+          '@date' => $formatted_date,
+          '@source' => $source,
+          '@title' => $entity->getTitle(),
+        ]);
+        
+        return true;
+      }
     } catch (\Exception $e) {
-      \Drupal::logger('news_extractor')->warning('Failed to parse publication date @date for @title: @error', [
+      \Drupal::logger('news_extractor')->warning('Failed to parse publication date @date (from @source) for @title: @error', [
         '@date' => $date_value,
+        '@source' => $source,
         '@title' => $entity->getTitle(),
         '@error' => $e->getMessage(),
       ]);
     }
+  } else {
+    \Drupal::logger('news_extractor')->info('No publication date found in Diffbot data for @title', [
+      '@title' => $entity->getTitle(),
+    ]);
   }
+  
+  return false;
 }
 
 /**
@@ -1181,84 +1220,219 @@ function news_extractor_debug_stored_diffbot_data($nid) {
   echo "=== END DEBUG DATA ===\n";
 }
 
-// Add this function at the end of the file:
+// Add this function after the existing functions:
 
 /**
- * Extract article data from Diffbot API with proper rate limiting.
+ * Bulk populate publication dates from stored Diffbot JSON data.
  * 
- * @param string $url
- *   The article URL.
- * @param string $diffbot_token
- *   The Diffbot API token.
+ * @param int $limit
+ *   Maximum number of articles to process.
  * 
- * @return array|null
- *   Complete Diffbot API response or NULL on failure.
+ * @return array
+ *   Processing statistics.
  */
-function _news_extractor_scraper_get_diffbot_data($url, $diffbot_token) {
-  // RATE LIMITING: Diffbot allows 0.08 calls/second = 1 call every 12.5 seconds
-  // We'll use 13 seconds to be safe
-  $rate_limit_key = 'news_extractor_diffbot_last_call';
-  $min_interval = 13; // 13 seconds between calls
-  
-  // Check last call time
-  $last_call = \Drupal::state()->get($rate_limit_key, 0);
-  $current_time = time();
-  $time_since_last = $current_time - $last_call;
-  
-  if ($time_since_last < $min_interval) {
-    $sleep_time = $min_interval - $time_since_last;
-    \Drupal::logger('news_extractor')->info('Rate limiting: Waiting @seconds seconds before Diffbot API call', [
-      '@seconds' => $sleep_time,
-    ]);
-    sleep($sleep_time);
+function news_extractor_bulk_populate_publication_dates($limit = 50) {
+  $stats = [
+    'processed' => 0,
+    'updated_dates' => 0,
+    'had_stored_data' => 0,
+    'already_had_dates' => 0,
+    'no_date_found' => 0,
+    'errors' => 0,
+  ];
+
+  echo "=== BULK POPULATING PUBLICATION DATES ===\n";
+
+  // Find articles missing publication dates but with stored JSON data
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_json_scraped_article_data.value', '', '<>')
+    ->accessCheck(FALSE)
+    ->range(0, $limit);
+
+  // Only process articles without publication dates
+  $or_group = $query->orConditionGroup();
+  $or_group->condition('field_publication_date.value', '', '=');
+  $or_group->condition('field_publication_date.value', NULL, 'IS NULL');
+  $query->condition($or_group);
+
+  $nids = $query->execute();
+
+  if (empty($nids)) {
+    echo "No articles found needing publication date population\n";
+    return $stats;
   }
-  
-  try {
-    $api_url = 'https://api.diffbot.com/v3/article';
-    $request_url = $api_url . '?' . http_build_query([
-      'token' => $diffbot_token,
-      'url' => $url,
-      'naturalLanguage' => 'summary',
-    ]);
+
+  echo "Found " . count($nids) . " articles for publication date processing\n\n";
+
+  foreach ($nids as $nid) {
+    try {
+      $node = \Drupal\node\Entity\Node::load($nid);
+      if (!$node) {
+        continue;
+      }
+
+      echo "Processing Node $nid: " . substr($node->getTitle(), 0, 60) . "...\n";
+
+      // Check if already has publication date
+      if ($node->hasField('field_publication_date') && !$node->get('field_publication_date')->isEmpty()) {
+        echo "  → Already has publication date, skipping\n";
+        $stats['already_had_dates']++;
+        $stats['processed']++;
+        continue;
+      }
+
+      // Get stored Diffbot data
+      $stored_data = _news_extractor_scraper_get_stored_diffbot_data($node);
+      if ($stored_data && isset($stored_data['objects'][0])) {
+        $stats['had_stored_data']++;
+        $article_data = $stored_data['objects'][0];
+        
+        // Try to update publication date
+        if (_news_extractor_scraper_update_publication_date($node, $article_data)) {
+          $node->save();
+          $stats['updated_dates']++;
+          echo "  ✓ Updated publication date from stored data\n";
+        } else {
+          $stats['no_date_found']++;
+          echo "  ✗ No valid date found in stored data\n";
+        }
+      } else {
+        echo "  ✗ No stored Diffbot data found\n";
+      }
+
+      $stats['processed']++;
+
+    } catch (\Exception $e) {
+      $stats['errors']++;
+      echo "  ✗ Error processing node $nid: " . $e->getMessage() . "\n";
+    }
+  }
+
+  // Display results
+  echo "\n=== PUBLICATION DATE PROCESSING COMPLETE ===\n";
+  foreach ($stats as $key => $value) {
+    echo "  {$key}: {$value}\n";
+  }
+
+  return $stats;
+}
+
+/**
+ * Debug publication dates in stored Diffbot data.
+ * 
+ * @param int $limit
+ *   Number of nodes to check.
+ */
+function news_extractor_debug_publication_dates($limit = 10) {
+  echo "=== DEBUGGING PUBLICATION DATES IN STORED DATA ===\n\n";
+
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_json_scraped_article_data.value', '', '<>')
+    ->accessCheck(FALSE)
+    ->sort('created', 'DESC')
+    ->range(0, $limit);
+
+  $nids = $query->execute();
+
+  foreach ($nids as $nid) {
+    $node = \Drupal\node\Entity\Node::load($nid);
+    if (!$node) continue;
+
+    echo "Node $nid: " . substr($node->getTitle(), 0, 50) . "...\n";
     
-    \Drupal::logger('news_extractor')->info('Making Diffbot API call to: @url', ['@url' => $url]);
-    
-    $response = \Drupal::httpClient()->get($request_url, [
-      'timeout' => 30,
-      'headers' => ['Accept' => 'application/json'],
-    ]);
-    
-    // Record successful call time
-    \Drupal::state()->set($rate_limit_key, time());
-    
-    $data = json_decode($response->getBody()->getContents(), true);
-    
-    if (!empty($data['objects'][0])) {
-      \Drupal::logger('news_extractor')->info('Successfully extracted content from Diffbot: @chars chars', [
-        '@chars' => strlen($data['objects'][0]['text'] ?? ''),
-      ]);
-      return $data; // Return complete response
+    // Check current publication date
+    $current_date = '';
+    if ($node->hasField('field_publication_date') && !$node->get('field_publication_date')->isEmpty()) {
+      $current_date = $node->get('field_publication_date')->value;
+      echo "  Current pub date: $current_date\n";
     } else {
-      \Drupal::logger('news_extractor')->warning('Diffbot returned no article data for: @url', ['@url' => $url]);
+      echo "  Current pub date: NOT SET\n";
     }
-  } catch (\Exception $e) {
-    $error_message = $e->getMessage();
-    
-    // Check for rate limiting error
-    if (strpos($error_message, '429') !== FALSE || strpos($error_message, 'Too Many Requests') !== FALSE) {
-      \Drupal::logger('news_extractor')->error('Diffbot rate limit exceeded. Waiting 60 seconds before retry. Error: @error', [
-        '@error' => $error_message,
-      ]);
+
+    // Check stored Diffbot data
+    $stored_data = _news_extractor_scraper_get_stored_diffbot_data($node);
+    if ($stored_data && isset($stored_data['objects'][0])) {
+      $article = $stored_data['objects'][0];
       
-      // Set a longer wait time for rate limit errors
-      \Drupal::state()->set($rate_limit_key, time() + 60);
+      echo "  Available date fields:\n";
+      $date_fields = ['date', 'estimatedDate', 'publishedAt', 'created'];
+      foreach ($date_fields as $field) {
+        if (!empty($article[$field])) {
+          echo "    $field: " . $article[$field] . "\n";
+        }
+      }
       
-      return null;
+      if (empty(array_filter($date_fields, function($field) use ($article) {
+        return !empty($article[$field]);
+      }))) {
+        echo "    No date fields found in stored data\n";
+      }
+    } else {
+      echo "  No stored Diffbot data found\n";
     }
     
-    \Drupal::logger('news_extractor')->error('Diffbot API error: @error', ['@error' => $error_message]);
+    echo "\n";
+  }
+}
+
+/**
+ * Test publication date parsing with a specific node.
+ * 
+ * @param int $nid
+ *   Node ID to test.
+ */
+function news_extractor_test_publication_date_parsing($nid) {
+  $node = \Drupal\node\Entity\Node::load($nid);
+  if (!$node) {
+    echo "Node $nid not found.\n";
+    return;
+  }
+
+  echo "=== TESTING PUBLICATION DATE PARSING FOR NODE $nid ===\n";
+  echo "Title: " . $node->getTitle() . "\n\n";
+
+  $stored_data = _news_extractor_scraper_get_stored_diffbot_data($node);
+  if (!$stored_data || !isset($stored_data['objects'][0])) {
+    echo "No stored Diffbot data found.\n";
+    return;
+  }
+
+  $article_data = $stored_data['objects'][0];
+  
+  echo "Testing date field parsing:\n";
+  
+  $date_fields = ['date', 'estimatedDate', 'publishedAt', 'created'];
+  foreach ($date_fields as $field) {
+    if (!empty($article_data[$field])) {
+      $date_value = $article_data[$field];
+      echo "\n$field: $date_value\n";
+      
+      try {
+        $date_obj = null;
+        
+        if (is_numeric($date_value)) {
+          $date_obj = new \DateTime();
+          $date_obj->setTimestamp($date_value);
+          echo "  → Parsed as timestamp: " . $date_obj->format('Y-m-d H:i:s') . "\n";
+        } else {
+          $date_obj = new \DateTime($date_value);
+          echo "  → Parsed as date string: " . $date_obj->format('Y-m-d H:i:s') . "\n";
+        }
+        
+        if ($date_obj) {
+          echo "  → Drupal format: " . $date_obj->format('Y-m-d') . "\n";
+        }
+        
+      } catch (\Exception $e) {
+        echo "  → Parse error: " . $e->getMessage() . "\n";
+      }
+    }
   }
   
-  return null;
+  echo "\nTesting actual update function:\n";
+  $result = _news_extractor_scraper_update_publication_date($node, $article_data);
+  echo "Update result: " . ($result ? 'SUCCESS' : 'FAILED') . "\n";
 }
 
