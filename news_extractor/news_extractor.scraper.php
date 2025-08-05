@@ -324,21 +324,23 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data,
         $field_settings = $field_config ? $field_config->getSettings() : [];
         $datetime_type = $field_settings['datetime_type'] ?? 'datetime';
         
+        // FORCE FULL DATETIME FORMAT FOR DATETIME FIELDS
         if ($datetime_type === 'datetime') {
-          // For datetime fields, use full ISO format (Y-m-d\TH:i:s)
+          // For datetime fields, ALWAYS use full ISO format with time
           $formatted_date = $date_obj->format('Y-m-d\TH:i:s');
         } else {
-          // For date fields, use date only (Y-m-d)
+          // For date-only fields, use date only
           $formatted_date = $date_obj->format('Y-m-d');
         }
         
-        // Set the date field value correctly for Drupal datetime field
+        // Set the date field value
         $entity->set('field_publication_date', $formatted_date);
         
-        \Drupal::logger('news_extractor')->info('Updated publication date @date (from @source, format: @type) for @title', [
+        \Drupal::logger('news_extractor')->info('Updated publication date @date (from @source, format: @type, length: @len) for @title', [
           '@date' => $formatted_date,
           '@source' => $source,
           '@type' => $datetime_type,
+          '@len' => strlen($formatted_date),
           '@title' => $entity->getTitle(),
         ]);
         
