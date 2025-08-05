@@ -13,6 +13,13 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
     \Drupal::logger('news_extractor')->error('Diffbot token not set in configuration.');
     return;
   }
+  
+  // Check if URL is valid for article processing
+  if (!_news_extractor_scraper_is_article_url($url)) {
+    \Drupal::logger('news_extractor')->info('Skipping non-article URL: @url', ['@url' => $url]);
+    return;
+  }
+  
   $api_url = 'https://api.diffbot.com/v3/article';
   $request_url = $api_url . '?' . http_build_query([
     'token' => $api_token,
@@ -21,21 +28,34 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
   ]);
 
   try {
+    \Drupal::logger('news_extractor')->info('Making Diffbot API call to: @url', ['@url' => $url]);
+    
     $response = \Drupal::httpClient()->get($request_url, [
       'timeout' => 30,
       'headers' => ['Accept' => 'application/json'],
     ]);
-    $data = json_decode($response->getBody()->getContents(), TRUE);
+    $diffbot_response = json_decode($response->getBody()->getContents(), TRUE);
 
-    if (isset($data['objects'][0]['text'])) {
-      // --- Update article with extracted content ---
-      _news_extractor_update_article($entity, $data['objects'][0]);
+    if (isset($diffbot_response['objects'][0]['text'])) {
+      // STEP 1: Store complete Diffbot JSON response
+      if ($entity->hasField('field_json_scraped_article_data')) {
+        $entity->set('field_json_scraped_article_data', json_encode($diffbot_response, JSON_PRETTY_PRINT));
+        \Drupal::logger('news_extractor')->info('Stored complete Diffbot JSON data (@size chars) for: @title', [
+          '@size' => strlen(json_encode($diffbot_response)),
+          '@title' => $entity->getTitle(),
+        ]);
+      }
+      
+      // STEP 2: Update basic article fields
+      _news_extractor_scraper_update_basic_fields($entity, $diffbot_response);
 
-      // --- Generate Motivation Analysis ---
-      $ai_summary = _news_extractor_generate_ai_summary($data['objects'][0]['text'], $entity->getTitle());
+      // STEP 3: Generate AI analysis
+      $article_data = $diffbot_response['objects'][0];
+      $ai_summary = _news_extractor_generate_ai_summary($article_data['text'], $entity->getTitle());
+      
       if ($ai_summary && $entity->hasField('field_motivation_analysis')) {
         
-        // Store the RAW AI response in new dedicated field
+        // Store the RAW AI response in dedicated field
         if ($entity->hasField('field_ai_raw_response')) {
           $entity->set('field_ai_raw_response', $ai_summary);
         }
@@ -122,8 +142,9 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         $entity->save();
         
         // Enhanced logging to track what's stored where
-        \Drupal::logger('news_extractor')->info('AI data stored for @title: Raw response (@raw_len chars), Structured data (@struct_items items), Formatted analysis with links (@format_len chars)', [
+        \Drupal::logger('news_extractor')->info('Complete processing for @title: Diffbot JSON (@json_size chars), AI raw (@raw_len chars), Structured data (@struct_items entities), Formatted analysis (@format_len chars)', [
           '@title' => $entity->getTitle(),
+          '@json_size' => strlen(json_encode($diffbot_response)),
           '@raw_len' => strlen($ai_summary),
           '@struct_items' => count($structured_data['entities'] ?? []),
           '@format_len' => strlen($motivation_analysis),
@@ -180,9 +201,232 @@ function _news_extractor_update_article(EntityInterface $entity, array $article_
 }
 
 /**
- * Check if URL is likely a news article (not podcast, video, ad, etc.).
+ * Update basic content fields from complete Diffbot response.
+ * 
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The article node entity.
+ * @param array $diffbot_response
+ *   Complete Diffbot API response.
  */
-function _news_extractor_is_article_url($url) {
+function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response) {
+  $article_data = $diffbot_response['objects'][0] ?? null;
+  if (!$article_data) {
+    \Drupal::logger('news_extractor')->warning('No article object found in Diffbot response for: @title', [
+      '@title' => $entity->getTitle(),
+    ]);
+    return;
+  }
+
+  $updated = FALSE;
+
+  // Update body with full article text
+  if (!empty($article_data['text'])) {
+    $entity->set('body', [
+      'value' => $article_data['text'],
+      'format' => 'basic_html',
+    ]);
+    $updated = TRUE;
+    \Drupal::logger('news_extractor')->info('Updated body content (@chars chars) for: @title', [
+      '@chars' => strlen($article_data['text']),
+      '@title' => $entity->getTitle(),
+    ]);
+  }
+
+  // Update title if empty
+  if (empty($entity->getTitle()) && !empty($article_data['title'])) {
+    $entity->setTitle($article_data['title']);
+    $updated = TRUE;
+    \Drupal::logger('news_extractor')->info('Updated title to: @title', [
+      '@title' => $article_data['title'],
+    ]);
+  }
+
+  // Update publication date
+  _news_extractor_scraper_update_publication_date($entity, $article_data);
+
+  // Update external image
+  _news_extractor_scraper_update_external_image($entity, $article_data);
+  
+  // Store additional metadata
+  _news_extractor_scraper_store_metadata($entity, $article_data);
+
+  // Truncate field_original_url_title for DB safety
+  if ($entity->hasField('field_original_url_title')) {
+    $title_value = $entity->getTitle();
+    $title_value = substr($title_value, 0, 255);
+    $entity->set('field_original_url_title', $title_value);
+  }
+
+  if ($updated) {
+    $entity->save();
+  }
+}
+
+/**
+ * Update publication date from Diffbot data.
+ * 
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The article node entity.
+ * @param array $article_data
+ *   Article data from Diffbot.
+ */
+function _news_extractor_scraper_update_publication_date($entity, $article_data) {
+  if (!$entity->hasField('field_publication_date')) {
+    return;
+  }
+
+  $date_value = null;
+  
+  // Try different date fields from Diffbot
+  if (!empty($article_data['date'])) {
+    $date_value = $article_data['date'];
+    $source = 'date';
+  } elseif (!empty($article_data['estimatedDate'])) {
+    $date_value = $article_data['estimatedDate'];
+    $source = 'estimatedDate';
+  }
+  
+  if ($date_value) {
+    try {
+      // Convert to proper date format for Drupal
+      $date_obj = new \DateTime($date_value);
+      $formatted_date = $date_obj->format('Y-m-d');
+      
+      $entity->set('field_publication_date', $formatted_date);
+      
+      \Drupal::logger('news_extractor')->info('Updated publication date @date (from @source) for @title', [
+        '@date' => $formatted_date,
+        '@source' => $source,
+        '@title' => $entity->getTitle(),
+      ]);
+    } catch (\Exception $e) {
+      \Drupal::logger('news_extractor')->warning('Failed to parse publication date @date for @title: @error', [
+        '@date' => $date_value,
+        '@title' => $entity->getTitle(),
+        '@error' => $e->getMessage(),
+      ]);
+    }
+  }
+}
+
+/**
+ * Update external image URL from Diffbot data.
+ * 
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The article node entity.
+ * @param array $article_data
+ *   Article data from Diffbot.
+ * 
+ * @return bool
+ *   TRUE if image was updated, FALSE otherwise.
+ */
+function _news_extractor_scraper_update_external_image($entity, $article_data) {
+  if (!$entity->hasField('field_external_image_url')) {
+    return FALSE;
+  }
+
+  // Skip if image is already set
+  if (!$entity->get('field_external_image_url')->isEmpty()) {
+    return FALSE;
+  }
+
+  // Look for images in Diffbot response
+  if (!empty($article_data['images']) && is_array($article_data['images'])) {
+    $image = $article_data['images'][0]; // Use first image
+    if (!empty($image['url'])) {
+      $entity->set('field_external_image_url', [
+        'uri' => $image['url'],
+        'title' => $entity->getTitle(),
+      ]);
+      
+      \Drupal::logger('news_extractor')->info('Set external image URL for @title: @url', [
+        '@title' => $entity->getTitle(),
+        '@url' => $image['url'],
+      ]);
+      
+      return TRUE;
+    }
+  }
+  
+  return FALSE;
+}
+
+/**
+ * Store additional metadata from Diffbot response.
+ * 
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The article node entity.
+ * @param array $article_data
+ *   Article data from Diffbot.
+ */
+function _news_extractor_scraper_store_metadata($entity, $article_data) {
+  // Store author information if available
+  if (!empty($article_data['author']) && $entity->hasField('field_author')) {
+    $entity->set('field_author', $article_data['author']);
+  }
+  
+  // Store site name if available
+  if (!empty($article_data['siteName']) && $entity->hasField('field_site_name')) {
+    $entity->set('field_site_name', $article_data['siteName']);
+  }
+  
+  // Store breadcrumb if available
+  if (!empty($article_data['breadcrumb']) && $entity->hasField('field_breadcrumb')) {
+    $breadcrumb_text = is_array($article_data['breadcrumb']) 
+      ? implode(' > ', $article_data['breadcrumb']) 
+      : $article_data['breadcrumb'];
+    $entity->set('field_breadcrumb', $breadcrumb_text);
+  }
+  
+  // Store word count if available
+  if (!empty($article_data['wordCount']) && $entity->hasField('field_word_count')) {
+    $entity->set('field_word_count', (string) $article_data['wordCount']);
+  }
+  
+  // Store language if available
+  if (!empty($article_data['naturalLanguage']) && $entity->hasField('field_article_language')) {
+    $entity->set('field_article_language', $article_data['naturalLanguage']);
+  }
+  
+  \Drupal::logger('news_extractor')->info('Stored additional metadata for: @title', [
+    '@title' => $entity->getTitle(),
+  ]);
+}
+
+/**
+ * Get stored Diffbot data from article node.
+ * 
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The article node entity.
+ * 
+ * @return array|null
+ *   Decoded JSON data or NULL if not available.
+ */
+function _news_extractor_scraper_get_stored_diffbot_data($entity) {
+  if (!$entity->hasField('field_json_scraped_article_data') || 
+      $entity->get('field_json_scraped_article_data')->isEmpty()) {
+    return null;
+  }
+  
+  $json_data = $entity->get('field_json_scraped_article_data')->value;
+  $decoded_data = json_decode($json_data, true);
+  
+  if (json_last_error() !== JSON_ERROR_NONE) {
+    \Drupal::logger('news_extractor')->error('Failed to decode stored JSON data for node @nid: @error', [
+      '@nid' => $entity->id(),
+      '@error' => json_last_error_msg(),
+    ]);
+    return null;
+  }
+  
+  return $decoded_data;
+}
+
+/**
+ * Check if URL is likely a news article (not podcast, video, ad, etc.).
+ * Updated function name to match scraper convention.
+ */
+function _news_extractor_scraper_is_article_url($url) {
   $blocked_domains = [
     'comparecards.com',
     'fool.com',
@@ -195,27 +439,39 @@ function _news_extractor_is_article_url($url) {
     }
   }
 
+  // Enhanced patterns for better filtering
   $skip_patterns = [
-    '/audio/', '/video/', '/podcast/', '/gallery/', '/interactive/', '/live-news/', '/live-tv/',
-    '/newsletters/', '/sponsored/', '/advertisement/', '/ads/', '/promo/', '/newsletter/',
-    '/weather/', '/specials/', '/cnn-underscored/', '/coupons/', '/profiles/',
+    '/\/ads?\//i' => 'advertisements',
+    '/\/advertisement/i' => 'advertisement pages',
+    '/\/sponsored/i' => 'sponsored content',
+    '/\/podcast/i' => 'podcast pages',
+    '/\/video/i' => 'video content',
+    '/\/gallery/i' => 'image galleries',
+    '/financial.*markets/i' => 'financial markets',
+    '/stock.*price/i' => 'stock prices',
+    '/\.pdf$/i' => 'PDF files',
+    '/\/audio\//i' => 'audio content',
+    '/\/interactive\//i' => 'interactive content',
+    '/\/live-news\//i' => 'live news feeds',
+    '/\/live-tv\//i' => 'live TV content',
+    '/\/newsletters?\//i' => 'newsletter content',
+    '/\/weather\//i' => 'weather content',
+    '/\/specials\//i' => 'special content',
+    '/\/coupons?\//i' => 'coupon content',
+    '/\/profiles?\//i' => 'profile pages',
   ];
 
-  foreach ($skip_patterns as $pattern) {
-    if (strpos($url, $pattern) !== FALSE) {
+  foreach ($skip_patterns as $pattern => $description) {
+    if (preg_match($pattern, $url)) {
+      \Drupal::logger('news_extractor')->info('Skipping @description: @url', [
+        '@description' => $description,
+        '@url' => $url,
+      ]);
       return FALSE;
     }
   }
 
-  $ad_keywords = ['sponsored', 'advertisement', 'promo', 'ad-', '-ad', 'coupon'];
-  $url_lower = strtolower($url);
-
-  foreach ($ad_keywords as $keyword) {
-    if (strpos($url_lower, $keyword) !== FALSE) {
-      return FALSE;
-    }
-  }
-
+  // Article patterns that indicate valid news content
   $article_patterns = ['/politics/', '/world/', '/us/', '/national/', '/international/', '/breaking/', '/news/'];
   foreach ($article_patterns as $pattern) {
     if (strpos($url, $pattern) !== FALSE) {
@@ -223,11 +479,12 @@ function _news_extractor_is_article_url($url) {
     }
   }
 
+  // Check for common article URL patterns
   if (preg_match('/\/(index\.html?|story\.html?)$/i', $url) || preg_match('/\/\d{4}\/\d{2}\/\d{2}\//', $url)) {
     return TRUE;
   }
 
-  return TRUE;
+  return TRUE; // Default to processing if no exclusion patterns match
 }
 
 /**
@@ -681,5 +938,258 @@ function news_extractor_bulk_reprocess_from_raw_responses($limit = 50) {
   ]);
   
   return ['processed' => $processed, 'updated' => $updated];
+}
+
+/**
+ * Post-process article node to fetch and set external image URL from stored Diffbot data.
+ * Uses stored JSON data instead of making new API call.
+ * 
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The article node entity.
+ * 
+ * @return bool
+ *   TRUE if image was processed, FALSE otherwise.
+ */
+function _news_extractor_scraper_postprocess_article_image($entity) {
+  // Only process article nodes with an original URL
+  if ($entity->bundle() !== 'article' || !$entity->hasField('field_original_url')) {
+    return FALSE;
+  }
+
+  $original_url = $entity->get('field_original_url')->uri ?? '';
+  if (empty($original_url)) {
+    return FALSE;
+  }
+
+  // Check if image is already set
+  if ($entity->hasField('field_external_image_url') && !$entity->get('field_external_image_url')->isEmpty()) {
+    \Drupal::logger('news_extractor')->info('Image URL already set for node @nid, skipping image processing', [
+      '@nid' => $entity->id(),
+    ]);
+    return FALSE;
+  }
+
+  // Try to get image from stored JSON data first
+  $stored_data = _news_extractor_scraper_get_stored_diffbot_data($entity);
+  if ($stored_data && isset($stored_data['objects'][0]['images'])) {
+    $article_data = $stored_data['objects'][0];
+    if (_news_extractor_scraper_update_external_image($entity, $article_data)) {
+      $entity->save();
+      \Drupal::logger('news_extractor')->info('Set external image URL from stored data for node @nid', [
+        '@nid' => $entity->id(),
+      ]);
+      return TRUE;
+    }
+  }
+
+  // Fallback: Make fresh Diffbot API call if no stored data or no images
+  \Drupal::logger('news_extractor')->info('No stored image data found, making fresh Diffbot API call for node @nid', [
+    '@nid' => $entity->id(),
+  ]);
+
+  $diffbot_token = \Drupal::config('news_extractor.settings')->get('diffbot_token');
+  if (empty($diffbot_token)) {
+    \Drupal::logger('news_extractor')->error('Diffbot token not set in configuration for image processing.');
+    return FALSE;
+  }
+
+  try {
+    // Make rate-limited API call
+    $diffbot_response = _news_extractor_scraper_get_diffbot_data($original_url, $diffbot_token);
+    
+    if ($diffbot_response && isset($diffbot_response['objects'][0]['images'])) {
+      $article_data = $diffbot_response['objects'][0];
+      
+      // Store the complete response if not already stored
+      if ($entity->hasField('field_json_scraped_article_data') && $entity->get('field_json_scraped_article_data')->isEmpty()) {
+        $entity->set('field_json_scraped_article_data', json_encode($diffbot_response, JSON_PRETTY_PRINT));
+        \Drupal::logger('news_extractor')->info('Stored Diffbot JSON data during image processing for node @nid', [
+          '@nid' => $entity->id(),
+        ]);
+      }
+      
+      // Update image
+      if (_news_extractor_scraper_update_external_image($entity, $article_data)) {
+        $entity->save();
+        \Drupal::logger('news_extractor')->info('Set external image URL from fresh API call for node @nid', [
+          '@nid' => $entity->id(),
+        ]);
+        return TRUE;
+      }
+    }
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error fetching Diffbot image for node @nid: @msg', [
+      '@nid' => $entity->id(),
+      '@msg' => $e->getMessage(),
+    ]);
+  }
+
+  return FALSE;
+}
+
+/**
+ * Bulk process article images using stored or fresh Diffbot data.
+ * 
+ * @param int $limit
+ *   Maximum number of articles to process.
+ * 
+ * @return array
+ *   Processing statistics.
+ */
+function news_extractor_bulk_process_article_images($limit = 20) {
+  $stats = [
+    'processed' => 0,
+    'updated_images' => 0,
+    'used_stored_data' => 0,
+    'made_api_calls' => 0,
+    'failed' => 0,
+    'skipped' => 0,
+  ];
+
+  echo "=== BULK PROCESSING ARTICLE IMAGES ===\n";
+
+  // Find articles missing images but with original URLs
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_original_url.uri', '', '<>')
+    ->accessCheck(FALSE)
+    ->range(0, $limit);
+
+  // Only process articles without images
+  $or_group = $query->orConditionGroup();
+  $or_group->condition('field_external_image_url.uri', '', '=');
+  $or_group->condition('field_external_image_url.uri', NULL, 'IS NULL');
+  $query->condition($or_group);
+
+  $nids = $query->execute();
+
+  if (empty($nids)) {
+    echo "No articles found needing image processing\n";
+    return $stats;
+  }
+
+  echo "Found " . count($nids) . " articles for image processing\n\n";
+
+  foreach ($nids as $nid) {
+    try {
+      $node = \Drupal\node\Entity\Node::load($nid);
+      if (!$node) {
+        $stats['skipped']++;
+        continue;
+      }
+
+      echo "Processing Node $nid: " . $node->getTitle() . "\n";
+
+      // Check if stored data has images
+      $stored_data = _news_extractor_scraper_get_stored_diffbot_data($node);
+      $used_stored = FALSE;
+      
+      if ($stored_data && isset($stored_data['objects'][0]['images'])) {
+        $article_data = $stored_data['objects'][0];
+        if (_news_extractor_scraper_update_external_image($node, $article_data)) {
+          $node->save();
+          $stats['updated_images']++;
+          $stats['used_stored_data']++;
+          $used_stored = TRUE;
+          echo "  ✓ Updated image from stored data\n";
+        }
+      }
+
+      if (!$used_stored) {
+        // Make fresh API call with rate limiting
+        $original_url = $node->get('field_original_url')->uri;
+        $diffbot_token = \Drupal::config('news_extractor.settings')->get('diffbot_token');
+        
+        if (!empty($diffbot_token)) {
+          echo "  → Making fresh Diffbot API call (rate limited)...\n";
+          $diffbot_response = _news_extractor_scraper_get_diffbot_data($original_url, $diffbot_token);
+          
+          if ($diffbot_response && isset($diffbot_response['objects'][0]['images'])) {
+            $article_data = $diffbot_response['objects'][0];
+            
+            // Store JSON data if not already stored
+            if ($node->hasField('field_json_scraped_article_data') && $node->get('field_json_scraped_article_data')->isEmpty()) {
+              $node->set('field_json_scraped_article_data', json_encode($diffbot_response, JSON_PRETTY_PRINT));
+            }
+            
+            if (_news_extractor_scraper_update_external_image($node, $article_data)) {
+              $node->save();
+              $stats['updated_images']++;
+              echo "  ✓ Updated image from fresh API call\n";
+            }
+            
+            $stats['made_api_calls']++;
+            
+            // Rate limiting - wait 13 seconds after API call
+            if (count($nids) > 1) {
+              echo "  → Waiting 13 seconds for rate limiting...\n";
+              sleep(13);
+            }
+          } else {
+            echo "  ✗ No images found in Diffbot response\n";
+          }
+        } else {
+          echo "  ✗ No Diffbot token configured\n";
+          $stats['failed']++;
+        }
+      }
+
+      $stats['processed']++;
+
+    } catch (\Exception $e) {
+      $stats['failed']++;
+      echo "  ✗ Error processing node $nid: " . $e->getMessage() . "\n";
+    }
+  }
+
+  // Display results
+  echo "\n=== IMAGE PROCESSING COMPLETE ===\n";
+  foreach ($stats as $key => $value) {
+    echo "  {$key}: {$value}\n";
+  }
+
+  return $stats;
+}
+
+/**
+ * Debug function to display stored Diffbot data.
+ * 
+ * @param int $nid
+ *   Node ID to debug.
+ */
+function news_extractor_debug_stored_diffbot_data($nid) {
+  $node = \Drupal\node\Entity\Node::load($nid);
+  if (!$node) {
+    echo "Node $nid not found.\n";
+    return;
+  }
+  
+  echo "=== STORED DIFFBOT DATA FOR NODE $nid ===\n";
+  echo "Title: " . $node->getTitle() . "\n";
+  
+  $stored_data = _news_extractor_scraper_get_stored_diffbot_data($node);
+  if ($stored_data) {
+    echo "JSON Data Size: " . strlen(json_encode($stored_data)) . " chars\n";
+    echo "Response Keys: " . implode(', ', array_keys($stored_data)) . "\n";
+    
+    if (isset($stored_data['objects'][0])) {
+      $article = $stored_data['objects'][0];
+      echo "Article Object Keys: " . implode(', ', array_keys($article)) . "\n";
+      echo "Text Length: " . strlen($article['text'] ?? '') . " chars\n";
+      echo "Author: " . ($article['author'] ?? 'Not available') . "\n";
+      echo "Site Name: " . ($article['siteName'] ?? 'Not available') . "\n";
+      echo "Word Count: " . ($article['wordCount'] ?? 'Not available') . "\n";
+      echo "Publication Date: " . ($article['date'] ?? 'Not available') . "\n";
+      echo "Images Count: " . count($article['images'] ?? []) . "\n";
+      
+      if (!empty($article['images'])) {
+        echo "First Image URL: " . ($article['images'][0]['url'] ?? 'N/A') . "\n";
+      }
+    }
+  } else {
+    echo "No stored Diffbot data found.\n";
+  }
+  
+  echo "=== END DEBUG DATA ===\n";
 }
 

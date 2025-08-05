@@ -38,7 +38,7 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
   }
 
   // Skip non-article URLs
-  if (!empty($item['link']) && !_news_extractor_is_article_url($item['link'])) {
+  if (!empty($item['link']) && !_news_extractor_scraper_is_article_url($item['link'])) {
     \Drupal::logger('news_extractor')->info('Skipping non-article URL: @url', [
       '@url' => $item['link'],
     ]);
@@ -78,7 +78,7 @@ function news_extractor_node_insert(EntityInterface $entity) {
   $original_url = $entity->get('field_original_url')->uri;
 
   // Delete non-article content
-  if (!_news_extractor_is_article_url($original_url)) {
+  if (!_news_extractor_scraper_is_article_url($original_url)) {
     \Drupal::logger('news_extractor')->info('Deleting non-article content: @title (@url)', [
       '@title' => $entity->getTitle(),
       '@url' => $original_url,
@@ -111,26 +111,11 @@ function news_extractor_node_insert(EntityInterface $entity) {
         $entity->set('field_tags', $tag_ids);
         $entity->save();
       }
-
-      // --- Linkify tags in Motivation Analysis ---
-      // Skip linkifying for plain text format
-      /*
-      $tag_entities = [];
-      if (!empty($tag_ids)) {
-        $tag_entities = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($tag_ids);
-      }
-      $motivation_analysis_linked = news_extractor_linkify_summary_tags($motivation_analysis, $tag_entities);
-      $entity->set('field_motivation_analysis', [
-        'value' => $motivation_analysis_linked,
-        'format' => $entity->get('field_motivation_analysis')->format,
-      ]);
-      $entity->save();
-      */
-      // --- End linkify ---
     }
     // --- End tagging logic ---
-    // Post-process to fetch and set external image URL
-    news_extractor_postprocess_article_image($entity);
+    
+    // Post-process to fetch and set external image URL - NOW USES SCRAPER
+    _news_extractor_scraper_postprocess_article_image($entity);
   }
 }
 
@@ -656,59 +641,6 @@ function _news_extractor_extract_structured_data($ai_response) {
   }
 
   return $data;
-}
-
-/**
- * Post-process article node to fetch and set external image URL from Diffbot.
- */
-function news_extractor_postprocess_article_image(Node $node) {
-  // Only process article nodes with an original URL.
-  if ($node->bundle() !== 'article' || !$node->hasField('field_original_url')) {
-    return;
-  }
-
-  $original_url = $node->get('field_original_url')->uri ?? '';
-  if (empty($original_url)) {
-    return;
-  }
-
-  // Get Diffbot token from config (set this in your module config).
-  $diffbot_token = news_extractor_get_diffbot_token();
-  if (empty($diffbot_token)) {
-    \Drupal::logger('news_extractor')->error('Diffbot token not set in configuration.');
-    return;
-  }
-
-  $api_url = 'https://api.diffbot.com/v3/article?token=' . urlencode($diffbot_token) . '&url=' . urlencode($original_url);
-
-  try {
-    $response = \Drupal::httpClient()->get($api_url, ['timeout' => 10]);
-    $data = json_decode($response->getBody(), TRUE);
-
-    // Check for images in the Diffbot response.
-    if (!empty($data['objects'][0]['images']) && is_array($data['objects'][0]['images'])) {
-      $first_image = $data['objects'][0]['images'][0]['url'] ?? '';
-      if (!empty($first_image) && filter_var($first_image, FILTER_VALIDATE_URL)) {
-        // Set the image URL in the node's field_external_image_url.
-        if ($node->hasField('field_external_image_url')) {
-          $node->set('field_external_image_url', [
-            'uri' => $first_image,
-            'title' => $node->getTitle(),
-          ]);
-          $node->save();
-          \Drupal::logger('news_extractor')->info('Set external image URL for node @nid: @url', [
-            '@nid' => $node->id(),
-            '@url' => $first_image,
-          ]);
-        }
-      }
-    }
-  } catch (\Exception $e) {
-    \Drupal::logger('news_extractor')->error('Error fetching Diffbot image for node @nid: @msg', [
-      '@nid' => $node->id(),
-      '@msg' => $e->getMessage(),
-    ]);
-  }
 }
 
 /**
