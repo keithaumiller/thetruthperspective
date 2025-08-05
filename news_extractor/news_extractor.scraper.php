@@ -229,11 +229,18 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
     ]);
   }
 
-  // Update publication date
-  _news_extractor_scraper_update_publication_date($entity, $article_data);
+  // Update publication date - ENSURE THIS HAPPENS BEFORE SAVE
+  if (_news_extractor_scraper_update_publication_date($entity, $article_data, TRUE)) {
+    $updated = TRUE;
+    \Drupal::logger('news_extractor')->info('Publication date updated during basic fields processing for: @title', [
+      '@title' => $entity->getTitle(),
+    ]);
+  }
 
   // Update external image
-  _news_extractor_scraper_update_external_image($entity, $article_data);
+  if (_news_extractor_scraper_update_external_image($entity, $article_data)) {
+    $updated = TRUE;
+  }
   
   // Store additional metadata
   _news_extractor_scraper_store_metadata($entity, $article_data);
@@ -245,8 +252,12 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
     $entity->set('field_original_url_title', $title_value);
   }
 
+  // Save only once at the end if anything was updated
   if ($updated) {
     $entity->save();
+    \Drupal::logger('news_extractor')->info('Saved entity with updated basic fields for: @title', [
+      '@title' => $entity->getTitle(),
+    ]);
   }
 }
 
@@ -324,13 +335,25 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data,
         $field_settings = $field_config ? $field_config->getSettings() : [];
         $datetime_type = $field_settings['datetime_type'] ?? 'datetime';
         
-        // FORCE FULL DATETIME FORMAT FOR DATETIME FIELDS
+        // ALWAYS FORCE FULL DATETIME FORMAT FOR DATETIME FIELDS
         if ($datetime_type === 'datetime') {
           // For datetime fields, ALWAYS use full ISO format with time
           $formatted_date = $date_obj->format('Y-m-d\TH:i:s');
+          
+          // SAFETY CHECK: Ensure we have the T separator
+          if (strlen($formatted_date) !== 19 || strpos($formatted_date, 'T') === false) {
+            // Force the correct format if something went wrong
+            $formatted_date = $date_obj->format('Y-m-d') . 'T' . $date_obj->format('H:i:s');
+          }
         } else {
           // For date-only fields, use date only
           $formatted_date = $date_obj->format('Y-m-d');
+        }
+        
+        // VALIDATION: Verify format before setting
+        $expected_length = ($datetime_type === 'datetime') ? 19 : 10;
+        if (strlen($formatted_date) !== $expected_length) {
+          throw new \Exception("Invalid formatted date length: expected $expected_length chars, got " . strlen($formatted_date));
         }
         
         // Set the date field value
