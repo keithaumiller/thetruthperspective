@@ -1491,3 +1491,82 @@ function news_extractor_test_publication_date_parsing($nid) {
     }
   }
 }
+
+/**
+ * Extract article data from Diffbot API with proper rate limiting.
+ * 
+ * @param string $url
+ *   The article URL.
+ * @param string $diffbot_token
+ *   The Diffbot API token.
+ * 
+ * @return array|null
+ *   Complete Diffbot API response or NULL on failure.
+ */
+function _news_extractor_scraper_get_diffbot_data($url, $diffbot_token) {
+  // RATE LIMITING: Diffbot allows 0.08 calls/second = 1 call every 12.5 seconds
+  // We'll use 13 seconds to be safe
+  $rate_limit_key = 'news_extractor_diffbot_last_call';
+  $min_interval = 13; // 13 seconds between calls
+  
+  // Check last call time
+  $last_call = \Drupal::state()->get($rate_limit_key, 0);
+  $current_time = time();
+  $time_since_last = $current_time - $last_call;
+  
+  if ($time_since_last < $min_interval) {
+    $sleep_time = $min_interval - $time_since_last;
+    \Drupal::logger('news_extractor')->info('Rate limiting: Waiting @seconds seconds before Diffbot API call', [
+      '@seconds' => $sleep_time,
+    ]);
+    sleep($sleep_time);
+  }
+  
+  try {
+    $api_url = 'https://api.diffbot.com/v3/article';
+    $request_url = $api_url . '?' . http_build_query([
+      'token' => $diffbot_token,
+      'url' => $url,
+      'naturalLanguage' => 'summary',
+    ]);
+    
+    \Drupal::logger('news_extractor')->info('Making Diffbot API call to: @url', ['@url' => $url]);
+    
+    $response = \Drupal::httpClient()->get($request_url, [
+      'timeout' => 30,
+      'headers' => ['Accept' => 'application/json'],
+    ]);
+    
+    // Record successful call time
+    \Drupal::state()->set($rate_limit_key, time());
+    
+    $data = json_decode($response->getBody()->getContents(), true);
+    
+    if (!empty($data['objects'][0])) {
+      \Drupal::logger('news_extractor')->info('Successfully extracted content from Diffbot: @chars chars', [
+        '@chars' => strlen($data['objects'][0]['text'] ?? ''),
+      ]);
+      return $data; // Return complete response
+    } else {
+      \Drupal::logger('news_extractor')->warning('Diffbot returned no article data for: @url', ['@url' => $url]);
+    }
+  } catch (\Exception $e) {
+    $error_message = $e->getMessage();
+    
+    // Check for rate limiting error
+    if (strpos($error_message, '429') !== FALSE || strpos($error_message, 'Too Many Requests') !== FALSE) {
+      \Drupal::logger('news_extractor')->error('Diffbot rate limit exceeded. Waiting 60 seconds before retry. Error: @error', [
+        '@error' => $error_message,
+      ]);
+      
+      // Set a longer wait time for rate limit errors
+      \Drupal::state()->set($rate_limit_key, time() + 60);
+      
+      return null;
+    }
+    
+    \Drupal::logger('news_extractor')->error('Diffbot API error: @error', ['@error' => $error_message]);
+  }
+  
+  return null;
+}
