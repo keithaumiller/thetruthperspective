@@ -251,19 +251,24 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
 }
 
 /**
- * Update publication date from Diffbot data with enhanced date handling.
+ * Update publication date from Diffbot data with enhanced date handling and fallback.
  * 
  * @param \Drupal\Core\Entity\EntityInterface $entity
  *   The article node entity.
  * @param array $article_data
  *   Article data from Diffbot.
+ * @param bool $use_creation_fallback
+ *   Whether to use node creation date as fallback.
+ * 
+ * @return bool
+ *   TRUE if date was updated, FALSE otherwise.
  */
-function _news_extractor_scraper_update_publication_date($entity, $article_data) {
+function _news_extractor_scraper_update_publication_date($entity, $article_data, $use_creation_fallback = TRUE) {
   if (!$entity->hasField('field_publication_date')) {
     \Drupal::logger('news_extractor')->info('Node @nid does not have field_publication_date field', [
       '@nid' => $entity->id(),
     ]);
-    return;
+    return FALSE;
   }
 
   // Skip if publication date is already set
@@ -271,7 +276,7 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data)
     \Drupal::logger('news_extractor')->info('Publication date already set for node @nid, skipping', [
       '@nid' => $entity->id(),
     ]);
-    return;
+    return FALSE;
   }
 
   $date_value = null;
@@ -280,16 +285,20 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data)
   // Try multiple date fields from Diffbot in order of preference
   if (!empty($article_data['date'])) {
     $date_value = $article_data['date'];
-    $source = 'date';
+    $source = 'diffbot_date';
   } elseif (!empty($article_data['estimatedDate'])) {
     $date_value = $article_data['estimatedDate'];
-    $source = 'estimatedDate';
+    $source = 'diffbot_estimatedDate';
   } elseif (!empty($article_data['publishedAt'])) {
     $date_value = $article_data['publishedAt'];
-    $source = 'publishedAt';
+    $source = 'diffbot_publishedAt';
   } elseif (!empty($article_data['created'])) {
     $date_value = $article_data['created'];
-    $source = 'created';
+    $source = 'diffbot_created';
+  } elseif ($use_creation_fallback) {
+    // FALLBACK: Use node creation date
+    $date_value = $entity->getCreatedTime();
+    $source = 'node_creation_date';
   }
   
   if ($date_value) {
@@ -317,7 +326,7 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data)
           '@title' => $entity->getTitle(),
         ]);
         
-        return true;
+        return TRUE;
       }
     } catch (\Exception $e) {
       \Drupal::logger('news_extractor')->warning('Failed to parse publication date @date (from @source) for @title: @error', [
@@ -328,12 +337,12 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data)
       ]);
     }
   } else {
-    \Drupal::logger('news_extractor')->info('No publication date found in Diffbot data for @title', [
+    \Drupal::logger('news_extractor')->info('No publication date found in Diffbot data and no fallback for @title', [
       '@title' => $entity->getTitle(),
     ]);
   }
   
-  return false;
+  return FALSE;
 }
 
 /**
@@ -1223,18 +1232,22 @@ function news_extractor_debug_stored_diffbot_data($nid) {
 // Add this function after the existing functions:
 
 /**
- * Bulk populate publication dates from stored Diffbot JSON data.
+ * Bulk populate publication dates from stored Diffbot JSON data with creation date fallback.
  * 
  * @param int $limit
  *   Maximum number of articles to process.
+ * @param bool $use_creation_fallback
+ *   Whether to use node creation date as fallback.
  * 
  * @return array
  *   Processing statistics.
  */
-function news_extractor_bulk_populate_publication_dates($limit = 50) {
+function news_extractor_bulk_populate_publication_dates($limit = 50, $use_creation_fallback = TRUE) {
   $stats = [
     'processed' => 0,
     'updated_dates' => 0,
+    'from_diffbot_data' => 0,
+    'from_creation_date' => 0,
     'had_stored_data' => 0,
     'already_had_dates' => 0,
     'no_date_found' => 0,
@@ -1242,11 +1255,11 @@ function news_extractor_bulk_populate_publication_dates($limit = 50) {
   ];
 
   echo "=== BULK POPULATING PUBLICATION DATES ===\n";
+  echo "Creation date fallback: " . ($use_creation_fallback ? 'ENABLED' : 'DISABLED') . "\n\n";
 
   // Find articles missing publication dates but with stored JSON data
   $query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
-    ->condition('field_json_scraped_article_data.value', '', '<>')
     ->accessCheck(FALSE)
     ->range(0, $limit);
 
@@ -1282,23 +1295,64 @@ function news_extractor_bulk_populate_publication_dates($limit = 50) {
         continue;
       }
 
-      // Get stored Diffbot data
+      $date_source = null;
+      $updated = FALSE;
+
+      // Try to get date from stored Diffbot data first
       $stored_data = _news_extractor_scraper_get_stored_diffbot_data($node);
       if ($stored_data && isset($stored_data['objects'][0])) {
         $stats['had_stored_data']++;
         $article_data = $stored_data['objects'][0];
         
+        // Check what date fields are available
+        $diffbot_date_fields = ['date', 'estimatedDate', 'publishedAt', 'created'];
+        $found_diffbot_date = FALSE;
+        
+        foreach ($diffbot_date_fields as $field) {
+          if (!empty($article_data[$field])) {
+            $found_diffbot_date = TRUE;
+            $date_source = "diffbot_$field";
+            break;
+          }
+        }
+        
         // Try to update publication date
-        if (_news_extractor_scraper_update_publication_date($node, $article_data)) {
+        if (_news_extractor_scraper_update_publication_date($node, $article_data, $use_creation_fallback)) {
           $node->save();
           $stats['updated_dates']++;
-          echo "  ✓ Updated publication date from stored data\n";
+          $updated = TRUE;
+          
+          if ($found_diffbot_date) {
+            $stats['from_diffbot_data']++;
+            echo "  ✓ Updated publication date from Diffbot data ($date_source)\n";
+          } else {
+            $stats['from_creation_date']++;
+            echo "  ✓ Updated publication date from node creation date (fallback)\n";
+          }
         } else {
           $stats['no_date_found']++;
-          echo "  ✗ No valid date found in stored data\n";
+          echo "  ✗ No valid date found in stored data or fallback\n";
         }
       } else {
-        echo "  ✗ No stored Diffbot data found\n";
+        // No stored data, try creation date fallback if enabled
+        if ($use_creation_fallback) {
+          $creation_timestamp = $node->getCreatedTime();
+          $creation_date = date('Y-m-d', $creation_timestamp);
+          
+          $node->set('field_publication_date', $creation_date);
+          $node->save();
+          
+          $stats['updated_dates']++;
+          $stats['from_creation_date']++;
+          $updated = TRUE;
+          echo "  ✓ Updated publication date from creation date (no stored data)\n";
+        } else {
+          echo "  ✗ No stored Diffbot data and fallback disabled\n";
+        }
+      }
+
+      if (!$updated) {
+        $stats['no_date_found']++;
       }
 
       $stats['processed']++;
@@ -1314,6 +1368,12 @@ function news_extractor_bulk_populate_publication_dates($limit = 50) {
   foreach ($stats as $key => $value) {
     echo "  {$key}: {$value}\n";
   }
+
+  // Show breakdown
+  echo "\nDate Source Breakdown:\n";
+  echo "  From Diffbot data: {$stats['from_diffbot_data']}\n";
+  echo "  From creation date fallback: {$stats['from_creation_date']}\n";
+  echo "  Success rate: " . round(($stats['updated_dates'] / max($stats['processed'], 1)) * 100, 1) . "%\n";
 
   return $stats;
 }
@@ -1364,7 +1424,7 @@ function news_extractor_debug_publication_dates($limit = 10) {
         }
       }
       
-      if (empty(array_filter($date_fields, function($field) use ($article) {
+      if (empty(array_filter($date_fields, function($field) use $article {
         return !empty($article[$field]);
       }))) {
         echo "    No date fields found in stored data\n";
@@ -1422,17 +1482,12 @@ function news_extractor_test_publication_date_parsing($nid) {
         }
         
         if ($date_obj) {
-          echo "  → Drupal format: " . $date_obj->format('Y-m-d') . "\n";
+          $formatted_date = $date_obj->format('Y-m-d');
+          echo "  → Formatted date: $formatted_date\n";
         }
-        
       } catch (\Exception $e) {
-        echo "  → Parse error: " . $e->getMessage() . "\n";
+        echo "  ✗ Error parsing date: " . $e->getMessage() . "\n";
       }
     }
   }
-  
-  echo "\nTesting actual update function:\n";
-  $result = _news_extractor_scraper_update_publication_date($node, $article_data);
-  echo "Update result: " . ($result ? 'SUCCESS' : 'FAILED') . "\n";
 }
-
