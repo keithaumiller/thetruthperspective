@@ -1424,7 +1424,8 @@ function news_extractor_debug_publication_dates($limit = 10) {
         }
       }
       
-      if (empty(array_filter($date_fields, function($field) use $article {
+      // FIXED LINE - Added parentheses around $article
+      if (empty(array_filter($date_fields, function($field) use ($article) {
         return !empty($article[$field]);
       }))) {
         echo "    No date fields found in stored data\n";
@@ -1452,7 +1453,6 @@ function news_extractor_test_publication_date_parsing($nid) {
 
   echo "=== TESTING PUBLICATION DATE PARSING FOR NODE $nid ===\n";
   echo "Title: " . $node->getTitle() . "\n\n";
-
   $stored_data = _news_extractor_scraper_get_stored_diffbot_data($node);
   if (!$stored_data || !isset($stored_data['objects'][0])) {
     echo "No stored Diffbot data found.\n";
