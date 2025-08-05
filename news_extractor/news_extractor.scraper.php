@@ -282,13 +282,13 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data,
   $date_value = null;
   $source = null;
   
-  // Try multiple date fields from Diffbot in order of preference
-  if (!empty($article_data['date'])) {
-    $date_value = $article_data['date'];
-    $source = 'diffbot_date';
-  } elseif (!empty($article_data['estimatedDate'])) {
+  // Try date fields from Diffbot in order of preference: estimatedDate FIRST, then date
+  if (!empty($article_data['estimatedDate'])) {
     $date_value = $article_data['estimatedDate'];
     $source = 'diffbot_estimatedDate';
+  } elseif (!empty($article_data['date'])) {
+    $date_value = $article_data['date'];
+    $source = 'diffbot_date';
   } elseif (!empty($article_data['publishedAt'])) {
     $date_value = $article_data['publishedAt'];
     $source = 'diffbot_publishedAt';
@@ -303,26 +303,42 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data,
   
   if ($date_value) {
     try {
-      // Handle different date formats
       $date_obj = null;
       
-      // Try parsing as timestamp first
+      // Handle different date formats
       if (is_numeric($date_value)) {
+        // Timestamp format
         $date_obj = new \DateTime();
         $date_obj->setTimestamp($date_value);
       } else {
-        // Try parsing as date string
+        // String format (like "Mon, 04 Aug 2025 19:35:23 GMT")
         $date_obj = new \DateTime($date_value);
       }
       
       if ($date_obj) {
-        $formatted_date = $date_obj->format('Y-m-d');
+        // Check field configuration to determine format
+        $field_config = \Drupal::entityTypeManager()
+          ->getStorage('field_config')
+          ->load('node.article.field_publication_date');
         
+        $field_settings = $field_config ? $field_config->getSettings() : [];
+        $datetime_type = $field_settings['datetime_type'] ?? 'datetime';
+        
+        if ($datetime_type === 'datetime') {
+          // For datetime fields, use full ISO format (Y-m-d\TH:i:s)
+          $formatted_date = $date_obj->format('Y-m-d\TH:i:s');
+        } else {
+          // For date fields, use date only (Y-m-d)
+          $formatted_date = $date_obj->format('Y-m-d');
+        }
+        
+        // Set the date field value correctly for Drupal datetime field
         $entity->set('field_publication_date', $formatted_date);
         
-        \Drupal::logger('news_extractor')->info('Updated publication date @date (from @source) for @title', [
+        \Drupal::logger('news_extractor')->info('Updated publication date @date (from @source, format: @type) for @title', [
           '@date' => $formatted_date,
           '@source' => $source,
+          '@type' => $datetime_type,
           '@title' => $entity->getTitle(),
         ]);
         
@@ -336,11 +352,11 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data,
         '@error' => $e->getMessage(),
       ]);
     }
-  } else {
-    \Drupal::logger('news_extractor')->info('No publication date found in Diffbot data and no fallback for @title', [
-      '@title' => $entity->getTitle(),
-    ]);
   }
+  
+  \Drupal::logger('news_extractor')->info('No publication date found in Diffbot data and no fallback for @title', [
+    '@title' => $entity->getTitle(),
+  ]);
   
   return FALSE;
 }
@@ -1235,9 +1251,7 @@ function news_extractor_debug_stored_diffbot_data($nid) {
  * Bulk populate publication dates from stored Diffbot JSON data with creation date fallback.
  * 
  * @param int $limit
- *   Maximum number of articles to process.
- * @param bool $use_creation_fallback
- *   Whether to use node creation date as fallback.
+ *  
  * 
  * @return array
  *   Processing statistics.
@@ -1561,12 +1575,12 @@ function _news_extractor_scraper_get_diffbot_data($url, $diffbot_token) {
       
       // Set a longer wait time for rate limit errors
       \Drupal::state()->set($rate_limit_key, time() + 60);
-      
-      return null;
+    } else {
+      \Drupal::logger('news_extractor')->error('Error calling Diffbot API: @error', [
+        '@error' => $error_message,
+      ]);
     }
-    
-    \Drupal::logger('news_extractor')->error('Diffbot API error: @error', ['@error' => $error_message]);
   }
-  
-  return null;
+
+  return NULL;
 }
