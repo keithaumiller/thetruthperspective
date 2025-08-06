@@ -151,21 +151,16 @@ class MetricsController extends ControllerBase {
       '#attributes' => ['class' => ['info-text']],
     ];
     
-    // Chart container with canvas element
+    // Chart container with canvas element - using markup for reliable rendering
     $build['taxonomy_timeline']['chart_wrapper'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['chart-container']],
     ];
     
-    $build['taxonomy_timeline']['chart_wrapper']['canvas'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'canvas',
-      '#value' => '',
-      '#attributes' => [
-        'id' => 'taxonomy-timeline-chart',
-        'width' => '800',
-        'height' => '400',
-      ],
+    // Use markup to ensure canvas element is properly rendered
+    $build['taxonomy_timeline']['chart_wrapper']['canvas_markup'] = [
+      '#type' => 'markup',
+      '#markup' => '<canvas id="taxonomy-timeline-chart" width="800" height="400" style="max-width: 100%; height: auto;"></canvas>',
     ];
     
     // Debug information for troubleshooting
