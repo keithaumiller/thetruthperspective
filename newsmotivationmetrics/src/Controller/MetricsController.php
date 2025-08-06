@@ -18,6 +18,10 @@ class MetricsController extends ControllerBase {
   public function dashboard() {
     $build = [];
     
+    // Get chart data first to ensure it's available
+    $timeline_data = $this->getTaxonomyTimelineData();
+    $top_terms = $this->getTopTaxonomyTerms(20);
+    
     // Page header with professional styling
     $build['header'] = [
       '#markup' => '<div class="news-metrics-header">
@@ -28,6 +32,49 @@ class MetricsController extends ControllerBase {
           <span class="updated">Updated: ' . date('F j, Y g:i A') . '</span>
         </div>
       </div>',
+    ];
+    
+    // Taxonomy Timeline Chart Section - ALWAYS OPEN for canvas element availability
+    $build['taxonomy_timeline'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['taxonomy-timeline-section']],
+    ];
+    
+    $build['taxonomy_timeline']['title'] = [
+      '#markup' => '<h2 class="chart-section-title">📈 Topic Trends Over Time</h2>',
+    ];
+    
+    $build['taxonomy_timeline']['controls'] = [
+      '#markup' => '
+        <div class="chart-controls">
+          <div class="control-group">
+            <label for="term-selector">Add/Remove Terms:</label>
+            <select id="term-selector" multiple class="term-selector">
+              ' . $this->buildTermOptions($top_terms) . '
+            </select>
+          </div>
+          <div class="control-buttons">
+            <button id="reset-chart" class="btn btn-secondary">Reset to Top 10</button>
+            <button id="clear-chart" class="btn btn-outline">Clear All</button>
+          </div>
+          <div class="chart-info">
+            <span class="info-text">📊 Showing frequency of topic mentions over the last 90 days</span>
+          </div>
+        </div>
+      ',
+    ];
+    
+    // CRITICAL: Canvas element must be directly rendered, not inside collapsible details
+    $build['taxonomy_timeline']['chart'] = [
+      '#markup' => '
+        <div class="chart-container">
+          <canvas id="taxonomy-timeline-chart" width="800" height="400"></canvas>
+          <div id="chart-debug-info" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em; color: #6c757d;">
+            <div id="chart-status">Initializing chart...</div>
+            <div id="chart-data-status">Data status: Loading...</div>
+          </div>
+        </div>
+      ',
     ];
     
     // Methodology explanation section
@@ -79,47 +126,7 @@ class MetricsController extends ControllerBase {
       ',
     ];
     
-    // Taxonomy Timeline Chart Section
-    $build['taxonomy_timeline'] = [
-      '#type' => 'details',
-      '#title' => '📈 Topic Trends Over Time',
-      '#open' => TRUE,
-      '#attributes' => ['class' => ['taxonomy-timeline-section']],
-    ];
-    
-    // Get taxonomy timeline data
-    $timeline_data = $this->getTaxonomyTimelineData();
-    $top_terms = $this->getTopTaxonomyTerms(20);
-    
-    $build['taxonomy_timeline']['controls'] = [
-      '#markup' => '
-        <div class="chart-controls">
-          <div class="control-group">
-            <label for="term-selector">Add/Remove Terms:</label>
-            <select id="term-selector" multiple class="term-selector">
-              ' . $this->buildTermOptions($top_terms) . '
-            </select>
-          </div>
-          <div class="control-buttons">
-            <button id="reset-chart" class="btn btn-secondary">Reset to Top 10</button>
-            <button id="clear-chart" class="btn btn-outline">Clear All</button>
-          </div>
-          <div class="chart-info">
-            <span class="info-text">📊 Showing frequency of topic mentions over the last 90 days</span>
-          </div>
-        </div>
-      ',
-    ];
-    
-    $build['taxonomy_timeline']['chart'] = [
-      '#markup' => '
-        <div class="chart-container">
-          <canvas id="taxonomy-timeline-chart" width="400" height="200"></canvas>
-        </div>
-      ',
-    ];
-    
-    // Get metrics data with PROPER GLOBAL FUNCTION CALLS
+    // Get metrics data with proper global function calls
     try {
       $metrics = \newsmotivationmetrics_get_article_metrics();
       $insights = \newsmotivationmetrics_get_motivation_insights();
@@ -303,6 +310,257 @@ class MetricsController extends ControllerBase {
     $build['#attached']['drupalSettings']['newsmotivationmetrics'] = [
       'timelineData' => $timeline_data,
       'topTerms' => $top_terms,
+      'debugInfo' => [
+        'dataPoints' => count($timeline_data),
+        'termCount' => count($top_terms),
+        'timestamp' => time(),
+      ],
+    ];
+    
+    // Enhanced CSS for chart section
+    $build['#attached']['html_head'][] = [
+      [
+        '#tag' => 'style',
+        '#value' => '
+          .taxonomy-timeline-section {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          .chart-section-title {
+            margin: 0 0 25px 0;
+            color: #2c3e50;
+            font-size: 1.8em;
+            font-weight: 300;
+            text-align: center;
+          }
+          .chart-controls {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+          }
+          .control-group {
+            margin-bottom: 15px;
+          }
+          .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 1.1em;
+          }
+          .term-selector {
+            width: 100%;
+            max-width: 600px;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.95em;
+          }
+          .control-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+          }
+          .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+          }
+          .btn-secondary {
+            background: #6c757d;
+            color: white;
+          }
+          .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+          }
+          .btn-outline {
+            background: transparent;
+            color: #6c757d;
+            border: 2px solid #6c757d;
+          }
+          .btn-outline:hover {
+            background: #6c757d;
+            color: white;
+            transform: translateY(-1px);
+          }
+          .chart-info {
+            color: #6c757d;
+            font-size: 0.95em;
+            font-style: italic;
+            text-align: center;
+          }
+          .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 20px;
+            position: relative;
+            min-height: 450px;
+          }
+          #taxonomy-timeline-chart {
+            max-width: 100%;
+            height: auto !important;
+          }
+          #chart-debug-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.9em;
+            color: #6c757d;
+            border: 1px solid #e9ecef;
+          }
+          
+          .news-metrics-header { 
+            margin-bottom: 30px; 
+            padding: 30px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px; 
+            color: white;
+            text-align: center;
+          }
+          .news-metrics-header h1 { 
+            margin: 0 0 15px 0; 
+            font-size: 2.5em;
+            font-weight: 300;
+          }
+          .news-metrics-header p { 
+            margin: 0 0 20px 0; 
+            font-size: 1.2em;
+            opacity: 0.9;
+          }
+          .metrics-subtitle {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+          }
+          .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+          }
+          .updated {
+            font-size: 0.9em;
+            opacity: 0.8;
+          }
+          .explanation-content {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            line-height: 1.6;
+          }
+          .explanation-content h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+          }
+          .explanation-content h3:first-child {
+            margin-top: 0;
+          }
+          .methodology-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+          }
+          .method-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          .method-card h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 1.1em;
+          }
+          .method-card p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.95em;
+          }
+          .data-sources {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+          }
+          .data-sources li {
+            margin-bottom: 8px;
+            color: #495057;
+          }
+          .update-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+            margin-top: 20px;
+          }
+          .update-info p {
+            margin: 5px 0;
+            color: #495057;
+            font-size: 0.9em;
+          }
+          
+          .metrics-overview, .temporal, .sentiment, .entities, .activity, .insights { 
+            margin-bottom: 25px; 
+          }
+          .metrics-table, .temporal-table, .sentiment-table, .entities-table, .activity-table, .insights-table { 
+            width: 100%; 
+            margin-top: 15px;
+          }
+          .metrics-table th, .temporal-table th, .sentiment-table th, .entities-table th, .activity-table th, .insights-table th { 
+            background-color: #f8f9fa; 
+            font-weight: 600;
+            padding: 12px;
+          }
+          .metrics-table td, .temporal-table td, .sentiment-table td, .entities-table td, .activity-table td, .insights-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #dee2e6;
+          }
+          @media (max-width: 768px) {
+            .methodology-grid {
+              grid-template-columns: 1fr;
+            }
+            .news-metrics-header h1 {
+              font-size: 2em;
+            }
+            .metrics-subtitle {
+              flex-direction: column;
+              gap: 10px;
+            }
+            .control-buttons {
+              flex-direction: column;
+            }
+            .term-selector {
+              max-width: 100%;
+            }
+            .chart-container {
+              padding: 15px;
+            }
+          }
+        ',
+      ],
+      'news-metrics-enhanced-styles',
     ];
     
     return $build;
