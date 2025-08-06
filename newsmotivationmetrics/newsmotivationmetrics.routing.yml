@@ -23,13 +23,14 @@ newsmotivationmetrics.admin_dashboard:
   requirements:
     _permission: 'access news motivation metrics'
 
+# Chart debug page for development and troubleshooting
 newsmotivationmetrics.chart_debug:
   path: '/admin/metrics/chart-debug'
   defaults:
     _controller: '\Drupal\newsmotivationmetrics\Controller\ChartDebugController::debugPage'
-    _title: 'Chart Debug Console - The Truth Perspective'
+    _title: 'Chart.js Debug Console'
   requirements:
-    _permission: 'access administration pages'
+    _permission: 'administer newsmotivationmetrics'
 
 newsmotivationmetrics.chart_test:
   path: '/admin/metrics/chart-test'
