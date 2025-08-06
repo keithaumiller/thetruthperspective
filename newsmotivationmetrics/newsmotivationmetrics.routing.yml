@@ -26,7 +26,29 @@ newsmotivationmetrics.admin_dashboard:
 newsmotivationmetrics.chart_debug:
   path: '/admin/metrics/chart-debug'
   defaults:
-    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::chartDebug'
-    _title: 'Chart Debug'
+    _controller: '\Drupal\newsmotivationmetrics\Controller\ChartDebugController::debugPage'
+    _title: 'Chart Debug Console - The Truth Perspective'
+  requirements:
+    _permission: 'access administration pages'
+
+newsmotivationmetrics.chart_test:
+  path: '/admin/metrics/chart-test'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\ChartTestController::testPage'
+    _title: 'Chart.js Test - Hello World'
+  requirements:
+    _permission: 'access administration pages'
+
+newsmotivationmetrics.chart_debug_refresh:
+  path: '/admin/metrics/chart-debug/refresh'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\ChartDebugController::refreshData'
+  requirements:
+    _permission: 'access administration pages'
+
+newsmotivationmetrics.chart_debug_test:
+  path: '/admin/metrics/chart-debug/test'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\ChartDebugController::testLibraries'
   requirements:
     _permission: 'access administration pages'
