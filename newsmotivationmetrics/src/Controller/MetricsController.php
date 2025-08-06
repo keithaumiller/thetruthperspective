@@ -31,10 +31,62 @@ class MetricsController extends ControllerBase {
       </div>',
     ];
     
+    // Methodology explanation section
+    $build['explanation'] = [
+      '#type' => 'details',
+      '#title' => 'ℹ️ About The Truth Perspective Analytics',
+      '#open' => FALSE,
+      '#attributes' => ['class' => ['methodology-explanation']],
+    ];
+    
+    $build['explanation']['content'] = [
+      '#markup' => '
+        <div class="explanation-content">
+          <h3>🎯 Our Mission</h3>
+          <p>The Truth Perspective leverages advanced AI technology to analyze news content across multiple media sources, providing transparency into narrative patterns, motivational drivers, and thematic trends in modern journalism.</p>
+          
+          <h3>🔬 Analysis Methodology</h3>
+          <div class="methodology-grid">
+            <div class="method-card">
+              <h4>🤖 AI-Powered Content Analysis</h4>
+              <p>Using Claude AI models, we evaluate article content for underlying motivations, bias indicators, and narrative frameworks. Each article undergoes comprehensive linguistic and semantic analysis.</p>
+            </div>
+            <div class="method-card">
+              <h4>🔍 Entity Recognition & Classification</h4>
+              <p>Automated identification of key people, organizations, locations, and concepts enables cross-reference analysis and theme tracking across multiple sources and timeframes.</p>
+            </div>
+            <div class="method-card">
+              <h4>📊 Statistical Aggregation</h4>
+              <p>Real-time metrics aggregate processing success rates, content coverage, and analytical depth to provide transparency into our system\'s capabilities and reliability.</p>
+            </div>
+          </div>
+          
+          <h3>📈 Data Sources & Processing</h3>
+          <ul class="data-sources">
+            <li><strong>Content Extraction:</strong> Diffbot API processes raw HTML into clean, structured article data</li>
+            <li><strong>AI Analysis:</strong> Claude language models analyze motivation, sentiment, and thematic elements</li>
+            <li><strong>Taxonomy Generation:</strong> Automated tag creation based on content analysis and entity recognition</li>
+            <li><strong>Cross-Source Correlation:</strong> Pattern recognition across multiple media outlets and publication timeframes</li>
+          </ul>
+          
+          <h3>🔒 Privacy & Transparency</h3>
+          <p>All metrics represent <strong>aggregated statistics</strong> from publicly available news content. We do not track individual users, collect personal data, or store private information. Our analysis focuses exclusively on published media content and provides transparency into automated content evaluation processes.</p>
+          
+          <div class="update-info">
+            <p><strong>Update Frequency:</strong> Metrics refresh in real-time as new articles are processed. Analysis typically completes within minutes of publication.</p>
+            <p><strong>Data Retention:</strong> Historical analysis data enables trend tracking and longitudinal narrative studies.</p>
+          </div>
+        </div>
+      ',
+    ];
+    
     // Get metrics data with error handling
     try {
       $metrics = newsmotivationmetrics_get_article_metrics();
       $insights = newsmotivationmetrics_get_motivation_insights();
+      $temporal_metrics = newsmotivationmetrics_get_temporal_metrics();
+      $sentiment_metrics = newsmotivationmetrics_get_sentiment_metrics();
+      $entity_metrics = newsmotivationmetrics_get_entity_metrics();
     } catch (\Exception $e) {
       \Drupal::logger('newsmotivationmetrics')->error('Failed to load metrics data: @error', [
         '@error' => $e->getMessage(),
@@ -56,6 +108,21 @@ class MetricsController extends ControllerBase {
         'avg_motivation_length' => 0,
         'avg_ai_response_length' => 0,
         'avg_tags_per_article' => 0,
+      ];
+      $temporal_metrics = [
+        'peak_processing_hour' => 'Unknown',
+        'avg_processing_time' => 0,
+        'articles_last_24_hours' => 0,
+      ];
+      $sentiment_metrics = [
+        'positive_sentiment_percentage' => 0,
+        'negative_sentiment_percentage' => 0,
+        'neutral_sentiment_percentage' => 0,
+      ];
+      $entity_metrics = [
+        'unique_people_identified' => 0,
+        'unique_organizations_identified' => 0,
+        'unique_locations_identified' => 0,
       ];
     }
     
@@ -82,6 +149,72 @@ class MetricsController extends ControllerBase {
       '#header' => $overview_data[0],
       '#rows' => array_slice($overview_data, 1),
       '#attributes' => ['class' => ['metrics-table']],
+    ];
+    
+    // NEW METRIC 1: Temporal Processing Analytics
+    $build['temporal'] = [
+      '#type' => 'details',
+      '#title' => '⏱️ Temporal Processing Analytics',
+      '#open' => TRUE,
+    ];
+    
+    $temporal_data = [
+      ['Time Metric', 'Value', 'Context'],
+      ['Articles Processed (24h)', number_format($temporal_metrics['articles_last_24_hours']), 'Real-time processing volume'],
+      ['Peak Processing Hour', $temporal_metrics['peak_processing_hour'], 'Busiest analysis period'],
+      ['Average Processing Time', round($temporal_metrics['avg_processing_time'], 2) . ' minutes', 'From URL to full analysis'],
+      ['Weekly Processing Trend', $this->calculateWeeklyTrend($metrics), 'Growth/decline indicator'],
+    ];
+    
+    $build['temporal']['table'] = [
+      '#type' => 'table',
+      '#header' => $temporal_data[0],
+      '#rows' => array_slice($temporal_data, 1),
+      '#attributes' => ['class' => ['temporal-table']],
+    ];
+    
+    // NEW METRIC 2: Sentiment Distribution Analysis
+    $build['sentiment'] = [
+      '#type' => 'details',
+      '#title' => '💭 Sentiment Distribution Analysis',
+      '#open' => TRUE,
+    ];
+    
+    $sentiment_data = [
+      ['Sentiment Category', 'Percentage', 'Article Count'],
+      ['Positive Sentiment', round($sentiment_metrics['positive_sentiment_percentage'], 1) . '%', number_format($metrics['total_articles'] * ($sentiment_metrics['positive_sentiment_percentage'] / 100))],
+      ['Negative Sentiment', round($sentiment_metrics['negative_sentiment_percentage'], 1) . '%', number_format($metrics['total_articles'] * ($sentiment_metrics['negative_sentiment_percentage'] / 100))],
+      ['Neutral Sentiment', round($sentiment_metrics['neutral_sentiment_percentage'], 1) . '%', number_format($metrics['total_articles'] * ($sentiment_metrics['neutral_sentiment_percentage'] / 100))],
+      ['Sentiment Analysis Coverage', round((($sentiment_metrics['positive_sentiment_percentage'] + $sentiment_metrics['negative_sentiment_percentage'] + $sentiment_metrics['neutral_sentiment_percentage']) > 0 ? 100 : 0), 1) . '%', 'AI sentiment detection rate'],
+    ];
+    
+    $build['sentiment']['table'] = [
+      '#type' => 'table',
+      '#header' => $sentiment_data[0],
+      '#rows' => array_slice($sentiment_data, 1),
+      '#attributes' => ['class' => ['sentiment-table']],
+    ];
+    
+    // NEW METRIC 3: Entity Recognition Metrics
+    $build['entities'] = [
+      '#type' => 'details',
+      '#title' => '🏷️ Entity Recognition Metrics',
+      '#open' => TRUE,
+    ];
+    
+    $entity_data = [
+      ['Entity Type', 'Unique Count', 'Recognition Rate'],
+      ['People Identified', number_format($entity_metrics['unique_people_identified']), $this->calculateEntityRate($entity_metrics['unique_people_identified'], $metrics['total_articles']) . '%'],
+      ['Organizations Tracked', number_format($entity_metrics['unique_organizations_identified']), $this->calculateEntityRate($entity_metrics['unique_organizations_identified'], $metrics['total_articles']) . '%'],
+      ['Locations Mapped', number_format($entity_metrics['unique_locations_identified']), $this->calculateEntityRate($entity_metrics['unique_locations_identified'], $metrics['total_articles']) . '%'],
+      ['Total Named Entities', number_format($entity_metrics['unique_people_identified'] + $entity_metrics['unique_organizations_identified'] + $entity_metrics['unique_locations_identified']), 'Cross-reference database'],
+    ];
+    
+    $build['entities']['table'] = [
+      '#type' => 'table',
+      '#header' => $entity_data[0],
+      '#rows' => array_slice($entity_data, 1),
+      '#attributes' => ['class' => ['entities-table']],
     ];
     
     // Recent Activity Section
@@ -166,30 +299,132 @@ class MetricsController extends ControllerBase {
             font-size: 0.9em;
             opacity: 0.8;
           }
-          .metrics-overview, .activity, .insights { 
+          .explanation-content {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            line-height: 1.6;
+          }
+          .explanation-content h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+          }
+          .explanation-content h3:first-child {
+            margin-top: 0;
+          }
+          .methodology-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+          }
+          .method-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          .method-card h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 1.1em;
+          }
+          .method-card p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.95em;
+          }
+          .data-sources {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+          }
+          .data-sources li {
+            margin-bottom: 8px;
+            color: #495057;
+          }
+          .update-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+            margin-top: 20px;
+          }
+          .update-info p {
+            margin: 5px 0;
+            color: #495057;
+            font-size: 0.9em;
+          }
+          .metrics-overview, .temporal, .sentiment, .entities, .activity, .insights { 
             margin-bottom: 25px; 
           }
-          .metrics-table, .activity-table, .insights-table { 
+          .metrics-table, .temporal-table, .sentiment-table, .entities-table, .activity-table, .insights-table { 
             width: 100%; 
             margin-top: 15px;
           }
-          .metrics-table th, .activity-table th, .insights-table th { 
+          .metrics-table th, .temporal-table th, .sentiment-table th, .entities-table th, .activity-table th, .insights-table th { 
             background-color: #f8f9fa; 
             font-weight: 600;
             padding: 12px;
           }
-          .metrics-table td, .activity-table td, .insights-table td {
+          .metrics-table td, .temporal-table td, .sentiment-table td, .entities-table td, .activity-table td, .insights-table td {
             padding: 10px 12px;
             border-bottom: 1px solid #dee2e6;
           }
+          @media (max-width: 768px) {
+            .methodology-grid {
+              grid-template-columns: 1fr;
+            }
+            .news-metrics-header h1 {
+              font-size: 2em;
+            }
+            .metrics-subtitle {
+              flex-direction: column;
+              gap: 10px;
+            }
+          }
         ',
       ],
-      'news-metrics-public-styles',
+      'news-metrics-enhanced-styles',
     ];
     
     return $build;
   }
   
+  /**
+   * Calculate weekly processing trend.
+   */
+  private function calculateWeeklyTrend($metrics) {
+    $current_week = $metrics['articles_last_7_days'];
+    $previous_week = max($metrics['articles_last_30_days'] - $current_week, 0) / 3; // Rough estimate
+    
+    if ($previous_week > 0) {
+      $trend = (($current_week - $previous_week) / $previous_week) * 100;
+      if ($trend > 5) {
+        return '📈 +' . round($trend, 1) . '% growth';
+      } elseif ($trend < -5) {
+        return '📉 ' . round($trend, 1) . '% decline';
+      } else {
+        return '➡️ Stable (~' . round($trend, 1) . '%)';
+      }
+    }
+    return '📊 Insufficient data';
+  }
+  
+  /**
+   * Calculate entity recognition rate.
+   */
+  private function calculateEntityRate($entity_count, $total_articles) {
+    if ($total_articles > 0) {
+      return round(($entity_count / $total_articles) * 100, 1);
+    }
+    return 0;
+  }
+
   /**
    * Display the admin version of the dashboard.
    */
@@ -228,5 +463,4 @@ class MetricsController extends ControllerBase {
     
     return $build;
   }
-
 }

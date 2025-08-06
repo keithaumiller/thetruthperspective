@@ -202,3 +202,95 @@ function newsmotivationmetrics_get_motivation_insights() {
   
   return $insights;
 }
+
+/**
+ * NEW METRIC 1: Get temporal processing analytics.
+ *
+ * @return array
+ *   Array of temporal processing metrics.
+ */
+function newsmotivationmetrics_get_temporal_metrics() {
+  $database = Database::getConnection();
+  $metrics = [];
+  
+  // Articles processed in last 24 hours
+  $query = $database->select('node_field_data', 'n');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('n.created', strtotime('-24 hours'), '>=');
+  $metrics['articles_last_24_hours'] = $query->countQuery()->execute()->fetchField();
+  
+  // Peak processing hour (hour of day with most articles created)
+  $query = $database->select('node_field_data', 'n');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('n.created', strtotime('-30 days'), '>=');
+  $query->addExpression('HOUR(FROM_UNIXTIME(created))', 'hour');
+  $query->addExpression('COUNT(*)', 'count');
+  $query->groupBy('hour');
+  $query->orderBy('count', 'DESC');
+  $query->range(0, 1);
+  $result = $query->execute()->fetchAssoc();
+  $metrics['peak_processing_hour'] = $result ? $result['hour'] . ':00' : 'Unknown';
+  
+  // Average processing time (estimated from creation to AI analysis completion)
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('n.created', strtotime('-7 days'), '>=');
+  $query->condition('ai.field_ai_raw_response_value', '', '<>');
+  $query->addExpression('AVG((n.changed - n.created) / 60)', 'avg_processing_minutes');
+  $result = $query->execute()->fetchField();
+  $metrics['avg_processing_time'] = $result ? (float) $result : 0;
+  
+  return $metrics;
+}
+
+/**
+ * NEW METRIC 2: Get sentiment distribution metrics.
+ *
+ * @return array
+ *   Array of sentiment analysis metrics.
+ */
+function newsmotivationmetrics_get_sentiment_metrics() {
+  $database = Database::getConnection();
+  $metrics = [
+    'positive_sentiment_percentage' => 0,
+    'negative_sentiment_percentage' => 0,
+    'neutral_sentiment_percentage' => 0,
+  ];
+  
+  // Get total articles with AI analysis for percentage calculation
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('ai.field_ai_raw_response_value', '', '<>');
+  $total_with_ai = $query->countQuery()->execute()->fetchField();
+  
+  if ($total_with_ai > 0) {
+    // Count articles with positive sentiment indicators in AI response
+    $query = $database->select('node_field_data', 'n');
+    $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
+    $query->condition('n.type', 'article');
+    $query->condition('n.status', 1);
+    $query->condition('ai.field_ai_raw_response_value', '%positive%', 'LIKE');
+    $positive_count = $query->countQuery()->execute()->fetchField();
+    
+    // Count articles with negative sentiment indicators
+    $query = $database->select('node_field_data', 'n');
+    $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
+    $query->condition('n.type', 'article');
+    $query->condition('n.status', 1);
+    $query->condition('ai.field_ai_raw_response_value', '%negative%', 'LIKE');
+    $negative_count = $query->countQuery()->execute()->fetchField();
+    
+    // Calculate percentages
+    $metrics['positive_sentiment_percentage'] = round(($positive_count / $total_with_ai) * 100, 2);
+    $metrics['negative_sentiment_percentage'] = round(($negative_count / $total_with_ai) * 100, 2);
+    $metrics['neutral_sentiment_percentage'] = 100 - $metrics['positive_sentiment_percentage'] - $metrics['negative_sentiment_percentage'];
+  }
+  
+  return $metrics;
+}
