@@ -80,6 +80,46 @@ class MetricsController extends ControllerBase {
       ',
     ];
     
+    // NEW: Taxonomy Timeline Chart Section
+    $build['taxonomy_timeline'] = [
+      '#type' => 'details',
+      '#title' => '📈 Topic Trends Over Time',
+      '#open' => TRUE,
+      '#attributes' => ['class' => ['taxonomy-timeline-section']],
+    ];
+    
+    // Get taxonomy timeline data
+    $timeline_data = $this->getTaxonomyTimelineData();
+    $top_terms = $this->getTopTaxonomyTerms(20); // Get top 20 for selection dropdown
+    
+    $build['taxonomy_timeline']['controls'] = [
+      '#markup' => '
+        <div class="chart-controls">
+          <div class="control-group">
+            <label for="term-selector">Add/Remove Terms:</label>
+            <select id="term-selector" multiple class="term-selector">
+              ' . $this->buildTermOptions($top_terms) . '
+            </select>
+          </div>
+          <div class="control-buttons">
+            <button id="reset-chart" class="btn btn-secondary">Reset to Top 10</button>
+            <button id="clear-chart" class="btn btn-outline">Clear All</button>
+          </div>
+          <div class="chart-info">
+            <span class="info-text">📊 Showing frequency of topic mentions over the last 90 days</span>
+          </div>
+        </div>
+      ',
+    ];
+    
+    $build['taxonomy_timeline']['chart'] = [
+      '#markup' => '
+        <div class="chart-container">
+          <canvas id="taxonomy-timeline-chart" width="400" height="200"></canvas>
+        </div>
+      ',
+    ];
+    
     // Get metrics data with error handling
     try {
       $metrics = newsmotivationmetrics_get_article_metrics();
@@ -151,7 +191,7 @@ class MetricsController extends ControllerBase {
       '#attributes' => ['class' => ['metrics-table']],
     ];
     
-    // NEW METRIC 1: Temporal Processing Analytics
+    // Temporal Processing Analytics
     $build['temporal'] = [
       '#type' => 'details',
       '#title' => '⏱️ Temporal Processing Analytics',
@@ -173,7 +213,7 @@ class MetricsController extends ControllerBase {
       '#attributes' => ['class' => ['temporal-table']],
     ];
     
-    // NEW METRIC 2: Sentiment Distribution Analysis
+    // Sentiment Distribution Analysis
     $build['sentiment'] = [
       '#type' => 'details',
       '#title' => '💭 Sentiment Distribution Analysis',
@@ -195,7 +235,7 @@ class MetricsController extends ControllerBase {
       '#attributes' => ['class' => ['sentiment-table']],
     ];
     
-    // NEW METRIC 3: Entity Recognition Metrics
+    // Entity Recognition Metrics
     $build['entities'] = [
       '#type' => 'details',
       '#title' => '🏷️ Entity Recognition Metrics',
@@ -257,6 +297,13 @@ class MetricsController extends ControllerBase {
       '#header' => $insights_data[0],
       '#rows' => array_slice($insights_data, 1),
       '#attributes' => ['class' => ['insights-table']],
+    ];
+    
+    // Attach Chart.js and custom JavaScript
+    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-js';
+    $build['#attached']['drupalSettings']['newsmotivationmetrics'] = [
+      'timelineData' => $timeline_data,
+      'topTerms' => $top_terms,
     ];
     
     // Enhanced CSS for professional presentation
@@ -359,6 +406,78 @@ class MetricsController extends ControllerBase {
             color: #495057;
             font-size: 0.9em;
           }
+          
+          /* NEW: Chart Styling */
+          .taxonomy-timeline-section {
+            margin-bottom: 30px;
+          }
+          .chart-controls {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+          }
+          .control-group {
+            margin-bottom: 15px;
+          }
+          .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+          }
+          .term-selector {
+            width: 100%;
+            max-width: 500px;
+            height: 120px;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+          }
+          .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+          }
+          .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+          }
+          .btn-secondary {
+            background: #6c757d;
+            color: white;
+          }
+          .btn-secondary:hover {
+            background: #5a6268;
+          }
+          .btn-outline {
+            background: transparent;
+            color: #6c757d;
+            border: 1px solid #6c757d;
+          }
+          .btn-outline:hover {
+            background: #6c757d;
+            color: white;
+          }
+          .chart-info {
+            color: #6c757d;
+            font-size: 0.9em;
+            font-style: italic;
+          }
+          .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 20px;
+          }
+          
           .metrics-overview, .temporal, .sentiment, .entities, .activity, .insights { 
             margin-bottom: 25px; 
           }
@@ -386,6 +505,12 @@ class MetricsController extends ControllerBase {
               flex-direction: column;
               gap: 10px;
             }
+            .control-buttons {
+              flex-direction: column;
+            }
+            .term-selector {
+              max-width: 100%;
+            }
           }
         ',
       ],
@@ -393,6 +518,118 @@ class MetricsController extends ControllerBase {
     ];
     
     return $build;
+  }
+  
+  /**
+   * Get taxonomy timeline data for charting.
+   */
+  private function getTaxonomyTimelineData() {
+    $database = \Drupal::database();
+    $timeline_data = [];
+    
+    try {
+      // Get daily counts for top 10 terms over last 90 days
+      $top_terms = $this->getTopTaxonomyTerms(10);
+      $days_back = 90;
+      
+      foreach ($top_terms as $term) {
+        $term_data = [
+          'term_id' => $term['tid'],
+          'term_name' => $term['name'],
+          'data' => [],
+        ];
+        
+        for ($i = $days_back; $i >= 0; $i--) {
+          $date = date('Y-m-d', strtotime("-{$i} days"));
+          $start_timestamp = strtotime($date . ' 00:00:00');
+          $end_timestamp = strtotime($date . ' 23:59:59');
+          
+          $query = $database->select('node__field_tags', 'nt');
+          $query->leftJoin('node_field_data', 'n', 'nt.entity_id = n.nid');
+          $query->condition('nt.field_tags_target_id', $term['tid']);
+          $query->condition('n.type', 'article');
+          $query->condition('n.status', 1);
+          $query->condition('n.created', $start_timestamp, '>=');
+          $query->condition('n.created', $end_timestamp, '<=');
+          $count = $query->countQuery()->execute()->fetchField();
+          
+          $term_data['data'][] = [
+            'date' => $date,
+            'count' => (int) $count,
+          ];
+        }
+        
+        $timeline_data[] = $term_data;
+      }
+      
+    } catch (\Exception $e) {
+      \Drupal::logger('newsmotivationmetrics')->error('Timeline data error: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+    }
+    
+    return $timeline_data;
+  }
+  
+  /**
+   * Get top taxonomy terms by usage count.
+   */
+  private function getTopTaxonomyTerms($limit = 10) {
+    $database = \Drupal::database();
+    $terms = [];
+    
+    try {
+      $query = $database->select('node__field_tags', 'nt');
+      $query->leftJoin('taxonomy_term_field_data', 't', 'nt.field_tags_target_id = t.tid');
+      $query->leftJoin('node_field_data', 'n', 'nt.entity_id = n.nid');
+      $query->condition('n.type', 'article');
+      $query->condition('n.status', 1);
+      $query->condition('t.status', 1);
+      $query->addField('t', 'tid');
+      $query->addField('t', 'name');
+      $query->addExpression('COUNT(*)', 'usage_count');
+      $query->groupBy('t.tid');
+      $query->groupBy('t.name');
+      $query->orderBy('usage_count', 'DESC');
+      $query->range(0, $limit);
+      
+      $results = $query->execute()->fetchAll();
+      
+      foreach ($results as $result) {
+        $terms[] = [
+          'tid' => $result->tid,
+          'name' => $result->name,
+          'usage_count' => $result->usage_count,
+        ];
+      }
+      
+    } catch (\Exception $e) {
+      \Drupal::logger('newsmotivationmetrics')->error('Top terms error: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+    }
+    
+    return $terms;
+  }
+  
+  /**
+   * Build HTML options for term selector.
+   */
+  private function buildTermOptions($terms) {
+    $options = '';
+    foreach ($terms as $term) {
+      $selected = '';
+      // Mark top 10 as selected by default
+      if (count(array_filter($terms, function($t) use ($term) {
+        return $t['usage_count'] >= $term['usage_count'];
+      })) <= 10) {
+        $selected = 'selected';
+      }
+      
+      $options .= '<option value="' . $term['tid'] . '" ' . $selected . '>' . 
+                  htmlspecialchars($term['name']) . ' (' . $term['usage_count'] . ' articles)</option>';
+    }
+    return $options;
   }
   
   /**

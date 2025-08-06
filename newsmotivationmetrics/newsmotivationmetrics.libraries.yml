@@ -1,0 +1,11 @@
+chart-js:
+  version: 1.x
+  css:
+    theme:
+      css/chart-styles.css: {}
+  js:
+    https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js: { type: external, minified: true }
+    js/taxonomy-timeline-chart.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
