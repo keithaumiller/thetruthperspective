@@ -35,7 +35,7 @@ newsmotivationmetrics.chart_test:
   path: '/admin/metrics/chart-test'
   defaults:
     _controller: '\Drupal\newsmotivationmetrics\Controller\ChartTestController::testPage'
-    _title: 'Chart.js Test - Hello World'
+    _title: 'Chart.js Hello World Test - Verified Paths'
   requirements:
     _permission: 'access administration pages'
 

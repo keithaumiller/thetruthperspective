@@ -11,6 +11,16 @@ chart-js:
     - core/drupal
     - core/jquery
 
+chart-test:
+  version: 1.x
+  js:
+    js/chart.umd.js: { weight: -10 }
+    js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
+    js/chart-test.js: { weight: -8 }
+  dependencies:
+    - core/drupal
+    - core/jquery
+
 chart-debug:
   version: 1.x
   css:
@@ -49,13 +59,3 @@ charts-base:
     js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
   dependencies:
     - core/drupal
-
-chart-test:
-  version: 1.x
-  js:
-    js/chart.umd.js: { weight: -10 }
-    js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
-    js/chart-test.js: { weight: -8 }
-  dependencies:
-    - core/drupal
-    - core/jquery

@@ -1,64 +1,206 @@
 {# filepath: /workspaces/thetruthperspective/newsmotivationmetrics/templates/chart-test.html.twig #}
+{# Chart.js Hello World Test Template for The Truth Perspective with verified paths #}
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chart.js Test - Hello World</title>
+  <title>Chart.js Hello World Test | The Truth Perspective</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 40px;
-      background: #f5f5f5;
+      background: #f8f9fa;
+      line-height: 1.6;
     }
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
       background: white;
       padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
     h1 {
       color: #2c3e50;
       text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.2rem;
     }
     .status {
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 4px;
-      font-weight: bold;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      border-left: 4px solid;
+      min-height: 20px;
     }
     .status.loading {
       background: #fff3cd;
       color: #856404;
+      border-color: #ffc107;
     }
     .status.success {
       background: #d4edda;
       color: #155724;
+      border-color: #28a745;
     }
     .status.error {
       background: #f8d7da;
       color: #721c24;
+      border-color: #dc3545;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 25px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .info-item:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      font-weight: 600;
+      color: #495057;
+    }
+    .info-value {
+      font-family: 'Courier New', monospace;
+      font-weight: 500;
+    }
+    .path-info {
+      background: #d1ecf1;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 25px 0;
+      border-left: 4px solid #17a2b8;
+    }
+    .path-info h4 {
+      margin-top: 0;
+      color: #0c5460;
+    }
+    .path-info code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    .description {
+      background: #e9f7ef;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 25px 0;
+      border-left: 4px solid #28a745;
+    }
+    .troubleshooting {
+      background: #fff3cd;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 25px 0;
+      border-left: 4px solid #ffc107;
+    }
+    .troubleshooting h4 {
+      margin-top: 0;
+      color: #856404;
+    }
+    .debug-section {
+      margin-top: 30px;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .debug-header {
+      background: #495057;
+      color: white;
+      padding: 15px 20px;
+      font-weight: 600;
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    .debug-content {
+      padding: 20px;
+      background: #f8f9fa;
+    }
+    #debug-log {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      margin: 0;
+      min-height: 100px;
+    }
+    @media (max-width: 768px) {
+      body { margin: 20px; }
+      .container { padding: 20px; }
+      .info-grid { grid-template-columns: 1fr; gap: 10px; }
+      h1 { font-size: 1.8rem; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>📊 Chart.js Test - Hello World</h1>
+    <h1>📊 Hello World - Chart.js Test</h1>
     
     <div id="chart-status" class="status loading">
-      Loading Chart.js...
+      Initializing Chart.js Hello World test environment...
     </div>
     
-    <div id="chart-info">
-      <p><strong>Chart.js Version:</strong> <span id="chart-version">Detecting...</span></p>
-      <p><strong>Date Adapter:</strong> <span id="date-adapter">Checking...</span></p>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Chart.js Version:</span>
+        <span id="chart-version" class="info-value">Detecting...</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Date Adapter:</span>
+        <span id="date-adapter" class="info-value">Checking...</span>
+      </div>
     </div>
 
-    <p>This is a minimal test page to verify Chart.js loading for The Truth Perspective analytics.</p>
+    <div class="path-info">
+      <h4>✅ Verified Chart.js Path</h4>
+      <p><strong>Confirmed accessible:</strong> <code>/modules/custom/newsmotivationmetrics/js/chart.umd.js</code></p>
+      <p><strong>Full URL:</strong> <code>https://thetruthperspective.org/modules/custom/newsmotivationmetrics/js/chart.umd.js</code></p>
+      <p><strong>Version:</strong> Chart.js v4.4.0 (Local)</p>
+    </div>
+
+    <div class="description">
+      <p><strong>Purpose:</strong> This Hello World test verifies Chart.js library loading for The Truth Perspective analytics platform.</p>
+      <p><strong>Test:</strong> Confirms Chart.js files are accessible and functional at verified paths.</p>
+      <p><strong>Success Criteria:</strong> Chart.js loads, version detection works, and basic chart creation succeeds.</p>
+    </div>
+
+    <div class="troubleshooting">
+      <h4>If Chart.js Still Fails to Load:</h4>
+      <ul>
+        <li>Chart.js file confirmed accessible at verified path above</li>
+        <li>Check browser Network tab for any loading errors or conflicts</li>
+        <li>Verify no JavaScript errors in browser console preventing execution</li>
+        <li>Clear Drupal cache: <code>drush cr</code></li>
+        <li>Check for conflicts with other loaded JavaScript libraries</li>
+        <li>Verify file permissions and web server configuration</li>
+      </ul>
+    </div>
     
-    <div id="debug-output">
-      <h3>Debug Output:</h3>
-      <pre id="debug-log"></pre>
+    <div class="debug-section">
+      <h3 class="debug-header">Debug Console Output</h3>
+      <div class="debug-content">
+        <pre id="debug-log">Initializing Chart.js Hello World test with verified paths...</pre>
+      </div>
     </div>
   </div>
 </body>

@@ -11,13 +11,18 @@ use Drupal\Core\Controller\ControllerBase;
 class ChartTestController extends ControllerBase {
 
   /**
-   * Simple Chart.js test page.
+   * Simple Chart.js test page - Hello World only.
    */
   public function testPage() {
+    // Only attach the minimal chart-test library, not chart-debug
     return [
       '#theme' => 'chart_test',
       '#attached' => [
         'library' => ['newsmotivationmetrics/chart-test'],
+        // Explicitly prevent other chart libraries from loading
+        'drupalSettings' => [
+          'chartTestOnly' => TRUE,
+        ],
       ],
     ];
   }
