@@ -22,3 +22,11 @@ newsmotivationmetrics.admin_dashboard:
     _title: 'News Motivation Metrics (Admin)'
   requirements:
     _permission: 'access news motivation metrics'
+
+newsmotivationmetrics.chart_debug:
+  path: '/admin/metrics/chart-debug'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::chartDebug'
+    _title: 'Chart Debug'
+  requirements:
+    _permission: 'access administration pages'

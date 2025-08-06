@@ -707,4 +707,397 @@ class MetricsController extends ControllerBase {
     
     return $build;
   }
+
+  /**
+   * Debug page for chart development and troubleshooting.
+   * 
+   * Provides a clean HTML environment for testing Chart.js integration
+   * without Drupal render array complications.
+   * 
+   * @return \Symfony\Component\HttpFoundation\Response
+   *   Raw HTML response with chart implementation.
+   */
+  public function chartDebug() {
+    // Get chart data
+    $timeline_data = $this->getTaxonomyTimelineData();
+    $top_terms = $this->getTopTaxonomyTerms(20);
+    
+    // Build clean HTML response
+    $html = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chart Debug - The Truth Perspective</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 20px;
+            background: #f8f9fa;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-container { 
+            position: relative; 
+            height: 400px; 
+            margin: 20px 0;
+        }
+        .controls { 
+            margin: 20px 0; 
+            padding: 15px;
+            background: #f1f3f4;
+            border-radius: 6px;
+        }
+        .control-group { 
+            margin: 10px 0; 
+        }
+        label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold;
+        }
+        select { 
+            width: 100%; 
+            max-width: 400px; 
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button { 
+            padding: 8px 16px; 
+            margin: 5px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+        }
+        .btn-primary { 
+            background: #0066cc; 
+            color: white; 
+        }
+        .btn-secondary { 
+            background: #6c757d; 
+            color: white; 
+        }
+        .btn-outline { 
+            background: white; 
+            color: #6c757d; 
+            border: 1px solid #6c757d;
+        }
+        .debug-info { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: #e8f4f8; 
+            border-left: 4px solid #0066cc;
+            font-family: monospace;
+        }
+        .status { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 4px;
+        }
+        .status.success { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb;
+        }
+        .status.error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb;
+        }
+        .status.info { 
+            background: #cce7ff; 
+            color: #004085; 
+            border: 1px solid #b3d7ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Chart Debug Page</h1>
+        <p>Testing Chart.js integration for The Truth Perspective Analytics</p>
+        
+        <div class="debug-info">
+            <h3>Debug Information:</h3>
+            <div id="debug-status">Initializing...</div>
+            <div>Data Points: ' . count($timeline_data) . '</div>
+            <div>Terms Available: ' . count($top_terms) . '</div>
+            <div>Timestamp: ' . date('Y-m-d H:i:s') . '</div>
+        </div>
+        
+        <div class="controls">
+            <h3>Chart Controls</h3>
+            <div class="control-group">
+                <label for="term-selector">Select Terms to Display:</label>
+                <select id="term-selector" multiple size="8">';
+    
+    // Add term options
+    foreach ($top_terms as $term) {
+        $selected = '';
+        // Pre-select top 5 terms
+        if (array_search($term, array_slice($top_terms, 0, 5)) !== false) {
+            $selected = ' selected';
+        }
+        $html .= '<option value="' . $term['tid'] . '"' . $selected . '>' . 
+                htmlspecialchars($term['name']) . ' (' . $term['usage_count'] . ' articles)</option>';
+    }
+    
+    $html .= '      </select>
+            </div>
+            <div class="control-group">
+                <button id="update-chart" class="btn-primary">Update Chart</button>
+                <button id="reset-chart" class="btn-secondary">Reset to Top 5</button>
+                <button id="clear-chart" class="btn-outline">Clear All</button>
+                <button id="test-data" class="btn-outline">Test with Sample Data</button>
+            </div>
+        </div>
+        
+        <div class="status info" id="chart-status">
+            Chart Status: Waiting for initialization...
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="taxonomy-timeline-chart"></canvas>
+        </div>
+        
+        <div class="debug-info">
+            <h3>Raw Data Preview:</h3>
+            <details>
+                <summary>Timeline Data JSON</summary>
+                <pre id="data-preview">' . htmlspecialchars(json_encode($timeline_data, JSON_PRETTY_PRINT)) . '</pre>
+            </details>
+        </div>
+    </div>
+    
+    <script>
+    // Global variables
+    let chart = null;
+    let allTimelineData = ' . json_encode($timeline_data) . ';
+    let allTerms = ' . json_encode($top_terms) . ';
+    
+    // Debug logging
+    console.log("=== Chart Debug Page Loaded ===");
+    console.log("Timeline data:", allTimelineData);
+    console.log("Terms data:", allTerms);
+    
+    // Update status function
+    function updateStatus(message, type = "info") {
+        const statusEl = document.getElementById("chart-status");
+        const debugEl = document.getElementById("debug-status");
+        
+        statusEl.className = "status " + type;
+        statusEl.textContent = "Chart Status: " + message;
+        debugEl.textContent = message + " (" + new Date().toLocaleTimeString() + ")";
+        
+        console.log("Status:", message);
+    }
+    
+    // Initialize chart
+    function initChart() {
+        updateStatus("Initializing Chart.js...", "info");
+        
+        const ctx = document.getElementById("taxonomy-timeline-chart");
+        if (!ctx) {
+            updateStatus("Canvas element not found!", "error");
+            return;
+        }
+        
+        updateStatus("Canvas found, creating chart...", "info");
+        
+        // Get selected terms
+        const selector = document.getElementById("term-selector");
+        const selectedTermIds = Array.from(selector.selectedOptions).map(option => option.value);
+        
+        // Filter timeline data for selected terms
+        const chartData = filterTimelineData(selectedTermIds);
+        
+        try {
+            // Destroy existing chart
+            if (chart) {
+                chart.destroy();
+            }
+            
+            chart = new Chart(ctx, {
+                type: "line",
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: "time",
+                            time: {
+                                parser: "YYYY-MM-DD",
+                                tooltipFormat: "MMM DD, YYYY",
+                                displayFormats: {
+                                    day: "MMM DD"
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: "Date"
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: "Article Count"
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: "Topic Trends Over Time (Last 90 Days)"
+                        },
+                        legend: {
+                            display: true,
+                            position: "top"
+                        }
+                    },
+                    interaction: {
+                        mode: "index",
+                        intersect: false
+                    }
+                }
+            });
+            
+            updateStatus("Chart created successfully with " + selectedTermIds.length + " terms", "success");
+            
+        } catch (error) {
+            updateStatus("Chart creation failed: " + error.message, "error");
+            console.error("Chart error:", error);
+        }
+    }
+    
+    // Filter timeline data for selected terms
+    function filterTimelineData(selectedTermIds) {
+        const datasets = [];
+        const colors = [
+            "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF",
+            "#FF9F40", "#FF6384", "#C9CBCF", "#4BC0C0", "#FF6384"
+        ];
+        
+        selectedTermIds.forEach((termId, index) => {
+            const termData = allTimelineData.find(item => item.term_id == termId);
+            if (termData) {
+                datasets.push({
+                    label: termData.term_name,
+                    data: termData.data.map(point => ({
+                        x: point.date,
+                        y: point.count
+                    })),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + "20",
+                    tension: 0.1,
+                    fill: false
+                });
+            }
+        });
+        
+        return { datasets: datasets };
+    }
+    
+    // Event handlers
+    document.getElementById("update-chart").addEventListener("click", initChart);
+    
+    document.getElementById("reset-chart").addEventListener("click", function() {
+        const selector = document.getElementById("term-selector");
+        // Clear all selections
+        for (let option of selector.options) {
+            option.selected = false;
+        }
+        // Select top 5
+        for (let i = 0; i < Math.min(5, selector.options.length); i++) {
+            selector.options[i].selected = true;
+        }
+        initChart();
+    });
+    
+    document.getElementById("clear-chart").addEventListener("click", function() {
+        const selector = document.getElementById("term-selector");
+        for (let option of selector.options) {
+            option.selected = false;
+        }
+        if (chart) {
+            chart.destroy();
+            chart = null;
+        }
+        updateStatus("Chart cleared", "info");
+    });
+    
+    document.getElementById("test-data").addEventListener("click", function() {
+        updateStatus("Testing with sample data...", "info");
+        
+        // Create sample data
+        const sampleData = {
+            datasets: [{
+                label: "Sample Data",
+                data: [
+                    { x: "2024-01-01", y: 10 },
+                    { x: "2024-01-02", y: 15 },
+                    { x: "2024-01-03", y: 8 },
+                    { x: "2024-01-04", y: 20 },
+                    { x: "2024-01-05", y: 12 }
+                ],
+                borderColor: "#FF6384",
+                backgroundColor: "#FF638420",
+                tension: 0.1
+            }]
+        };
+        
+        try {
+            if (chart) {
+                chart.destroy();
+            }
+            
+            const ctx = document.getElementById("taxonomy-timeline-chart");
+            chart = new Chart(ctx, {
+                type: "line",
+                data: sampleData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: "time",
+                            time: {
+                                parser: "YYYY-MM-DD"
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            updateStatus("Sample chart created successfully", "success");
+        } catch (error) {
+            updateStatus("Sample chart failed: " + error.message, "error");
+        }
+    });
+    
+    // Initialize on page load
+    document.addEventListener("DOMContentLoaded", function() {
+        updateStatus("Page loaded, ready to initialize chart", "info");
+        // Auto-initialize with selected terms
+        setTimeout(initChart, 500);
+    });
+    
+    </script>
+</body>
+</html>';
+    
+    // Return raw HTML response
+    return new \Symfony\Component\HttpFoundation\Response($html);
+  }
 }
