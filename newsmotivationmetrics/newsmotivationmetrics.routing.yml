@@ -1,0 +1,24 @@
+newsmotivationmetrics.metrics_dashboard:
+  path: '/metrics'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::dashboard'
+    _title: 'News Motivation Metrics'
+  requirements:
+    _access: 'TRUE'
+
+newsmotivationmetrics.tag_details:
+  path: '/metrics/tag/{tid}'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::tagDetails'
+    _title: 'Tag Analysis'
+  requirements:
+    _access: 'TRUE'
+    tid: \d+
+
+newsmotivationmetrics.admin_dashboard:
+  path: '/admin/reports/news-motivation-metrics'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::adminDashboard'
+    _title: 'News Motivation Metrics (Admin)'
+  requirements:
+    _permission: 'access news motivation metrics'

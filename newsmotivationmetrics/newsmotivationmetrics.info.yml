@@ -1,0 +1,10 @@
+name: 'News Motivation Metrics'
+type: module
+description: 'Provides analytics and metrics for news article motivations, entities, and AI analysis data.'
+core_version_requirement: ^9 || ^10 || ^11
+package: 'The Truth Perspective'
+dependencies:
+  - drupal:node
+  - drupal:taxonomy
+  - drupal:field
+  - drupal:system

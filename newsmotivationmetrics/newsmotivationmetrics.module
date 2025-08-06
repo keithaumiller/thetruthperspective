@@ -1,1 +1,204 @@
-tbd
+<?php
+// filepath: /workspaces/thetruthperspective/newsmotivationmetrics/newsmotivationmetrics.module
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Database\Database;
+
+/**
+ * @file
+ * News Motivation Metrics module.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.newsmotivationmetrics':
+      return '<p>' . t('This module provides analytics and metrics for news article motivations, entities, and AI analysis data.') . '</p>';
+  }
+}
+
+/**
+ * Get all taxonomy tags with article counts.
+ *
+ * @return array
+ *   Array of tag data with counts.
+ */
+function newsmotivationmetrics_get_tag_metrics() {
+  $database = Database::getConnection();
+  
+  // Get all tags with article counts
+  $query = $database->select('taxonomy_term_field_data', 't');
+  $query->leftJoin('node__field_tags', 'nft', 't.tid = nft.field_tags_target_id');
+  $query->leftJoin('node_field_data', 'n', 'nft.entity_id = n.nid AND n.type = :type AND n.status = 1', [':type' => 'article']);
+  $query->fields('t', ['tid', 'name', 'vid']);
+  $query->addExpression('COUNT(DISTINCT n.nid)', 'article_count');
+  $query->condition('t.vid', 'tags');
+  $query->groupBy('t.tid');
+  $query->groupBy('t.name');
+  $query->groupBy('t.vid');
+  $query->orderBy('article_count', 'DESC');
+  
+  $results = $query->execute()->fetchAll();
+  
+  $tags = [];
+  foreach ($results as $result) {
+    $tags[] = [
+      'tid' => $result->tid,
+      'name' => $result->name,
+      'article_count' => (int) $result->article_count,
+    ];
+  }
+  
+  return $tags;
+}
+
+/**
+ * Get general article metrics.
+ *
+ * @return array
+ *   Array of key metrics.
+ */
+function newsmotivationmetrics_get_article_metrics() {
+  $database = Database::getConnection();
+  
+  $metrics = [];
+  
+  // Total articles
+  $query = $database->select('node_field_data', 'n');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $metrics['total_articles'] = $query->countQuery()->execute()->fetchField();
+  
+  // Articles with AI analysis
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('ai.field_ai_raw_response_value', '', '<>');
+  $metrics['articles_with_ai'] = $query->countQuery()->execute()->fetchField();
+  
+  // Articles with JSON data
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_json_scraped_article_data', 'json', 'n.nid = json.entity_id');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('json.field_json_scraped_article_data_value', '', '<>');
+  $metrics['articles_with_json'] = $query->countQuery()->execute()->fetchField();
+  
+  // Articles with tags
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_tags', 'tags', 'n.nid = tags.entity_id');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->isNotNull('tags.field_tags_target_id');
+  $metrics['articles_with_tags'] = $query->countQuery()->execute()->fetchField();
+  
+  // Articles with motivation analysis
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_motivation_analysis', 'mot', 'n.nid = mot.entity_id');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('mot.field_motivation_analysis_value', '', '<>');
+  $metrics['articles_with_motivation'] = $query->countQuery()->execute()->fetchField();
+  
+  // Articles with external images
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_external_image_url', 'img', 'n.nid = img.entity_id');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('img.field_external_image_url_uri', '', '<>');
+  $metrics['articles_with_images'] = $query->countQuery()->execute()->fetchField();
+  
+  // Total unique tags
+  $query = $database->select('taxonomy_term_field_data', 't');
+  $query->condition('t.vid', 'tags');
+  $metrics['total_tags'] = $query->countQuery()->execute()->fetchField();
+  
+  // Articles created in last 7 days
+  $query = $database->select('node_field_data', 'n');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('n.created', strtotime('-7 days'), '>=');
+  $metrics['articles_last_7_days'] = $query->countQuery()->execute()->fetchField();
+  
+  // Articles created in last 30 days
+  $query = $database->select('node_field_data', 'n');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('n.created', strtotime('-30 days'), '>=');
+  $metrics['articles_last_30_days'] = $query->countQuery()->execute()->fetchField();
+  
+  return $metrics;
+}
+
+/**
+ * Get news source metrics.
+ *
+ * @return array
+ *   Array of news source data with counts.
+ */
+function newsmotivationmetrics_get_news_source_metrics() {
+  $database = Database::getConnection();
+  
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_news_source', 'ns', 'n.nid = ns.entity_id');
+  $query->fields('ns', ['field_news_source_value']);
+  $query->addExpression('COUNT(n.nid)', 'article_count');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $query->condition('ns.field_news_source_value', '', '<>');
+  $query->groupBy('ns.field_news_source_value');
+  $query->orderBy('article_count', 'DESC');
+  $query->range(0, 20); // Top 20 sources
+  
+  $results = $query->execute()->fetchAll();
+  
+  $sources = [];
+  foreach ($results as $result) {
+    $sources[] = [
+      'source' => $result->field_news_source_value,
+      'article_count' => (int) $result->article_count,
+    ];
+  }
+  
+  return $sources;
+}
+
+/**
+ * Get motivation analysis metrics.
+ *
+ * @return array
+ *   Array of motivation insights.
+ */
+function newsmotivationmetrics_get_motivation_insights() {
+  $database = Database::getConnection();
+  
+  $insights = [];
+  
+  // Average motivation analysis length
+  $query = $database->select('node__field_motivation_analysis', 'mot');
+  $query->addExpression('AVG(LENGTH(mot.field_motivation_analysis_value))', 'avg_length');
+  $query->condition('mot.field_motivation_analysis_value', '', '<>');
+  $avg_length = $query->execute()->fetchField();
+  $insights['avg_motivation_length'] = round($avg_length);
+  
+  // Average AI response length
+  $query = $database->select('node__field_ai_raw_response', 'ai');
+  $query->addExpression('AVG(LENGTH(ai.field_ai_raw_response_value))', 'avg_length');
+  $query->condition('ai.field_ai_raw_response_value', '', '<>');
+  $avg_ai_length = $query->execute()->fetchField();
+  $insights['avg_ai_response_length'] = round($avg_ai_length);
+  
+  // Average tags per article
+  $query = $database->select('node_field_data', 'n');
+  $query->leftJoin('node__field_tags', 'tags', 'n.nid = tags.entity_id');
+  $query->addExpression('COUNT(tags.field_tags_target_id) / COUNT(DISTINCT n.nid)', 'avg_tags');
+  $query->condition('n.type', 'article');
+  $query->condition('n.status', 1);
+  $avg_tags = $query->execute()->fetchField();
+  $insights['avg_tags_per_article'] = round($avg_tags, 1);
+  
+  return $insights;
+}
