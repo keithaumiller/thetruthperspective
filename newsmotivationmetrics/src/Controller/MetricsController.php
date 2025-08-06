@@ -120,13 +120,13 @@ class MetricsController extends ControllerBase {
       ',
     ];
     
-    // Get metrics data with error handling
+    // Get metrics data with error handling and PROPER GLOBAL FUNCTION CALLS
     try {
-      $metrics = newsmotivationmetrics_get_article_metrics();
-      $insights = newsmotivationmetrics_get_motivation_insights();
-      $temporal_metrics = newsmotivationmetrics_get_temporal_metrics();
-      $sentiment_metrics = newsmotivationmetrics_get_sentiment_metrics();
-      $entity_metrics = newsmotivationmetrics_get_entity_metrics();
+      $metrics = \newsmotivationmetrics_get_article_metrics();
+      $insights = \newsmotivationmetrics_get_motivation_insights();
+      $temporal_metrics = \newsmotivationmetrics_get_temporal_metrics();
+      $sentiment_metrics = \newsmotivationmetrics_get_sentiment_metrics();
+      $entity_metrics = \newsmotivationmetrics_get_entity_metrics();
     } catch (\Exception $e) {
       \Drupal::logger('newsmotivationmetrics')->error('Failed to load metrics data: @error', [
         '@error' => $e->getMessage(),
@@ -407,7 +407,7 @@ class MetricsController extends ControllerBase {
             font-size: 0.9em;
           }
           
-          /* NEW: Chart Styling */
+          /* Chart Styling */
           .taxonomy-timeline-section {
             margin-bottom: 30px;
           }
