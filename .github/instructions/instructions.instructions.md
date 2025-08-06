@@ -29,7 +29,7 @@ Code is tested on the server, not locally in the workspace.
 Always generate the commit and push commands for the code changes after changes are generated and applied to the workspace.
 Always assume we are troubleshooting on the production server
 all curl testing functions should assume they need to run against the production URL:
-https://thetruthperspective.com
+https://thetruthperspective.org
 
 
 # The Truth Perspective Platform - AI Coding Instructions
