@@ -22,12 +22,12 @@
       // Store chart data globally for access throughout debug session
       window.chartDebugData = settings.newsmotivationmetrics || {};
 
-      // Initialize debug environment with local Chart.js files
+      // Initialize debug environment with enhanced Chart.js detection
       this.initializeDebugMode();
     },
 
     /**
-     * Initialize debug-specific functionality with local Chart.js library detection.
+     * Initialize debug-specific functionality with robust Chart.js library detection.
      */
     initializeDebugMode: function() {
       const self = this;
@@ -43,16 +43,23 @@
     },
 
     /**
-     * Set up debug environment with local Chart.js files.
+     * Set up debug environment with enhanced Chart.js detection.
      */
     setupDebugEnvironment: function() {
       const self = this;
       
       self.updateDebugStatus('Initializing The Truth Perspective chart system with local files...', 'info');
       
-      // Check for Chart.js availability (should be loaded via Drupal libraries)
-      self.waitForLocalChartJS(function(success) {
+      // Enhanced Chart.js detection with multiple attempts
+      self.waitForChartJS(function(success) {
         if (success) {
+          console.log('Chart.js successfully loaded:', {
+            version: Chart.version,
+            available: typeof Chart !== 'undefined',
+            hasAdapters: !!(Chart.adapters),
+            hasDateAdapter: !!(Chart.adapters && Chart.adapters._date)
+          });
+          
           self.updateVersionInfo();
           self.setupDebugEventListeners();
           self.validateTimelineData();
@@ -62,10 +69,11 @@
             self.testRealTimelineData();
           }, 500);
         } else {
-          self.updateDebugStatus('Local Chart.js files failed to load via Drupal libraries', 'error');
+          console.error('Chart.js failed to load - checking alternatives');
+          self.updateDebugStatus('Chart.js library failed to load - check file accessibility', 'error');
           self.showLibraryErrorMessage();
           
-          // Still validate data even without charts
+          // Still validate data and setup listeners even without charts
           self.validateTimelineData();
           self.setupDebugEventListeners();
         }
@@ -73,97 +81,87 @@
     },
 
     /**
-     * Wait for local Chart.js to load via Drupal library system.
+     * Enhanced Chart.js detection with better error handling.
      */
-    waitForLocalChartJS: function(callback, attempts) {
+    waitForChartJS: function(callback, attempts) {
       attempts = attempts || 0;
-      const maxAttempts = 50; // 5 seconds with 100ms intervals
+      const maxAttempts = 100; // 10 seconds with 100ms intervals
       const self = this;
       
-      // Check if Chart.js is available
-      if (typeof Chart !== 'undefined') {
-        console.log('Local Chart.js loaded successfully, version:', Chart.version);
+      // Check if Chart.js is available and properly initialized
+      if (typeof Chart !== 'undefined' && Chart.version) {
+        console.log('Chart.js detected successfully:', Chart.version);
         
-        // Check for date adapter after Chart.js loads
-        self.waitForDateAdapter(function(adapterSuccess) {
-          console.log('Date adapter availability:', adapterSuccess);
+        // Check for date adapter availability
+        if (Chart.adapters && Chart.adapters._date) {
+          console.log('Date adapter available');
           callback(true);
+        } else {
+          console.warn('Chart.js loaded but date adapter missing - will use simple charts');
+          callback(true);
+        }
+        return;
+      }
+      
+      if (attempts >= maxAttempts) {
+        console.error('Chart.js failed to load after', maxAttempts, 'attempts (10 seconds)');
+        console.log('Chart.js debug info:', {
+          chartDefined: typeof Chart !== 'undefined',
+          chartVersion: typeof Chart !== 'undefined' ? Chart.version : 'undefined',
+          windowChart: !!window.Chart,
+          documentReady: document.readyState
         });
-        return;
-      }
-      
-      if (attempts >= maxAttempts) {
-        console.error('Local Chart.js failed to load after', maxAttempts, 'attempts (5 seconds)');
         callback(false);
         return;
       }
       
-      // Update status every 10 attempts (1 second)
-      if (attempts % 10 === 0) {
-        self.updateDebugStatus('Waiting for local Chart.js to load... (' + Math.floor(attempts/10) + 's)', 'info');
+      // Update status every 20 attempts (2 seconds)
+      if (attempts % 20 === 0) {
+        const seconds = Math.floor(attempts/10);
+        self.updateDebugStatus(`Waiting for Chart.js to load... (${seconds}s)`, 'info');
+        console.log(`Chart.js load attempt ${attempts}, Chart defined:`, typeof Chart !== 'undefined');
       }
       
       setTimeout(function() {
-        self.waitForLocalChartJS(callback, attempts + 1);
+        self.waitForChartJS(callback, attempts + 1);
       }, 100);
     },
 
     /**
-     * Wait for date adapter to load after Chart.js is available.
-     */
-    waitForDateAdapter: function(callback, attempts) {
-      attempts = attempts || 0;
-      const maxAttempts = 25; // 2.5 seconds for date adapter
-      const self = this;
-      
-      if (typeof Chart !== 'undefined' && Chart.adapters && Chart.adapters._date) {
-        console.log('Local date adapter loaded successfully');
-        callback(true);
-        return;
-      }
-      
-      if (attempts >= maxAttempts) {
-        console.warn('Date adapter not available after timeout - using fallback');
-        callback(false);
-        return;
-      }
-      
-      setTimeout(function() {
-        self.waitForDateAdapter(callback, attempts + 1);
-      }, 100);
-    },
-
-    /**
-     * Update Chart.js version and date adapter information.
+     * Update Chart.js version and date adapter information with enhanced detection.
      */
     updateVersionInfo: function() {
       const versionEl = document.getElementById('chartjs-version');
       const adapterEl = document.getElementById('date-adapter-status');
       
       if (versionEl) {
-        if (typeof Chart !== 'undefined') {
-          const version = Chart.version || 'Unknown Version';
+        if (typeof Chart !== 'undefined' && Chart.version) {
+          const version = Chart.version;
           versionEl.textContent = version + ' (Local)';
           versionEl.style.color = '#28a745';
-          console.log('Local Chart.js version detected:', version);
+          console.log('Chart.js version confirmed:', version);
         } else {
           versionEl.textContent = 'Not Loaded';
           versionEl.style.color = '#dc3545';
+          console.error('Chart.js version check failed');
         }
       }
       
       if (adapterEl) {
-        const hasAdapter = (typeof Chart !== 'undefined') && Chart.adapters && Chart.adapters._date;
-        if (hasAdapter) {
+        if (typeof Chart !== 'undefined' && Chart.adapters && Chart.adapters._date) {
           adapterEl.textContent = 'Available (Local)';
           adapterEl.style.color = '#28a745';
-          console.log('Local date adapter available for timeline charts');
-          this.updateDebugStatus('Local Chart.js and date adapter loaded successfully', 'success');
-        } else {
-          adapterEl.textContent = 'Missing';
+          console.log('Date adapter confirmed available');
+          this.updateDebugStatus('Chart.js and date adapter loaded successfully', 'success');
+        } else if (typeof Chart !== 'undefined') {
+          adapterEl.textContent = 'Missing - Simple Mode';
           adapterEl.style.color = '#ffc107';
-          console.warn('Date adapter not found - timeline charts will use simple fallback');
-          this.updateDebugStatus('Date adapter missing - using simple chart fallback', 'warning');
+          console.warn('Date adapter not available - using simple charts');
+          this.updateDebugStatus('Chart.js loaded but date adapter missing - using simple mode', 'warning');
+        } else {
+          adapterEl.textContent = 'Chart.js Not Loaded';
+          adapterEl.style.color = '#dc3545';
+          console.error('Chart.js not available for adapter check');
         }
       }
     },
@@ -193,23 +191,11 @@
         term.data.some(point => point.count > 0)
       );
       
-      // Check data date range
-      const allDataPoints = validTerms.flatMap(term => term.data);
-      const dates = allDataPoints.map(point => point.date).filter(Boolean);
-      const minDate = dates.length > 0 ? Math.min(...dates.map(d => new Date(d).getTime())) : null;
-      const maxDate = dates.length > 0 ? Math.max(...dates.map(d => new Date(d).getTime())) : null;
-      
       console.log('Timeline data validation results:', {
         totalTerms: data.timelineData.length,
         validTerms: validTerms.length,
         termsWithData: nonEmptyTerms.length,
-        topTermsAvailable: data.topTerms.length,
-        totalDataPoints: allDataPoints.length,
-        dateRange: minDate && maxDate ? {
-          from: new Date(minDate).toISOString().split('T')[0],
-          to: new Date(maxDate).toISOString().split('T')[0],
-          days: Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24))
-        } : null
+        topTermsAvailable: data.topTerms.length
       });
       
       if (nonEmptyTerms.length === 0) {
@@ -231,7 +217,7 @@
       const testSimpleBtn = document.getElementById('test-simple');
       if (testSimpleBtn) {
         testSimpleBtn.addEventListener('click', function() {
-          console.log('User initiated: Testing simple chart without dates...');
+          console.log('User initiated: Testing simple chart...');
           self.testSimpleChart();
         });
       }
@@ -319,13 +305,14 @@
     },
 
     /**
-     * Test simple chart without date functionality for basic Chart.js verification.
+     * Test simple chart for basic Chart.js verification.
      */
     testSimpleChart: function() {
       this.updateDebugStatus('Testing simple chart with local Chart.js...', 'info');
       
       if (typeof Chart === 'undefined') {
-        this.updateDebugStatus('Local Chart.js not available - check Drupal library loading', 'error');
+        this.updateDebugStatus('Chart.js not available - check library loading', 'error');
+        console.error('Chart.js undefined during simple chart test');
         return;
       }
       
@@ -348,7 +335,7 @@
         const simpleData = {
           labels: ['Aug 1', 'Aug 2', 'Aug 3', 'Aug 4', 'Aug 5', 'Aug 6'],
           datasets: [{
-            label: 'The Truth Perspective Sample Data',
+            label: 'Test Data - Simple Mode',
             data: [22, 15, 18, 20, 12, 28],
             borderColor: '#007bff',
             backgroundColor: 'rgba(0, 123, 255, 0.1)',
@@ -373,45 +360,27 @@
                 beginAtZero: true,
                 title: {
                   display: true,
-                  text: 'Article Count',
-                  font: { size: 14, weight: 'bold' }
-                },
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.1)'
+                  text: 'Article Count'
                 }
               },
               x: {
                 title: {
                   display: true,
-                  text: 'Time Period',
-                  font: { size: 14, weight: 'bold' }
-                },
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.1)'
+                  text: 'Time Period'
                 }
               }
             },
             plugins: {
               title: {
                 display: true,
-                text: 'Simple Chart Test - The Truth Perspective (Local)',
-                font: { size: 16, weight: 'bold' },
-                padding: 20
-              },
-              legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                  padding: 20,
-                  usePointStyle: true
-                }
+                text: 'Simple Chart Test - Local Chart.js'
               }
             }
           }
         });
         
-        this.updateDebugStatus('Simple chart created successfully - local Chart.js is working', 'success');
-        console.log('Simple chart instance created:', window.debugChart);
+        this.updateDebugStatus('Simple chart created successfully - Chart.js working', 'success');
+        console.log('Simple chart instance created successfully');
         
       } catch (error) {
         this.updateDebugStatus('Simple chart creation failed: ' + error.message, 'error');
@@ -420,40 +389,38 @@
     },
 
     /**
-     * Test date-based chart functionality with sample timeline data.
+     * Test date-based chart functionality.
      */
     testDateChart: function() {
-      this.updateDebugStatus('Testing date-based chart with local files...', 'info');
+      this.updateDebugStatus('Testing date-based chart...', 'info');
       
       if (typeof Chart === 'undefined') {
-        this.updateDebugStatus('Local Chart.js not available - check Drupal library loading', 'error');
+        this.updateDebugStatus('Chart.js not available for date chart test', 'error');
+        return;
+      }
+      
+      // If no date adapter, fall back to simple chart
+      if (!Chart.adapters || !Chart.adapters._date) {
+        this.updateDebugStatus('Date adapter not available - using simple chart instead', 'warning');
+        this.testSimpleChart();
         return;
       }
       
       const canvas = document.getElementById('taxonomy-timeline-chart');
       if (!canvas) {
-        this.updateDebugStatus('Canvas element not found in DOM', 'error');
-        return;
-      }
-      
-      // Check for date adapter availability
-      if (!Chart.adapters || !Chart.adapters._date) {
-        this.updateDebugStatus('Date adapter not available - using fallback simple chart', 'warning');
-        this.testSimpleChart();
+        this.updateDebugStatus('Canvas element not found', 'error');
         return;
       }
       
       try {
-        // Destroy existing chart instance
+        // Destroy existing chart
         if (window.debugChart) {
           window.debugChart.destroy();
-          console.log('Destroyed previous chart instance');
         }
         
         const ctx = canvas.getContext('2d');
-        
-        // Generate recent dates for realistic testing similar to real data
         const today = new Date();
+        
         const dateData = {
           datasets: [{
             label: 'Date-based Test Data',
@@ -468,12 +435,7 @@
             borderColor: '#28a745',
             backgroundColor: 'rgba(40, 167, 69, 0.1)',
             tension: 0.2,
-            fill: true,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            pointBackgroundColor: '#28a745',
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2
+            fill: true
           }]
         };
         
@@ -495,50 +457,32 @@
                 },
                 title: {
                   display: true,
-                  text: 'Date',
-                  font: { size: 14, weight: 'bold' }
-                },
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.1)'
+                  text: 'Date'
                 }
               },
               y: {
                 beginAtZero: true,
                 title: {
                   display: true,
-                  text: 'Article Count',
-                  font: { size: 14, weight: 'bold' }
-                },
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.1)'
+                  text: 'Article Count'
                 }
               }
             },
             plugins: {
               title: {
                 display: true,
-                text: 'Date-based Chart Test - Last 6 Days (Local)',
-                font: { size: 16, weight: 'bold' },
-                padding: 20
-              },
-              legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                  padding: 20,
-                  usePointStyle: true
-                }
+                text: 'Date Chart Test - Last 6 Days'
               }
             }
           }
         });
         
-        this.updateDebugStatus('Date-based chart created successfully - local date adapter working', 'success');
-        console.log('Date chart instance created:', window.debugChart);
+        this.updateDebugStatus('Date-based chart created successfully', 'success');
+        console.log('Date chart created successfully');
         
       } catch (error) {
-        this.updateDebugStatus('Date chart creation failed: ' + error.message, 'error');
-        console.error('Date chart error details:', error);
+        this.updateDebugStatus('Date chart failed: ' + error.message, 'error');
+        console.error('Date chart error:', error);
       }
     },
 
@@ -547,19 +491,24 @@
      */
     updateRealChart: function() {
       if (!window.chartDebugData || !window.chartDebugData.timelineData) {
-        this.updateDebugStatus('No real timeline data available', 'error');
+        this.updateDebugStatus('No timeline data available', 'error');
         return;
       }
 
       const selector = document.getElementById('term-selector');
       if (!selector) {
-        this.updateDebugStatus('Term selector not found in DOM', 'error');
+        this.updateDebugStatus('Term selector not found', 'error');
         return;
       }
 
       const selectedTermIds = Array.from(selector.selectedOptions).map(option => option.value);
       if (selectedTermIds.length === 0) {
         this.updateDebugStatus('No terms selected - choose terms to display', 'warning');
+        return;
+      }
+
+      if (typeof Chart === 'undefined') {
+        this.updateDebugStatus('Chart.js not available for real chart', 'error');
         return;
       }
 
@@ -570,21 +519,14 @@
         this.createRealChart(chartData);
         this.updateDebugStatus('Real data chart updated with ' + selectedTermIds.length + ' terms', 'success');
         
-        // Log selected terms for debugging
-        const selectedTerms = selectedTermIds.map(id => {
-          const termData = window.chartDebugData.timelineData.find(t => t.term_id == id);
-          return termData ? termData.term_name : 'Unknown';
-        });
-        console.log('Chart displaying terms:', selectedTerms);
-        
       } catch (error) {
         this.updateDebugStatus('Real chart update failed: ' + error.message, 'error');
-        console.error('Real chart error details:', error);
+        console.error('Real chart error:', error);
       }
     },
 
     /**
-     * Filter timeline data for selected terms from The Truth Perspective system.
+     * Filter timeline data for selected terms.
      */
     filterTimelineData: function(selectedTermIds) {
       const datasets = [];
@@ -596,7 +538,6 @@
       selectedTermIds.forEach((termId, index) => {
         const termData = window.chartDebugData.timelineData.find(item => item.term_id == termId);
         if (termData && termData.data) {
-          // Filter out zero values for cleaner visualization
           const dataPoints = termData.data
             .filter(point => point.count > 0)
             .map(point => ({
@@ -606,17 +547,14 @@
           
           if (dataPoints.length > 0) {
             datasets.push({
-              label: termData.term_name + ' (' + dataPoints.length + ' data points)',
+              label: termData.term_name + ' (' + dataPoints.length + ' points)',
               data: dataPoints,
               borderColor: colors[index % colors.length],
               backgroundColor: colors[index % colors.length] + '20',
               tension: 0.1,
               fill: false,
               pointRadius: 3,
-              pointHoverRadius: 6,
-              pointBackgroundColor: colors[index % colors.length],
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2
+              pointHoverRadius: 6
             });
           }
         }
@@ -626,30 +564,28 @@
     },
 
     /**
-     * Create chart with real timeline data from The Truth Perspective analytics.
+     * Create chart with real timeline data.
      */
     createRealChart: function(chartData) {
       if (typeof Chart === 'undefined') {
-        throw new Error('Local Chart.js library not available');
+        throw new Error('Chart.js library not available');
       }
 
       const canvas = document.getElementById('taxonomy-timeline-chart');
       if (!canvas) {
-        throw new Error('Canvas element not found in DOM');
+        throw new Error('Canvas element not found');
       }
 
-      // Destroy existing chart instance
+      // Destroy existing chart
       if (window.debugChart) {
         window.debugChart.destroy();
       }
 
       const ctx = canvas.getContext('2d');
-      
-      // Check for date adapter and choose appropriate chart type
       const hasDateAdapter = Chart.adapters && Chart.adapters._date;
       
       if (hasDateAdapter) {
-        // Use time-based chart with date adapter
+        // Use time-based chart
         window.debugChart = new Chart(ctx, {
           type: 'line',
           data: chartData,
@@ -663,89 +599,28 @@
                   parser: 'YYYY-MM-DD',
                   tooltipFormat: 'MMM DD, YYYY',
                   displayFormats: {
-                    day: 'MMM DD',
-                    week: 'MMM DD',
-                    month: 'MMM YYYY'
+                    day: 'MMM DD'
                   }
                 },
-                title: {
-                  display: true,
-                  text: 'Date',
-                  font: { size: 14, weight: 'bold' }
-                },
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.1)'
-                }
+                title: { display: true, text: 'Date' }
               },
               y: {
                 beginAtZero: true,
-                title: {
-                  display: true,
-                  text: 'Article Count',
-                  font: { size: 14, weight: 'bold' }
-                },
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.1)'
-                },
-                ticks: {
-                  precision: 0
-                }
+                title: { display: true, text: 'Article Count' },
+                ticks: { precision: 0 }
               }
             },
             plugins: {
               title: {
                 display: true,
-                text: 'The Truth Perspective - Topic Trends Over Time (Local)',
-                font: { size: 16, weight: 'bold' },
-                padding: 20
-              },
-              legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                  padding: 20,
-                  usePointStyle: true,
-                  pointStyle: 'circle'
-                }
-              },
-              tooltip: {
-                mode: 'index',
-                intersect: false,
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: 'white',
-                bodyColor: 'white',
-                borderColor: 'rgba(255, 255, 255, 0.3)',
-                borderWidth: 1,
-                cornerRadius: 6,
-                callbacks: {
-                  title: function(context) {
-                    return 'Date: ' + context[0].label;
-                  },
-                  label: function(context) {
-                    return context.dataset.label + ': ' + context.parsed.y + ' articles';
-                  }
-                }
-              }
-            },
-            interaction: {
-              mode: 'index',
-              intersect: false
-            },
-            elements: {
-              line: {
-                borderWidth: 2
-              },
-              point: {
-                hoverBorderWidth: 2
+                text: 'The Truth Perspective - Topic Trends Over Time'
               }
             }
           }
         });
       } else {
-        // Fallback to simple chart without date adapter
-        console.warn('Using simple chart fallback - date adapter not available');
-        
-        // Convert data to simple format
+        // Simple fallback chart
+        console.warn('Using simple chart fallback');
         const allDates = [];
         chartData.datasets.forEach(dataset => {
           dataset.data.forEach(point => {
@@ -774,35 +649,17 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-              x: {
-                title: {
-                  display: true,
-                  text: 'Date',
-                  font: { size: 14, weight: 'bold' }
-                }
-              },
-              y: {
-                beginAtZero: true,
-                title: {
-                  display: true,
-                  text: 'Article Count',
-                  font: { size: 14, weight: 'bold' }
-                },
-                ticks: {
-                  precision: 0
-                }
+              x: { title: { display: true, text: 'Date' } },
+              y: { 
+                beginAtZero: true, 
+                title: { display: true, text: 'Article Count' },
+                ticks: { precision: 0 }
               }
             },
             plugins: {
               title: {
                 display: true,
-                text: 'The Truth Perspective - Topic Trends (Simple Mode)',
-                font: { size: 16, weight: 'bold' },
-                padding: 20
-              },
-              legend: {
-                display: true,
-                position: 'top'
+                text: 'The Truth Perspective - Topic Trends (Simple Mode)'
               }
             }
           }
@@ -811,31 +668,23 @@
     },
 
     /**
-     * Reset chart to default term selection (top 5 terms with data).
+     * Reset chart to default selection.
      */
     resetChart: function() {
       const selector = document.getElementById('term-selector');
-      if (!selector) {
-        this.updateDebugStatus('Term selector not found', 'error');
-        return;
+      if (selector) {
+        for (let option of selector.options) {
+          option.selected = false;
+        }
+        for (let i = 0; i < Math.min(5, selector.options.length); i++) {
+          selector.options[i].selected = true;
+        }
+        this.updateRealChart();
       }
-
-      // Clear all selections
-      for (let option of selector.options) {
-        option.selected = false;
-      }
-      
-      // Select top 5 terms
-      for (let i = 0; i < Math.min(5, selector.options.length); i++) {
-        selector.options[i].selected = true;
-      }
-      
-      this.updateDebugStatus('Reset to top 5 terms', 'info');
-      this.updateRealChart();
     },
 
     /**
-     * Clear chart display completely.
+     * Clear chart display.
      */
     clearChart: function() {
       const selector = document.getElementById('term-selector');
@@ -844,46 +693,41 @@
           option.selected = false;
         }
       }
-
       if (window.debugChart) {
         window.debugChart.destroy();
         window.debugChart = null;
       }
-
       this.updateDebugStatus('Chart display cleared', 'info');
     },
 
     /**
-     * Show error message when local Chart.js libraries fail to load.
+     * Show error message when Chart.js fails to load.
      */
     showLibraryErrorMessage: function() {
       const container = document.querySelector('.chart-container');
       if (container) {
         container.innerHTML = `
           <div class="chart-status error">
-            <h3>📊 Local Chart Libraries Unavailable</h3>
-            <p>The local Chart.js files failed to load via Drupal's library system. This affects the interactive chart functionality for The Truth Perspective analytics.</p>
-            <h4>Possible causes:</h4>
+            <h3>📊 Chart Libraries Unavailable</h3>
+            <p>The Chart.js files failed to load. Check the following:</p>
             <ul>
-              <li><strong>Missing files</strong> - Chart.js files may not be properly placed in the js/ directory</li>
-              <li><strong>Library definition issues</strong> - Check newsmotivationmetrics.libraries.yml configuration</li>
-              <li><strong>File permissions</strong> - Ensure Chart.js files are readable by the web server</li>
-              <li><strong>Caching issues</strong> - Clear Drupal cache after adding new library files</li>
+              <li>Verify chart.umd.js exists in js/ directory</li>
+              <li>Check file permissions and web server access</li>
+              <li>Clear Drupal cache after adding library files</li>
+              <li>Check browser console for loading errors</li>
             </ul>
-            <p><strong>Files expected:</strong></p>
+            <p>Files expected:</p>
             <ul>
-              <li>/newsmotivationmetrics/js/chart.umd.js</li>
-              <li>/newsmotivationmetrics/js/chartjs-adapter-date-fns.bundle.min.js</li>
+              <li>/modules/custom/newsmotivationmetrics/js/chart.umd.js</li>
+              <li>/modules/custom/newsmotivationmetrics/js/chartjs-adapter-date-fns.bundle.min.js</li>
             </ul>
-            <p><strong>For administrators:</strong> Check browser console for specific error messages and verify file paths.</p>
-            <p><strong>Alternative:</strong> Raw data and statistics are still available in the sections below the chart.</p>
           </div>
         `;
       }
     },
 
     /**
-     * Update debug status messages with enhanced logging for The Truth Perspective system.
+     * Update debug status with enhanced logging.
      */
     updateDebugStatus: function(message, type) {
       type = type || 'info';
@@ -902,21 +746,21 @@
         statusEl.textContent = 'Chart Status: ' + message;
       }
       
-      // Enhanced console logging with debug context
-      const logPrefix = '[THE TRUTH PERSPECTIVE DEBUG] ' + new Date().toISOString() + ' - ' + type.toUpperCase() + ':';
+      // Console logging
+      const logPrefix = '[TRUTH PERSPECTIVE DEBUG] ' + timestamp + ' - ' + type.toUpperCase() + ':';
       console.log(logPrefix, message);
       
-      // Log additional context for errors and warnings
+      // Additional context for errors and warnings
       if (type === 'error' || type === 'warning') {
         console.log('Debug context:', {
           chartJsAvailable: typeof Chart !== 'undefined',
           chartJsVersion: (typeof Chart !== 'undefined') ? Chart.version : null,
-          dateAdapterAvailable: typeof Chart !== 'undefined' && Chart.adapters && Chart.adapters._date,
+          hasAdapters: typeof Chart !== 'undefined' && !!Chart.adapters,
+          hasDateAdapter: typeof Chart !== 'undefined' && !!(Chart.adapters && Chart.adapters._date),
           canvasExists: !!document.getElementById('taxonomy-timeline-chart'),
           dataAvailable: !!window.chartDebugData,
           timelineDataCount: window.chartDebugData?.timelineData?.length || 0,
-          topTermsCount: window.chartDebugData?.topTerms?.length || 0,
-          libraryMethod: 'local'
+          topTermsCount: window.chartDebugData?.topTerms?.length || 0
         });
       }
     }
