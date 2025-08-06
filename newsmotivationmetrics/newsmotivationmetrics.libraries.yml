@@ -1,11 +1,28 @@
 chart-js:
   version: 1.x
-  js:
-    //cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js: { type: external, minified: true }
-    js/taxonomy-timeline-chart.js: {}
   css:
     theme:
-      css/chart-styles.css: {}
+      css/chart-style.css: {}
+  js:
+    js/chart-behavior.js: {}
   dependencies:
     - core/drupal
     - core/jquery
+  external:
+    js:
+      'https://cdn.jsdelivr.net/npm/chart.js': { type: external, weight: -10 }
+      'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js': { type: external, weight: -9 }
+
+chart-debug:
+  version: 1.x
+  css:
+    theme:
+      css/chart-style.css: {}
+  js:
+    js/chart-debug.js: {}
+  dependencies:
+    - core/drupal
+  external:
+    js:
+      'https://cdn.jsdelivr.net/npm/chart.js': { type: external, weight: -10 }
+      'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js': { type: external, weight: -9 }
