@@ -23,9 +23,6 @@ chart-test:
 
 chart-debug:
   version: 1.x
-  css:
-    theme:
-      css/chart-debug.css: {}
   js:
     js/chart.umd.js: { weight: -10 }
     js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
