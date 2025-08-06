@@ -1,5 +1,4 @@
 <?php
-// filepath: /workspaces/thetruthperspective/newsmotivationmetrics/src/Controller/MetricsController.php
 
 namespace Drupal\newsmotivationmetrics\Controller;
 
@@ -80,7 +79,7 @@ class MetricsController extends ControllerBase {
       ',
     ];
     
-    // NEW: Taxonomy Timeline Chart Section
+    // Taxonomy Timeline Chart Section
     $build['taxonomy_timeline'] = [
       '#type' => 'details',
       '#title' => '📈 Topic Trends Over Time',
@@ -90,7 +89,7 @@ class MetricsController extends ControllerBase {
     
     // Get taxonomy timeline data
     $timeline_data = $this->getTaxonomyTimelineData();
-    $top_terms = $this->getTopTaxonomyTerms(20); // Get top 20 for selection dropdown
+    $top_terms = $this->getTopTaxonomyTerms(20);
     
     $build['taxonomy_timeline']['controls'] = [
       '#markup' => '
@@ -120,7 +119,7 @@ class MetricsController extends ControllerBase {
       ',
     ];
     
-    // Get metrics data with error handling and PROPER GLOBAL FUNCTION CALLS
+    // Get metrics data with PROPER GLOBAL FUNCTION CALLS
     try {
       $metrics = \newsmotivationmetrics_get_article_metrics();
       $insights = \newsmotivationmetrics_get_motivation_insights();
@@ -306,217 +305,6 @@ class MetricsController extends ControllerBase {
       'topTerms' => $top_terms,
     ];
     
-    // Enhanced CSS for professional presentation
-    $build['#attached']['html_head'][] = [
-      [
-        '#tag' => 'style',
-        '#value' => '
-          .news-metrics-header { 
-            margin-bottom: 30px; 
-            padding: 30px; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px; 
-            color: white;
-            text-align: center;
-          }
-          .news-metrics-header h1 { 
-            margin: 0 0 15px 0; 
-            font-size: 2.5em;
-            font-weight: 300;
-          }
-          .news-metrics-header p { 
-            margin: 0 0 20px 0; 
-            font-size: 1.2em;
-            opacity: 0.9;
-          }
-          .metrics-subtitle {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            align-items: center;
-          }
-          .badge {
-            background: rgba(255,255,255,0.2);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-          }
-          .updated {
-            font-size: 0.9em;
-            opacity: 0.8;
-          }
-          .explanation-content {
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            line-height: 1.6;
-          }
-          .explanation-content h3 {
-            color: #2c3e50;
-            margin-top: 25px;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-          }
-          .explanation-content h3:first-child {
-            margin-top: 0;
-          }
-          .methodology-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-          }
-          .method-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          }
-          .method-card h4 {
-            margin: 0 0 10px 0;
-            color: #495057;
-            font-size: 1.1em;
-          }
-          .method-card p {
-            margin: 0;
-            color: #6c757d;
-            font-size: 0.95em;
-          }
-          .data-sources {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 15px 0;
-          }
-          .data-sources li {
-            margin-bottom: 8px;
-            color: #495057;
-          }
-          .update-info {
-            background: #e7f3ff;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #007bff;
-            margin-top: 20px;
-          }
-          .update-info p {
-            margin: 5px 0;
-            color: #495057;
-            font-size: 0.9em;
-          }
-          
-          /* Chart Styling */
-          .taxonomy-timeline-section {
-            margin-bottom: 30px;
-          }
-          .chart-controls {
-            margin-bottom: 20px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-          }
-          .control-group {
-            margin-bottom: 15px;
-          }
-          .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #495057;
-          }
-          .term-selector {
-            width: 100%;
-            max-width: 500px;
-            height: 120px;
-            padding: 8px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            background: white;
-          }
-          .control-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-          }
-          .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: background-color 0.2s;
-          }
-          .btn-secondary {
-            background: #6c757d;
-            color: white;
-          }
-          .btn-secondary:hover {
-            background: #5a6268;
-          }
-          .btn-outline {
-            background: transparent;
-            color: #6c757d;
-            border: 1px solid #6c757d;
-          }
-          .btn-outline:hover {
-            background: #6c757d;
-            color: white;
-          }
-          .chart-info {
-            color: #6c757d;
-            font-size: 0.9em;
-            font-style: italic;
-          }
-          .chart-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-            margin-bottom: 20px;
-          }
-          
-          .metrics-overview, .temporal, .sentiment, .entities, .activity, .insights { 
-            margin-bottom: 25px; 
-          }
-          .metrics-table, .temporal-table, .sentiment-table, .entities-table, .activity-table, .insights-table { 
-            width: 100%; 
-            margin-top: 15px;
-          }
-          .metrics-table th, .temporal-table th, .sentiment-table th, .entities-table th, .activity-table th, .insights-table th { 
-            background-color: #f8f9fa; 
-            font-weight: 600;
-            padding: 12px;
-          }
-          .metrics-table td, .temporal-table td, .sentiment-table td, .entities-table td, .activity-table td, .insights-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #dee2e6;
-          }
-          @media (max-width: 768px) {
-            .methodology-grid {
-              grid-template-columns: 1fr;
-            }
-            .news-metrics-header h1 {
-              font-size: 2em;
-            }
-            .metrics-subtitle {
-              flex-direction: column;
-              gap: 10px;
-            }
-            .control-buttons {
-              flex-direction: column;
-            }
-            .term-selector {
-              max-width: 100%;
-            }
-          }
-        ',
-      ],
-      'news-metrics-enhanced-styles',
-    ];
-    
     return $build;
   }
   
@@ -637,7 +425,7 @@ class MetricsController extends ControllerBase {
    */
   private function calculateWeeklyTrend($metrics) {
     $current_week = $metrics['articles_last_7_days'];
-    $previous_week = max($metrics['articles_last_30_days'] - $current_week, 0) / 3; // Rough estimate
+    $previous_week = max($metrics['articles_last_30_days'] - $current_week, 0) / 3;
     
     if ($previous_week > 0) {
       $trend = (($current_week - $previous_week) / $previous_week) * 100;
