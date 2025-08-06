@@ -19,7 +19,7 @@ class MetricsController extends ControllerBase {
   public function dashboard() {
     $build = [];
     
-    // Page header
+    // Page header with professional styling
     $build['header'] = [
       '#markup' => '<div class="news-metrics-header">
         <h1>The Truth Perspective Analytics</h1>
@@ -31,10 +31,35 @@ class MetricsController extends ControllerBase {
       </div>',
     ];
     
-    // Key metrics overview
-    $metrics = newsmotivationmetrics_get_article_metrics();
-    $insights = newsmotivationmetrics_get_motivation_insights();
+    // Get metrics data with error handling
+    try {
+      $metrics = newsmotivationmetrics_get_article_metrics();
+      $insights = newsmotivationmetrics_get_motivation_insights();
+    } catch (\Exception $e) {
+      \Drupal::logger('newsmotivationmetrics')->error('Failed to load metrics data: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      
+      // Fallback data
+      $metrics = [
+        'total_articles' => 0,
+        'articles_with_ai' => 0,
+        'articles_with_json' => 0,
+        'articles_with_tags' => 0,
+        'articles_with_motivation' => 0,
+        'articles_with_images' => 0,
+        'total_tags' => 0,
+        'articles_last_7_days' => 0,
+        'articles_last_30_days' => 0,
+      ];
+      $insights = [
+        'avg_motivation_length' => 0,
+        'avg_ai_response_length' => 0,
+        'avg_tags_per_article' => 0,
+      ];
+    }
     
+    // Content Analysis Overview
     $build['overview'] = [
       '#type' => 'details',
       '#title' => '📊 Content Analysis Overview',
@@ -59,7 +84,7 @@ class MetricsController extends ControllerBase {
       '#attributes' => ['class' => ['metrics-table']],
     ];
     
-    // Activity metrics
+    // Recent Activity Section
     $build['activity'] = [
       '#type' => 'details',
       '#title' => '⚡ Recent Activity',
@@ -80,7 +105,7 @@ class MetricsController extends ControllerBase {
       '#attributes' => ['class' => ['activity-table']],
     ];
     
-    // Analysis quality insights
+    // Analysis Quality Metrics
     $build['insights'] = [
       '#type' => 'details',
       '#title' => '🔍 Analysis Quality Metrics',
@@ -101,103 +126,7 @@ class MetricsController extends ControllerBase {
       '#attributes' => ['class' => ['insights-table']],
     ];
     
-    // Top narrative themes
-    $tags = newsmotivationmetrics_get_tag_metrics();
-    $top_tags = array_slice($tags, 0, 20); // Top 20 tags
-    
-    $build['tags'] = [
-      '#type' => 'details',
-      '#title' => '🎯 Dominant Narrative Themes',
-      '#open' => TRUE,
-    ];
-    
-    $tag_rows = [];
-    foreach ($top_tags as $tag) {
-      $tag_link = Link::createFromRoute(
-        $tag['name'],
-        'newsmotivationmetrics.tag_details',
-        ['tid' => $tag['tid']]
-      );
-      
-      $percentage = round(($tag['article_count'] / max($metrics['total_articles'], 1)) * 100, 1);
-      $bar_width = min($percentage * 3, 100); // Visual bar representation
-      
-      $tag_rows[] = [
-        $tag_link,
-        number_format($tag['article_count']),
-        $percentage . '%',
-        [
-          'data' => '<div class="progress-bar-container"><div class="progress-bar" style="width: ' . $bar_width . 'px;"></div></div>',
-          'data' => [
-            '#markup' => '<div class="progress-bar-container"><div class="progress-bar" style="width: ' . $bar_width . 'px;"></div></div>',
-          ],
-        ],
-      ];
-    }
-    
-    $build['tags']['table'] = [
-      '#type' => 'table',
-      '#header' => ['Theme/Topic', 'Articles', 'Prevalence', 'Distribution'],
-      '#rows' => $tag_rows,
-      '#attributes' => ['class' => ['tags-table']],
-    ];
-    
-    // News sources analysis (public version)
-    $sources = newsmotivationmetrics_get_news_source_metrics();
-    
-    if (!empty($sources)) {
-      $build['sources'] = [
-        '#type' => 'details',
-        '#title' => '📰 Media Source Distribution',
-        '#open' => FALSE,
-      ];
-      
-      $source_rows = [];
-      foreach (array_slice($sources, 0, 15) as $source) { // Top 15 for public view
-        $source_rows[] = [
-          $source['source'],
-          number_format($source['article_count']),
-          round(($source['article_count'] / max($metrics['total_articles'], 1)) * 100, 1) . '%',
-        ];
-      }
-      
-      $build['sources']['table'] = [
-        '#type' => 'table',
-        '#header' => ['Media Source', 'Articles', 'Share'],
-        '#rows' => $source_rows,
-        '#attributes' => ['class' => ['sources-table']],
-      ];
-    }
-    
-    // About section
-    $build['about'] = [
-      '#type' => 'details',
-      '#title' => 'ℹ️ About This Analysis',
-      '#open' => FALSE,
-    ];
-    
-    $build['about']['content'] = [
-      '#markup' => '
-        <div class="about-content">
-          <h3>Methodology</h3>
-          <p>This dashboard presents real-time analytics from The Truth Perspective news analysis system, which uses:</p>
-          <ul>
-            <li><strong>AI-Powered Content Analysis:</strong> Advanced language models evaluate article content for narrative patterns, motivations, and thematic elements</li>
-            <li><strong>Automated Entity Recognition:</strong> Machine learning identifies key people, organizations, and concepts</li>
-            <li><strong>Motivation Mapping:</strong> Algorithmic assessment of underlying motivations and perspectives in news content</li>
-            <li><strong>Cross-Source Correlation:</strong> Pattern recognition across multiple media sources and timeframes</li>
-          </ul>
-          
-          <h3>Data Sources</h3>
-          <p>Content is aggregated from ' . count($sources) . '+ media sources, processed through Diffbot content extraction, and analyzed using Claude AI models.</p>
-          
-          <h3>Update Frequency</h3>
-          <p>Metrics are updated in real-time as new content is processed. Analysis typically completes within minutes of article publication.</p>
-        </div>
-      ',
-    ];
-    
-    // Enhanced CSS for public presentation
+    // Enhanced CSS for professional presentation
     $build['#attached']['html_head'][] = [
       [
         '#tag' => 'style',
@@ -237,51 +166,21 @@ class MetricsController extends ControllerBase {
             font-size: 0.9em;
             opacity: 0.8;
           }
-          .metrics-overview, .activity, .insights, .tags, .sources, .about { 
+          .metrics-overview, .activity, .insights { 
             margin-bottom: 25px; 
           }
-          .metrics-table, .activity-table, .insights-table, .tags-table, .sources-table { 
+          .metrics-table, .activity-table, .insights-table { 
             width: 100%; 
             margin-top: 15px;
           }
-          .metrics-table th, .activity-table th, .insights-table th, .tags-table th, .sources-table th { 
+          .metrics-table th, .activity-table th, .insights-table th { 
             background-color: #f8f9fa; 
             font-weight: 600;
             padding: 12px;
           }
-          .metrics-table td, .activity-table td, .insights-table td, .tags-table td, .sources-table td {
+          .metrics-table td, .activity-table td, .insights-table td {
             padding: 10px 12px;
             border-bottom: 1px solid #dee2e6;
-          }
-          .progress-bar-container {
-            width: 100px;
-            height: 8px;
-            background: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-          }
-          .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #28a745, #20c997);
-            border-radius: 4px;
-            transition: width 0.3s ease;
-          }
-          .about-content {
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-          }
-          .about-content h3 {
-            color: #495057;
-            margin-top: 20px;
-            margin-bottom: 10px;
-          }
-          .about-content ul {
-            margin: 10px 0;
-            padding-left: 25px;
-          }
-          .about-content li {
-            margin-bottom: 8px;
           }
         ',
       ],
@@ -292,13 +191,12 @@ class MetricsController extends ControllerBase {
   }
   
   /**
-   * Display the admin version of the dashboard (more detailed).
+   * Display the admin version of the dashboard.
    */
   public function adminDashboard() {
-    // This can be the same as the current dashboard or enhanced with admin-only features
     $build = $this->dashboard();
     
-    // Add admin-specific enhancements
+    // Add admin-specific modifications
     $build['header']['#markup'] = str_replace(
       'The Truth Perspective Analytics',
       'News Motivation Metrics Dashboard (Admin)',
@@ -321,122 +219,14 @@ class MetricsController extends ControllerBase {
     $build = [];
     
     $build['header'] = [
-      '#markup' => '<div class="tag-details-header">
-        <h1>📊 Theme Analysis: ' . $term->getName() . '</h1>
-        <p>Detailed breakdown of articles and patterns for this narrative theme.</p>
-      </div>',
+      '#markup' => '<h1>Tag Details: ' . $term->getName() . '</h1>',
     ];
-    
-    // Get articles with this tag
-    $query = \Drupal::entityQuery('node')
-      ->condition('type', 'article')
-      ->condition('status', 1)
-      ->condition('field_tags', $tid)
-      ->sort('created', 'DESC')
-      ->range(0, 100);
-    
-    $nids = $query->execute();
-    $nodes = \Drupal\node\Entity\Node::loadMultiple($nids);
-    
-    $build['summary'] = [
-      '#markup' => '<div class="tag-summary">
-        <h2>Summary Statistics</h2>
-        <p><strong>Total articles with this theme:</strong> ' . count($nodes) . '</p>
-        <p><strong>Analysis period:</strong> ' . 
-        (count($nodes) > 0 ? 
-          date('M j, Y', min(array_map(function($n) { return $n->getCreatedTime(); }, $nodes))) . 
-          ' to ' . 
-          date('M j, Y', max(array_map(function($n) { return $n->getCreatedTime(); }, $nodes)))
-          : 'No articles found'
-        ) . '</p>
-      </div>',
-    ];
-    
-    if (!empty($nodes)) {
-      $rows = [];
-      foreach ($nodes as $node) {
-        $pub_date = $node->get('field_publication_date')->value;
-        $formatted_date = $pub_date ? date('M j, Y', strtotime($pub_date)) : date('M j, Y', $node->getCreatedTime());
-        
-        $rows[] = [
-          Link::fromTextAndUrl($node->getTitle(), $node->toUrl()),
-          $formatted_date,
-          $node->get('field_news_source')->value ?: 'Unknown',
-          [
-            'data' => Link::fromTextAndUrl('View Analysis', $node->toUrl()),
-            'class' => ['action-link'],
-          ],
-        ];
-      }
-      
-      $build['articles'] = [
-        '#type' => 'table',
-        '#header' => ['Article Title', 'Published', 'Source', 'Action'],
-        '#rows' => $rows,
-        '#caption' => 'Articles featuring this theme (most recent first)',
-        '#attributes' => ['class' => ['tag-articles-table']],
-      ];
-    } else {
-      $build['no_articles'] = [
-        '#markup' => '<p class="no-articles">No articles found with this theme.</p>',
-      ];
-    }
     
     $build['back'] = [
-      '#markup' => '<div class="back-link">' . 
-        Link::createFromRoute('← Back to Analytics Dashboard', 'newsmotivationmetrics.metrics_dashboard')->toString() . 
-        '</div>',
-    ];
-    
-    // CSS for tag details page
-    $build['#attached']['html_head'][] = [
-      [
-        '#tag' => 'style',
-        '#value' => '
-          .tag-details-header {
-            margin-bottom: 30px;
-            padding: 25px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 5px solid #007bff;
-          }
-          .tag-summary {
-            margin-bottom: 25px;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-          }
-          .tag-articles-table {
-            margin-top: 20px;
-          }
-          .action-link a {
-            background: #007bff;
-            color: white;
-            padding: 5px 12px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 0.9em;
-          }
-          .action-link a:hover {
-            background: #0056b3;
-          }
-          .back-link {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #dee2e6;
-          }
-          .no-articles {
-            padding: 40px;
-            text-align: center;
-            color: #6c757d;
-            font-style: italic;
-          }
-        ',
-      ],
-      'tag-details-styles',
+      '#markup' => '<p>' . Link::createFromRoute('← Back to Metrics Dashboard', 'newsmotivationmetrics.metrics_dashboard')->toString() . '</p>',
     ];
     
     return $build;
   }
+
 }
