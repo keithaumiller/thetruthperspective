@@ -9,72 +9,183 @@ use Drupal\taxonomy\Entity\Term;
 
 /**
  * Controller for News Motivation Metrics pages.
+ * 
+ * Provides public analytics dashboard and admin interfaces for The Truth
+ * Perspective news analysis system. Handles chart data generation, metrics
+ * aggregation, and responsive dashboard presentation.
  */
 class MetricsController extends ControllerBase {
 
   /**
    * Display the public metrics dashboard.
+   * 
+   * Main analytics interface showing taxonomy trends, processing metrics,
+   * sentiment analysis, and entity recognition statistics.
+   * 
+   * @return array
+   *   Drupal render array for the dashboard page.
    */
   public function dashboard() {
     $build = [];
     
-    // Get chart data first to ensure it's available
+    // Get chart data for timeline visualization
     $timeline_data = $this->getTaxonomyTimelineData();
     $top_terms = $this->getTopTaxonomyTerms(20);
     
-    // Page header with professional styling
+    // Page header with live data indicator
     $build['header'] = [
-      '#markup' => '<div class="news-metrics-header">
-        <h1>The Truth Perspective Analytics</h1>
-        <p>Real-time insights into news analysis, AI-powered content evaluation, and narrative tracking across media sources.</p>
-        <div class="metrics-subtitle">
-          <span class="badge">Live Data</span>
-          <span class="updated">Updated: ' . date('F j, Y g:i A') . '</span>
-        </div>
-      </div>',
+      '#type' => 'container',
+      '#attributes' => ['class' => ['news-metrics-header']],
     ];
     
-    // Taxonomy Timeline Chart Section - ALWAYS OPEN for canvas element availability
+    $build['header']['title'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'h1',
+      '#value' => 'The Truth Perspective Analytics',
+    ];
+    
+    $build['header']['description'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => 'Real-time insights into news analysis, AI-powered content evaluation, and narrative tracking across media sources.',
+    ];
+    
+    $build['header']['subtitle'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['metrics-subtitle']],
+    ];
+    
+    $build['header']['subtitle']['badge'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'span',
+      '#value' => 'Live Data',
+      '#attributes' => ['class' => ['badge']],
+    ];
+    
+    $build['header']['subtitle']['updated'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'span',
+      '#value' => 'Updated: ' . date('F j, Y g:i A'),
+      '#attributes' => ['class' => ['updated']],
+    ];
+    
+    // Taxonomy Timeline Chart Section
     $build['taxonomy_timeline'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['taxonomy-timeline-section']],
     ];
     
     $build['taxonomy_timeline']['title'] = [
-      '#markup' => '<h2 class="chart-section-title">📈 Topic Trends Over Time</h2>',
+      '#type' => 'html_tag',
+      '#tag' => 'h2',
+      '#value' => '📈 Topic Trends Over Time',
+      '#attributes' => ['class' => ['chart-section-title']],
     ];
     
+    // Chart controls using proper form elements
     $build['taxonomy_timeline']['controls'] = [
-      '#markup' => '
-        <div class="chart-controls">
-          <div class="control-group">
-            <label for="term-selector">Add/Remove Terms:</label>
-            <select id="term-selector" multiple class="term-selector">
-              ' . $this->buildTermOptions($top_terms) . '
-            </select>
-          </div>
-          <div class="control-buttons">
-            <button id="reset-chart" class="btn btn-secondary">Reset to Top 10</button>
-            <button id="clear-chart" class="btn btn-outline">Clear All</button>
-          </div>
-          <div class="chart-info">
-            <span class="info-text">📊 Showing frequency of topic mentions over the last 90 days</span>
-          </div>
-        </div>
-      ',
+      '#type' => 'container',
+      '#attributes' => ['class' => ['chart-controls']],
     ];
     
-    // CRITICAL: Canvas element must be directly rendered, not inside collapsible details
-    $build['taxonomy_timeline']['chart'] = [
-      '#markup' => '
-        <div class="chart-container">
-          <canvas id="taxonomy-timeline-chart" width="800" height="400"></canvas>
-          <div id="chart-debug-info" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em; color: #6c757d;">
-            <div id="chart-status">Initializing chart...</div>
-            <div id="chart-data-status">Data status: Loading...</div>
-          </div>
-        </div>
-      ',
+    $build['taxonomy_timeline']['controls']['selector_group'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['control-group']],
+    ];
+    
+    $build['taxonomy_timeline']['controls']['selector_group']['label'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'label',
+      '#value' => 'Add/Remove Terms:',
+      '#attributes' => ['for' => 'term-selector'],
+    ];
+    
+    $build['taxonomy_timeline']['controls']['selector_group']['selector'] = [
+      '#type' => 'select',
+      '#multiple' => TRUE,
+      '#options' => $this->buildTermOptionsArray($top_terms),
+      '#default_value' => array_slice(array_column($top_terms, 'tid'), 0, 10),
+      '#attributes' => [
+        'class' => ['term-selector'],
+        'id' => 'term-selector',
+        'size' => 8,
+      ],
+    ];
+    
+    $build['taxonomy_timeline']['controls']['buttons'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['control-buttons']],
+    ];
+    
+    $build['taxonomy_timeline']['controls']['buttons']['reset'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => 'Reset to Top 10',
+      '#attributes' => [
+        'id' => 'reset-chart',
+        'class' => ['btn', 'btn-secondary'],
+        'type' => 'button',
+      ],
+    ];
+    
+    $build['taxonomy_timeline']['controls']['buttons']['clear'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => 'Clear All',
+      '#attributes' => [
+        'id' => 'clear-chart',
+        'class' => ['btn', 'btn-outline'],
+        'type' => 'button',
+      ],
+    ];
+    
+    $build['taxonomy_timeline']['controls']['info'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['chart-info']],
+    ];
+    
+    $build['taxonomy_timeline']['controls']['info']['text'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'span',
+      '#value' => '📊 Showing frequency of topic mentions over the last 90 days',
+      '#attributes' => ['class' => ['info-text']],
+    ];
+    
+    // Chart container with canvas element
+    $build['taxonomy_timeline']['chart_wrapper'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['chart-container']],
+    ];
+    
+    $build['taxonomy_timeline']['chart_wrapper']['canvas'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'canvas',
+      '#value' => '',
+      '#attributes' => [
+        'id' => 'taxonomy-timeline-chart',
+        'width' => '800',
+        'height' => '400',
+      ],
+    ];
+    
+    // Debug information for troubleshooting
+    $build['taxonomy_timeline']['chart_wrapper']['debug'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'chart-debug-info'],
+    ];
+    
+    $build['taxonomy_timeline']['chart_wrapper']['debug']['status'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#value' => 'Initializing chart...',
+      '#attributes' => ['id' => 'chart-status'],
+    ];
+    
+    $build['taxonomy_timeline']['chart_wrapper']['debug']['data_status'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#value' => 'Data status: Loading...',
+      '#attributes' => ['id' => 'chart-data-status'],
     ];
     
     // Methodology explanation section
@@ -86,93 +197,145 @@ class MetricsController extends ControllerBase {
     ];
     
     $build['explanation']['content'] = [
-      '#markup' => '
-        <div class="explanation-content">
-          <h3>🎯 Our Mission</h3>
-          <p>The Truth Perspective leverages advanced AI technology to analyze news content across multiple media sources, providing transparency into narrative patterns, motivational drivers, and thematic trends in modern journalism.</p>
-          
-          <h3>🔬 Analysis Methodology</h3>
-          <div class="methodology-grid">
-            <div class="method-card">
-              <h4>🤖 AI-Powered Content Analysis</h4>
-              <p>Using Claude AI models, we evaluate article content for underlying motivations, bias indicators, and narrative frameworks. Each article undergoes comprehensive linguistic and semantic analysis.</p>
-            </div>
-            <div class="method-card">
-              <h4>🔍 Entity Recognition & Classification</h4>
-              <p>Automated identification of key people, organizations, locations, and concepts enables cross-reference analysis and theme tracking across multiple sources and timeframes.</p>
-            </div>
-            <div class="method-card">
-              <h4>📊 Statistical Aggregation</h4>
-              <p>Real-time metrics aggregate processing success rates, content coverage, and analytical depth to provide transparency into our system\'s capabilities and reliability.</p>
-            </div>
-          </div>
-          
-          <h3>📈 Data Sources & Processing</h3>
-          <ul class="data-sources">
-            <li><strong>Content Extraction:</strong> Diffbot API processes raw HTML into clean, structured article data</li>
-            <li><strong>AI Analysis:</strong> Claude language models analyze motivation, sentiment, and thematic elements</li>
-            <li><strong>Taxonomy Generation:</strong> Automated tag creation based on content analysis and entity recognition</li>
-            <li><strong>Cross-Source Correlation:</strong> Pattern recognition across multiple media outlets and publication timeframes</li>
-          </ul>
-          
-          <h3>🔒 Privacy & Transparency</h3>
-          <p>All metrics represent <strong>aggregated statistics</strong> from publicly available news content. We do not track individual users, collect personal data, or store private information. Our analysis focuses exclusively on published media content and provides transparency into automated content evaluation processes.</p>
-          
-          <div class="update-info">
-            <p><strong>Update Frequency:</strong> Metrics refresh in real-time as new articles are processed. Analysis typically completes within minutes of publication.</p>
-            <p><strong>Data Retention:</strong> Historical analysis data enables trend tracking and longitudinal narrative studies.</p>
-          </div>
-        </div>
-      ',
+      '#markup' => $this->getMethodologyContent(),
     ];
     
-    // Get metrics data with proper global function calls
+    // Get metrics data with error handling
+    $metrics_data = $this->getMetricsData();
+    
+    // Build dashboard sections
+    $this->buildOverviewSection($build, $metrics_data);
+    $this->buildTemporalSection($build, $metrics_data);
+    $this->buildSentimentSection($build, $metrics_data);
+    $this->buildEntitiesSection($build, $metrics_data);
+    $this->buildActivitySection($build, $metrics_data);
+    $this->buildInsightsSection($build, $metrics_data);
+    
+    // Attach Chart.js library and pass data to JavaScript
+    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-js';
+    $build['#attached']['drupalSettings']['newsmotivationmetrics'] = [
+      'timelineData' => $timeline_data,
+      'topTerms' => $top_terms,
+      'debugInfo' => [
+        'dataPoints' => count($timeline_data),
+        'termCount' => count($top_terms),
+        'timestamp' => time(),
+      ],
+    ];
+    
+    return $build;
+  }
+  
+  /**
+   * Get methodology content for explanation section.
+   * 
+   * @return string
+   *   HTML content describing analysis methodology.
+   */
+  private function getMethodologyContent() {
+    return '
+      <div class="explanation-content">
+        <h3>🎯 Our Mission</h3>
+        <p>The Truth Perspective leverages advanced AI technology to analyze news content across multiple media sources, providing transparency into narrative patterns, motivational drivers, and thematic trends in modern journalism.</p>
+        
+        <h3>🔬 Analysis Methodology</h3>
+        <div class="methodology-grid">
+          <div class="method-card">
+            <h4>🤖 AI-Powered Content Analysis</h4>
+            <p>Using Claude AI models, we evaluate article content for underlying motivations, bias indicators, and narrative frameworks. Each article undergoes comprehensive linguistic and semantic analysis.</p>
+          </div>
+          <div class="method-card">
+            <h4>🔍 Entity Recognition & Classification</h4>
+            <p>Automated identification of key people, organizations, locations, and concepts enables cross-reference analysis and theme tracking across multiple sources and timeframes.</p>
+          </div>
+          <div class="method-card">
+            <h4>📊 Statistical Aggregation</h4>
+            <p>Real-time metrics aggregate processing success rates, content coverage, and analytical depth to provide transparency into our system\'s capabilities and reliability.</p>
+          </div>
+        </div>
+        
+        <h3>📈 Data Sources & Processing</h3>
+        <ul class="data-sources">
+          <li><strong>Content Extraction:</strong> Diffbot API processes raw HTML into clean, structured article data</li>
+          <li><strong>AI Analysis:</strong> Claude language models analyze motivation, sentiment, and thematic elements</li>
+          <li><strong>Taxonomy Generation:</strong> Automated tag creation based on content analysis and entity recognition</li>
+          <li><strong>Cross-Source Correlation:</strong> Pattern recognition across multiple media outlets and publication timeframes</li>
+        </ul>
+        
+        <h3>🔒 Privacy & Transparency</h3>
+        <p>All metrics represent <strong>aggregated statistics</strong> from publicly available news content. We do not track individual users, collect personal data, or store private information. Our analysis focuses exclusively on published media content and provides transparency into automated content evaluation processes.</p>
+        
+        <div class="update-info">
+          <p><strong>Update Frequency:</strong> Metrics refresh in real-time as new articles are processed. Analysis typically completes within minutes of publication.</p>
+          <p><strong>Data Retention:</strong> Historical analysis data enables trend tracking and longitudinal narrative studies.</p>
+        </div>
+      </div>
+    ';
+  }
+  
+  /**
+   * Get all metrics data with error handling.
+   * 
+   * @return array
+   *   Associative array containing all metrics data.
+   */
+  private function getMetricsData() {
     try {
-      $metrics = \newsmotivationmetrics_get_article_metrics();
-      $insights = \newsmotivationmetrics_get_motivation_insights();
-      $temporal_metrics = \newsmotivationmetrics_get_temporal_metrics();
-      $sentiment_metrics = \newsmotivationmetrics_get_sentiment_metrics();
-      $entity_metrics = \newsmotivationmetrics_get_entity_metrics();
+      return [
+        'metrics' => \newsmotivationmetrics_get_article_metrics(),
+        'insights' => \newsmotivationmetrics_get_motivation_insights(),
+        'temporal_metrics' => \newsmotivationmetrics_get_temporal_metrics(),
+        'sentiment_metrics' => \newsmotivationmetrics_get_sentiment_metrics(),
+        'entity_metrics' => \newsmotivationmetrics_get_entity_metrics(),
+      ];
     } catch (\Exception $e) {
       \Drupal::logger('newsmotivationmetrics')->error('Failed to load metrics data: @error', [
         '@error' => $e->getMessage(),
       ]);
       
-      // Fallback data
-      $metrics = [
-        'total_articles' => 0,
-        'articles_with_ai' => 0,
-        'articles_with_json' => 0,
-        'articles_with_tags' => 0,
-        'articles_with_motivation' => 0,
-        'articles_with_images' => 0,
-        'total_tags' => 0,
-        'articles_last_7_days' => 0,
-        'articles_last_30_days' => 0,
-      ];
-      $insights = [
-        'avg_motivation_length' => 0,
-        'avg_ai_response_length' => 0,
-        'avg_tags_per_article' => 0,
-      ];
-      $temporal_metrics = [
-        'peak_processing_hour' => 'Unknown',
-        'avg_processing_time' => 0,
-        'articles_last_24_hours' => 0,
-      ];
-      $sentiment_metrics = [
-        'positive_sentiment_percentage' => 0,
-        'negative_sentiment_percentage' => 0,
-        'neutral_sentiment_percentage' => 0,
-      ];
-      $entity_metrics = [
-        'unique_people_identified' => 0,
-        'unique_organizations_identified' => 0,
-        'unique_locations_identified' => 0,
+      // Return fallback data structure
+      return [
+        'metrics' => [
+          'total_articles' => 0,
+          'articles_with_ai' => 0,
+          'articles_with_json' => 0,
+          'articles_with_tags' => 0,
+          'articles_with_motivation' => 0,
+          'articles_with_images' => 0,
+          'total_tags' => 0,
+          'articles_last_7_days' => 0,
+          'articles_last_30_days' => 0,
+        ],
+        'insights' => [
+          'avg_motivation_length' => 0,
+          'avg_ai_response_length' => 0,
+          'avg_tags_per_article' => 0,
+        ],
+        'temporal_metrics' => [
+          'peak_processing_hour' => 'Unknown',
+          'avg_processing_time' => 0,
+          'articles_last_24_hours' => 0,
+        ],
+        'sentiment_metrics' => [
+          'positive_sentiment_percentage' => 0,
+          'negative_sentiment_percentage' => 0,
+          'neutral_sentiment_percentage' => 0,
+        ],
+        'entity_metrics' => [
+          'unique_people_identified' => 0,
+          'unique_organizations_identified' => 0,
+          'unique_locations_identified' => 0,
+        ],
       ];
     }
+  }
+  
+  /**
+   * Build Content Analysis Overview section.
+   */
+  private function buildOverviewSection(&$build, $metrics_data) {
+    $metrics = $metrics_data['metrics'];
     
-    // Content Analysis Overview
     $build['overview'] = [
       '#type' => 'details',
       '#title' => '📊 Content Analysis Overview',
@@ -196,8 +359,15 @@ class MetricsController extends ControllerBase {
       '#rows' => array_slice($overview_data, 1),
       '#attributes' => ['class' => ['metrics-table']],
     ];
+  }
+  
+  /**
+   * Build Temporal Processing Analytics section.
+   */
+  private function buildTemporalSection(&$build, $metrics_data) {
+    $metrics = $metrics_data['metrics'];
+    $temporal_metrics = $metrics_data['temporal_metrics'];
     
-    // Temporal Processing Analytics
     $build['temporal'] = [
       '#type' => 'details',
       '#title' => '⏱️ Temporal Processing Analytics',
@@ -218,8 +388,15 @@ class MetricsController extends ControllerBase {
       '#rows' => array_slice($temporal_data, 1),
       '#attributes' => ['class' => ['temporal-table']],
     ];
+  }
+  
+  /**
+   * Build Sentiment Distribution Analysis section.
+   */
+  private function buildSentimentSection(&$build, $metrics_data) {
+    $metrics = $metrics_data['metrics'];
+    $sentiment_metrics = $metrics_data['sentiment_metrics'];
     
-    // Sentiment Distribution Analysis
     $build['sentiment'] = [
       '#type' => 'details',
       '#title' => '💭 Sentiment Distribution Analysis',
@@ -240,8 +417,15 @@ class MetricsController extends ControllerBase {
       '#rows' => array_slice($sentiment_data, 1),
       '#attributes' => ['class' => ['sentiment-table']],
     ];
+  }
+  
+  /**
+   * Build Entity Recognition Metrics section.
+   */
+  private function buildEntitiesSection(&$build, $metrics_data) {
+    $metrics = $metrics_data['metrics'];
+    $entity_metrics = $metrics_data['entity_metrics'];
     
-    // Entity Recognition Metrics
     $build['entities'] = [
       '#type' => 'details',
       '#title' => '🏷️ Entity Recognition Metrics',
@@ -262,8 +446,14 @@ class MetricsController extends ControllerBase {
       '#rows' => array_slice($entity_data, 1),
       '#attributes' => ['class' => ['entities-table']],
     ];
+  }
+  
+  /**
+   * Build Recent Activity section.
+   */
+  private function buildActivitySection(&$build, $metrics_data) {
+    $metrics = $metrics_data['metrics'];
     
-    // Recent Activity Section
     $build['activity'] = [
       '#type' => 'details',
       '#title' => '⚡ Recent Activity',
@@ -283,8 +473,14 @@ class MetricsController extends ControllerBase {
       '#rows' => array_slice($activity_data, 1),
       '#attributes' => ['class' => ['activity-table']],
     ];
+  }
+  
+  /**
+   * Build Analysis Quality Metrics section.
+   */
+  private function buildInsightsSection(&$build, $metrics_data) {
+    $insights = $metrics_data['insights'];
     
-    // Analysis Quality Metrics
     $build['insights'] = [
       '#type' => 'details',
       '#title' => '🔍 Analysis Quality Metrics',
@@ -304,277 +500,22 @@ class MetricsController extends ControllerBase {
       '#rows' => array_slice($insights_data, 1),
       '#attributes' => ['class' => ['insights-table']],
     ];
-    
-    // Attach Chart.js and custom JavaScript
-    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-js';
-    $build['#attached']['drupalSettings']['newsmotivationmetrics'] = [
-      'timelineData' => $timeline_data,
-      'topTerms' => $top_terms,
-      'debugInfo' => [
-        'dataPoints' => count($timeline_data),
-        'termCount' => count($top_terms),
-        'timestamp' => time(),
-      ],
-    ];
-    
-    // Enhanced CSS for chart section
-    $build['#attached']['html_head'][] = [
-      [
-        '#tag' => 'style',
-        '#value' => '
-          .taxonomy-timeline-section {
-            background: white;
-            border-radius: 8px;
-            padding: 30px;
-            margin: 30px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          }
-          .chart-section-title {
-            margin: 0 0 25px 0;
-            color: #2c3e50;
-            font-size: 1.8em;
-            font-weight: 300;
-            text-align: center;
-          }
-          .chart-controls {
-            margin-bottom: 25px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-          }
-          .control-group {
-            margin-bottom: 15px;
-          }
-          .control-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #495057;
-            font-size: 1.1em;
-          }
-          .term-selector {
-            width: 100%;
-            max-width: 600px;
-            height: 120px;
-            padding: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            background: white;
-            font-size: 0.95em;
-          }
-          .control-buttons {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-          }
-          .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.95em;
-            font-weight: 500;
-            transition: all 0.2s ease;
-          }
-          .btn-secondary {
-            background: #6c757d;
-            color: white;
-          }
-          .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-1px);
-          }
-          .btn-outline {
-            background: transparent;
-            color: #6c757d;
-            border: 2px solid #6c757d;
-          }
-          .btn-outline:hover {
-            background: #6c757d;
-            color: white;
-            transform: translateY(-1px);
-          }
-          .chart-info {
-            color: #6c757d;
-            font-size: 0.95em;
-            font-style: italic;
-            text-align: center;
-          }
-          .chart-container {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-            margin-bottom: 20px;
-            position: relative;
-            min-height: 450px;
-          }
-          #taxonomy-timeline-chart {
-            max-width: 100%;
-            height: auto !important;
-          }
-          #chart-debug-info {
-            margin-top: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            font-size: 0.9em;
-            color: #6c757d;
-            border: 1px solid #e9ecef;
-          }
-          
-          .news-metrics-header { 
-            margin-bottom: 30px; 
-            padding: 30px; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px; 
-            color: white;
-            text-align: center;
-          }
-          .news-metrics-header h1 { 
-            margin: 0 0 15px 0; 
-            font-size: 2.5em;
-            font-weight: 300;
-          }
-          .news-metrics-header p { 
-            margin: 0 0 20px 0; 
-            font-size: 1.2em;
-            opacity: 0.9;
-          }
-          .metrics-subtitle {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            align-items: center;
-          }
-          .badge {
-            background: rgba(255,255,255,0.2);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-          }
-          .updated {
-            font-size: 0.9em;
-            opacity: 0.8;
-          }
-          .explanation-content {
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            line-height: 1.6;
-          }
-          .explanation-content h3 {
-            color: #2c3e50;
-            margin-top: 25px;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-          }
-          .explanation-content h3:first-child {
-            margin-top: 0;
-          }
-          .methodology-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-          }
-          .method-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          }
-          .method-card h4 {
-            margin: 0 0 10px 0;
-            color: #495057;
-            font-size: 1.1em;
-          }
-          .method-card p {
-            margin: 0;
-            color: #6c757d;
-            font-size: 0.95em;
-          }
-          .data-sources {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 15px 0;
-          }
-          .data-sources li {
-            margin-bottom: 8px;
-            color: #495057;
-          }
-          .update-info {
-            background: #e7f3ff;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #007bff;
-            margin-top: 20px;
-          }
-          .update-info p {
-            margin: 5px 0;
-            color: #495057;
-            font-size: 0.9em;
-          }
-          
-          .metrics-overview, .temporal, .sentiment, .entities, .activity, .insights { 
-            margin-bottom: 25px; 
-          }
-          .metrics-table, .temporal-table, .sentiment-table, .entities-table, .activity-table, .insights-table { 
-            width: 100%; 
-            margin-top: 15px;
-          }
-          .metrics-table th, .temporal-table th, .sentiment-table th, .entities-table th, .activity-table th, .insights-table th { 
-            background-color: #f8f9fa; 
-            font-weight: 600;
-            padding: 12px;
-          }
-          .metrics-table td, .temporal-table td, .sentiment-table td, .entities-table td, .activity-table td, .insights-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #dee2e6;
-          }
-          @media (max-width: 768px) {
-            .methodology-grid {
-              grid-template-columns: 1fr;
-            }
-            .news-metrics-header h1 {
-              font-size: 2em;
-            }
-            .metrics-subtitle {
-              flex-direction: column;
-              gap: 10px;
-            }
-            .control-buttons {
-              flex-direction: column;
-            }
-            .term-selector {
-              max-width: 100%;
-            }
-            .chart-container {
-              padding: 15px;
-            }
-          }
-        ',
-      ],
-      'news-metrics-enhanced-styles',
-    ];
-    
-    return $build;
   }
   
   /**
    * Get taxonomy timeline data for charting.
+   * 
+   * Retrieves daily article counts for top taxonomy terms over the past 90 days.
+   * Optimized for Chart.js consumption with proper data structure.
+   * 
+   * @return array
+   *   Timeline data array with term information and daily counts.
    */
   private function getTaxonomyTimelineData() {
     $database = \Drupal::database();
     $timeline_data = [];
     
     try {
-      // Get daily counts for top 10 terms over last 90 days
       $top_terms = $this->getTopTaxonomyTerms(10);
       $days_back = 90;
       
@@ -619,6 +560,12 @@ class MetricsController extends ControllerBase {
   
   /**
    * Get top taxonomy terms by usage count.
+   * 
+   * @param int $limit
+   *   Maximum number of terms to return.
+   * 
+   * @return array
+   *   Array of term data with usage statistics.
    */
   private function getTopTaxonomyTerms($limit = 10) {
     $database = \Drupal::database();
@@ -659,27 +606,30 @@ class MetricsController extends ControllerBase {
   }
   
   /**
-   * Build HTML options for term selector.
+   * Build options array for term selector.
+   * 
+   * @param array $terms
+   *   Array of term data.
+   * 
+   * @return array
+   *   Options array for Drupal select element.
    */
-  private function buildTermOptions($terms) {
-    $options = '';
+  private function buildTermOptionsArray($terms) {
+    $options = [];
     foreach ($terms as $term) {
-      $selected = '';
-      // Mark top 10 as selected by default
-      if (count(array_filter($terms, function($t) use ($term) {
-        return $t['usage_count'] >= $term['usage_count'];
-      })) <= 10) {
-        $selected = 'selected';
-      }
-      
-      $options .= '<option value="' . $term['tid'] . '" ' . $selected . '>' . 
-                  htmlspecialchars($term['name']) . ' (' . $term['usage_count'] . ' articles)</option>';
+      $options[$term['tid']] = $term['name'] . ' (' . $term['usage_count'] . ' articles)';
     }
     return $options;
   }
   
   /**
-   * Calculate weekly processing trend.
+   * Calculate weekly processing trend indicator.
+   * 
+   * @param array $metrics
+   *   Article metrics data.
+   * 
+   * @return string
+   *   Formatted trend indicator with emoji and percentage.
    */
   private function calculateWeeklyTrend($metrics) {
     $current_week = $metrics['articles_last_7_days'];
@@ -699,7 +649,15 @@ class MetricsController extends ControllerBase {
   }
   
   /**
-   * Calculate entity recognition rate.
+   * Calculate entity recognition rate percentage.
+   * 
+   * @param int $entity_count
+   *   Number of unique entities identified.
+   * @param int $total_articles
+   *   Total number of articles processed.
+   * 
+   * @return float
+   *   Recognition rate as percentage.
    */
   private function calculateEntityRate($entity_count, $total_articles) {
     if ($total_articles > 0) {
@@ -710,22 +668,30 @@ class MetricsController extends ControllerBase {
 
   /**
    * Display the admin version of the dashboard.
+   * 
+   * @return array
+   *   Drupal render array for admin dashboard.
    */
   public function adminDashboard() {
     $build = $this->dashboard();
     
-    // Add admin-specific modifications
-    $build['header']['#markup'] = str_replace(
-      'The Truth Perspective Analytics',
-      'News Motivation Metrics Dashboard (Admin)',
-      $build['header']['#markup']
-    );
+    // Modify header for admin interface
+    $build['header']['title']['#value'] = 'News Motivation Metrics Dashboard (Admin)';
     
     return $build;
   }
   
   /**
-   * Display details for a specific tag.
+   * Display details for a specific taxonomy term.
+   * 
+   * @param int $tid
+   *   Taxonomy term ID.
+   * 
+   * @return array
+   *   Drupal render array for tag details page.
+   * 
+   * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+   *   When taxonomy term is not found.
    */
   public function tagDetails($tid) {
     $term = Term::load($tid);
