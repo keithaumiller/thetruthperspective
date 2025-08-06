@@ -17,12 +17,30 @@ chart-debug:
   version: 1.x
   css:
     theme:
-      css/chart-style.css: {}
+      css/chart-debug.css: {}
   js:
     js/chart-debug.js: {}
   dependencies:
     - core/drupal
-  external:
-    js:
-      'https://cdn.jsdelivr.net/npm/chart.js': { type: external, weight: -10 }
-      'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js': { type: external, weight: -9 }
+    - core/jquery
+    - core/drupalSettings
+
+chart-analytics:
+  version: 1.x
+  css:
+    theme:
+      css/chart-analytics.css: {}
+  js:
+    js/chart-analytics.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/drupalSettings
+
+charts-base:
+  version: 1.x
+  css:
+    theme:
+      css/charts.css: {}
+  dependencies:
+    - core/drupal

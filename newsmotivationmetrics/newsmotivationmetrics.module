@@ -377,3 +377,29 @@ function newsmotivationmetrics_get_entity_metrics() {
   
   return $metrics;
 }
+
+/**
+ * Implements hook_theme().
+ */
+function newsmotivationmetrics_theme() {
+  return [
+    'chart_debug' => [
+      'template' => 'chart-debug',
+      'variables' => [
+        'timelineData' => [],
+        'topTerms' => [],
+        'debugInfo' => [],
+      ],
+    ],
+    'analytics_dashboard' => [
+      'template' => 'analytics-dashboard',
+      'variables' => [
+        'timeline_data' => [],
+        'top_terms' => [],
+        'total_articles' => 0,
+        'date_range' => [],
+        'most_recent_articles' => [],
+      ],
+    ],
+  ];
+}

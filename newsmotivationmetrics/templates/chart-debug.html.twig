@@ -1,0 +1,398 @@
+<?php
+{# Chart Debug Page for The Truth Perspective Analytics #}
+<div class="chart-debug-page">
+  <h1>📊 The Truth Perspective - Chart Debug Console</h1>
+  
+  <div class="debug-info">
+    <h2>System Status</h2>
+    <div class="status-grid">
+      <div class="status-item">
+        <label>Chart.js Version:</label>
+        <span id="chartjs-version">Loading...</span>
+      </div>
+      <div class="status-item">
+        <label>Date Adapter:</label>
+        <span id="date-adapter-status">Loading...</span>
+      </div>
+      <div class="status-item">
+        <label>Debug Status:</label>
+        <span id="debug-status">Initializing...</span>
+      </div>
+      <div class="status-item">
+        <label>Data Points:</label>
+        <span>{{ debugInfo.dataPoints ?? 'Unknown' }}</span>
+      </div>
+      <div class="status-item">
+        <label>Terms Available:</label>
+        <span>{{ debugInfo.termCount ?? 'Unknown' }}</span>
+      </div>
+      <div class="status-item">
+        <label>Timestamp:</label>
+        <span>{{ debugInfo.timestamp ?? 'Unknown' | date('Y-m-d H:i:s') }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-controls">
+    <h2>Chart Testing Controls</h2>
+    <div class="control-buttons">
+      <button id="test-simple" class="btn btn-primary">Test Simple Chart</button>
+      <button id="test-date" class="btn btn-secondary">Test Date Chart</button>
+      <button id="update-chart" class="btn btn-success">Update Real Chart</button>
+      <button id="reset-chart" class="btn btn-warning">Reset to Top 5</button>
+      <button id="clear-chart" class="btn btn-danger">Clear Chart</button>
+    </div>
+  </div>
+
+  <div class="term-selection">
+    <h2>Term Selection</h2>
+    <select id="term-selector" multiple size="10">
+      {% for term in topTerms %}
+        <option value="{{ term.tid }}">{{ term.name }} ({{ term.usage_count }} articles)</option>
+      {% endfor %}
+    </select>
+    <p class="help-text">Hold Ctrl/Cmd to select multiple terms for comparison</p>
+  </div>
+
+  <div class="chart-container">
+    <h2>Chart Display</h2>
+    <div id="chart-status" class="chart-status info">Chart Status: Waiting to initialize</div>
+    <div class="chart-wrapper">
+      <canvas id="taxonomy-timeline-chart" width="800" height="400"></canvas>
+    </div>
+  </div>
+
+  <div class="raw-data-section">
+    <h2>Raw Data Analysis</h2>
+    <details>
+      <summary>Timeline Data ({{ timelineData|length }} terms)</summary>
+      <pre>{{ timelineData|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+    </details>
+    
+    <details>
+      <summary>Top Terms ({{ topTerms|length }} terms)</summary>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Term Name</th>
+            <th>Usage Count</th>
+            <th>Data Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for term in topTerms %}
+            {% set timelineTerm = timelineData|filter(t => t.term_id == term.tid)|first %}
+            {% set dataPointCount = timelineTerm ? timelineTerm.data|filter(d => d.count > 0)|length : 0 %}
+            <tr>
+              <td>{{ term.tid }}</td>
+              <td>{{ term.name }}</td>
+              <td>{{ term.usage_count }}</td>
+              <td>{{ dataPointCount }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+</div>
+
+{# Enhanced Chart.js CDN Loading with Multiple Fallbacks #}
+<script>
+  // Primary Chart.js CDN with fallback chain
+  (function() {
+    'use strict';
+    
+    const cdnUrls = [
+      'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js',
+      'https://unpkg.com/chart.js@4.4.0/dist/chart.umd.js'
+    ];
+    
+    const dateAdapterUrls = [
+      'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js',
+      'https://unpkg.com/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js'
+    ];
+    
+    let chartLoaded = false;
+    let adapterLoaded = false;
+    let currentCdnIndex = 0;
+    let currentAdapterIndex = 0;
+    
+    function loadScript(url, callback, errorCallback) {
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.async = true;
+      script.src = url;
+      
+      script.onload = function() {
+        console.log('Successfully loaded:', url);
+        callback();
+      };
+      
+      script.onerror = function() {
+        console.warn('Failed to load:', url);
+        errorCallback();
+      };
+      
+      document.head.appendChild(script);
+    }
+    
+    function tryLoadChart() {
+      if (currentCdnIndex >= cdnUrls.length) {
+        console.error('All Chart.js CDN sources failed');
+        window.chartLoadError = 'All Chart.js CDN sources failed';
+        return;
+      }
+      
+      const url = cdnUrls[currentCdnIndex];
+      console.log('Attempting to load Chart.js from:', url);
+      
+      loadScript(url, function() {
+        chartLoaded = true;
+        console.log('Chart.js loaded successfully from:', url);
+        checkLoadingComplete();
+        tryLoadDateAdapter();
+      }, function() {
+        currentCdnIndex++;
+        setTimeout(tryLoadChart, 500);
+      });
+    }
+    
+    function tryLoadDateAdapter() {
+      if (currentAdapterIndex >= dateAdapterUrls.length) {
+        console.error('All date adapter CDN sources failed');
+        window.adapterLoadError = 'All date adapter CDN sources failed';
+        checkLoadingComplete();
+        return;
+      }
+      
+      const url = dateAdapterUrls[currentAdapterIndex];
+      console.log('Attempting to load date adapter from:', url);
+      
+      loadScript(url, function() {
+        adapterLoaded = true;
+        console.log('Date adapter loaded successfully from:', url);
+        checkLoadingComplete();
+      }, function() {
+        currentAdapterIndex++;
+        setTimeout(tryLoadDateAdapter, 500);
+      });
+    }
+    
+    function checkLoadingComplete() {
+      if (chartLoaded && (adapterLoaded || currentAdapterIndex >= dateAdapterUrls.length)) {
+        console.log('Chart library loading complete. Chart.js available:', typeof Chart !== 'undefined');
+        console.log('Date adapter available:', typeof Chart !== 'undefined' && Chart.adapters && Chart.adapters._date);
+        
+        // Trigger Drupal behaviors after libraries load
+        if (typeof Drupal !== 'undefined' && Drupal.behaviors) {
+          setTimeout(function() {
+            Drupal.attachBehaviors(document, drupalSettings);
+          }, 100);
+        }
+      }
+    }
+    
+    // Start loading process
+    window.addEventListener('load', function() {
+      console.log('Starting Chart.js CDN loading process...');
+      tryLoadChart();
+    });
+    
+    // Fallback: try to load immediately if DOM is already ready
+    if (document.readyState === 'complete') {
+      console.log('DOM already complete, starting Chart.js loading...');
+      tryLoadChart();
+    }
+  })();
+</script>
+
+<style>
+.chart-debug-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.debug-info {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.status-item label {
+  font-weight: bold;
+  color: #495057;
+}
+
+.chart-controls {
+  background: #e9f7ef;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.btn-primary { background: #007bff; color: white; }
+.btn-secondary { background: #6c757d; color: white; }
+.btn-success { background: #28a745; color: white; }
+.btn-warning { background: #ffc107; color: #212529; }
+.btn-danger { background: #dc3545; color: white; }
+
+.btn:hover { opacity: 0.8; transform: translateY(-1px); }
+
+.term-selection {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+#term-selector {
+  width: 100%;
+  max-width: 500px;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.help-text {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 8px;
+}
+
+.chart-container {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.chart-status {
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.chart-status.info { background: #d1ecf1; color: #0c5460; }
+.chart-status.success { background: #d4edda; color: #155724; }
+.chart-status.warning { background: #fff3cd; color: #856404; }
+.chart-status.error { background: #f8d7da; color: #721c24; }
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+}
+
+#taxonomy-timeline-chart {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.raw-data-section {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.raw-data-section details {
+  margin-bottom: 20px;
+}
+
+.raw-data-section summary {
+  font-weight: bold;
+  cursor: pointer;
+  padding: 10px;
+  background: #e9ecef;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.raw-data-section pre {
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 15px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  max-height: 400px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.data-table th {
+  background: #f8f9fa;
+  font-weight: bold;
+}
+
+.data-table tr:hover {
+  background: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+  .control-buttons {
+    flex-direction: column;
+  }
+  
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-wrapper {
+    height: 300px;
+  }
+}
+</style>
