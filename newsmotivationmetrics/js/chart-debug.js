@@ -1,7 +1,7 @@
 /**
  * @file
  * Chart.js debug console for The Truth Perspective news motivation metrics.
- * Production-ready debug interface with proper date adapter detection.
+ * Enhanced date adapter detection for Chart.js v4.4.0 with date-fns adapter.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -42,7 +42,7 @@
       self.log('Initializing Chart Debug Console for The Truth Perspective');
       self.updateDebugStatus('Starting Chart.js debug verification...', 'info');
       
-      // Verify Chart.js is ready for debug operations
+      // Enhanced verification with extended wait for date adapter
       self.verifyChartJSForDebug(function(success, details) {
         if (success) {
           self.log('Chart.js debug environment ready');
@@ -58,11 +58,11 @@
     },
 
     /**
-     * Verify Chart.js is ready for debug operations with proper date adapter detection.
+     * Enhanced Chart.js and date adapter verification with multiple detection methods.
      */
     verifyChartJSForDebug: function(callback, attempts) {
       attempts = attempts || 0;
-      const maxAttempts = 30; // 3 seconds maximum wait
+      const maxAttempts = 50; // 5 seconds maximum wait for date adapter
       const self = this;
 
       // Enhanced Chart.js verification for debug mode
@@ -71,39 +71,96 @@
           window.Chart.version &&
           typeof window.Chart.register === 'function') {
         
-        // Proper date adapter detection
+        // Comprehensive date adapter detection for Chart.js v4.4.0
         let hasDateAdapter = false;
+        let dateAdapterDetails = 'Not detected';
+        
         try {
-          // Check for date-fns adapter specifically
-          hasDateAdapter = !!(window.Chart.adapters && 
-                             window.Chart.adapters._date && 
-                             typeof window.Chart.adapters._date.formats === 'function');
-          
-          // Alternative check for Chart.js v4.x date adapter
-          if (!hasDateAdapter && window._adapters) {
-            hasDateAdapter = !!(window._adapters && window._adapters.date);
+          // Method 1: Check Chart.js v4.x adapters registry
+          if (window.Chart.adapters && window.Chart.adapters._date) {
+            hasDateAdapter = true;
+            dateAdapterDetails = 'Chart.adapters._date available';
+            self.log('Date adapter detected via Chart.adapters._date');
           }
           
-          // Check if date-fns is available globally
+          // Method 2: Check for date-fns adapter specifically
+          if (!hasDateAdapter && window.Chart.adapters && 
+              window.Chart.adapters._date && 
+              typeof window.Chart.adapters._date.parse === 'function') {
+            hasDateAdapter = true;
+            dateAdapterDetails = 'date-fns adapter with parse function';
+            self.log('Date adapter detected via parse function');
+          }
+          
+          // Method 3: Test time scale availability
+          if (!hasDateAdapter && window.Chart.registry && 
+              window.Chart.registry.scales && 
+              window.Chart.registry.scales.items && 
+              window.Chart.registry.scales.items.time) {
+            hasDateAdapter = true;
+            dateAdapterDetails = 'Time scale registered';
+            self.log('Date adapter detected via time scale registration');
+          }
+          
+          // Method 4: Check global date-fns availability
           if (!hasDateAdapter && typeof window.dateFns !== 'undefined') {
             hasDateAdapter = true;
+            dateAdapterDetails = 'Global date-fns library available';
+            self.log('Date adapter detected via global date-fns');
           }
+          
+          // Method 5: Test date adapter by attempting to create a time scale
+          if (!hasDateAdapter) {
+            try {
+              // Attempt to access time scale constructor
+              const timeScale = window.Chart.registry.scales.get('time');
+              if (timeScale) {
+                hasDateAdapter = true;
+                dateAdapterDetails = 'Time scale constructor available';
+                self.log('Date adapter detected via time scale constructor');
+              }
+            } catch (timeError) {
+              self.log('Time scale test failed: ' + timeError.message);
+            }
+          }
+          
+          // Method 6: Direct adapter test
+          if (!hasDateAdapter) {
+            try {
+              // Try to directly access the adapter
+              if (window.Chart && window.Chart.adapters && 
+                  typeof window.Chart.adapters._date === 'object') {
+                hasDateAdapter = true;
+                dateAdapterDetails = 'Direct adapter object access';
+                self.log('Date adapter detected via direct object access');
+              }
+            } catch (directError) {
+              self.log('Direct adapter test failed: ' + directError.message);
+            }
+          }
+          
         } catch (error) {
           self.log('Date adapter detection error: ' + error.message);
+          dateAdapterDetails = 'Detection error: ' + error.message;
         }
         
         const details = {
           version: window.Chart.version,
           hasAdapters: !!(window.Chart.adapters),
           hasDateAdapter: hasDateAdapter,
+          dateAdapterDetails: dateAdapterDetails,
           registeredControllers: Object.keys(window.Chart.registry.controllers.items),
           registeredScales: Object.keys(window.Chart.registry.scales.items),
+          timeScaleAvailable: !!(window.Chart.registry.scales.items.time),
           loadTime: attempts * 100,
           debugReady: true
         };
         
         self.log('Chart.js debug verification successful: v' + details.version);
-        self.log('Date adapter available: ' + (hasDateAdapter ? 'Yes' : 'No'));
+        self.log('Date adapter status: ' + (hasDateAdapter ? 'Available' : 'Missing'));
+        self.log('Date adapter details: ' + dateAdapterDetails);
+        self.log('Time scale available: ' + (details.timeScaleAvailable ? 'Yes' : 'No'));
+        
         callback(true, details);
         return;
       }
@@ -117,6 +174,11 @@
         };
         callback(false, diagnostics);
         return;
+      }
+
+      // Progress updates for date adapter loading
+      if (attempts % 10 === 0 && attempts > 0) {
+        self.updateDebugStatus('Loading Chart.js and date adapter... (' + (attempts/10) + 's)', 'info');
       }
 
       setTimeout(function() {
@@ -135,7 +197,7 @@
     },
 
     /**
-     * Display comprehensive Chart.js information.
+     * Display comprehensive Chart.js information with enhanced date adapter details.
      */
     displayChartJSInfo: function(details) {
       // Update version info
@@ -145,15 +207,24 @@
         versionEl.style.color = '#28a745';
       }
 
-      // Update adapter info with proper detection
+      // Enhanced date adapter status display
       const adapterEl = document.getElementById('date-adapter-status');
       if (adapterEl) {
         if (details.hasDateAdapter) {
           adapterEl.textContent = '✅ Available (Timeline Ready)';
           adapterEl.style.color = '#28a745';
+          adapterEl.title = details.dateAdapterDetails;
         } else {
-          adapterEl.textContent = '⚠️ Missing (Timeline Limited)';
-          adapterEl.style.color = '#ffc107';
+          // Check if time scale is available even without adapter detection
+          if (details.timeScaleAvailable) {
+            adapterEl.textContent = '⚠️ Partial (Time Scale Available)';
+            adapterEl.style.color = '#ffc107';
+            adapterEl.title = 'Time scale registered but adapter detection failed';
+          } else {
+            adapterEl.textContent = '❌ Missing (Timeline Disabled)';
+            adapterEl.style.color = '#dc3545';
+            adapterEl.title = details.dateAdapterDetails;
+          }
         }
       }
 
@@ -164,16 +235,19 @@
         controllersEl.style.color = '#17a2b8';
       }
 
-      // Update scales info
+      // Update scales info with time scale highlight
       const scalesEl = document.getElementById('chart-scales');
       if (scalesEl) {
-        scalesEl.textContent = details.registeredScales.length + ' available';
-        scalesEl.style.color = '#17a2b8';
+        const scaleCount = details.registeredScales.length;
+        const timeScaleText = details.timeScaleAvailable ? ' (incl. time)' : ' (no time)';
+        scalesEl.textContent = scaleCount + ' available' + timeScaleText;
+        scalesEl.style.color = details.timeScaleAvailable ? '#28a745' : '#17a2b8';
       }
 
       this.log('Chart.js debug information displayed');
       this.log('Registered chart types: ' + details.registeredControllers.join(', '));
-      this.log('Date adapter status: ' + (details.hasDateAdapter ? 'Available' : 'Missing'));
+      this.log('Registered scales: ' + details.registeredScales.join(', '));
+      this.log('Date adapter details: ' + details.dateAdapterDetails);
     },
 
     /**
@@ -236,19 +310,19 @@
     },
 
     /**
-     * Load debug data for testing.
+     * Load debug data for testing with real publication dates.
      */
     loadDebugData: function() {
       const self = this;
       
-      // Create sample data for testing
+      // Create sample data using publication date format from Drupal nodes
       window.chartDebugData = {
         timelineData: [
-          { date: '2024-01-01', count: 5, label: 'Political Analysis' },
-          { date: '2024-01-02', count: 8, label: 'Economic Reports' },
-          { date: '2024-01-03', count: 3, label: 'Social Issues' },
-          { date: '2024-01-04', count: 12, label: 'Cultural Topics' },
-          { date: '2024-01-05', count: 7, label: 'International News' }
+          { date: '2024-01-01T00:00:00', count: 5, label: 'Political Analysis' },
+          { date: '2024-01-02T00:00:00', count: 8, label: 'Economic Reports' },
+          { date: '2024-01-03T00:00:00', count: 3, label: 'Social Issues' },
+          { date: '2024-01-04T00:00:00', count: 12, label: 'Cultural Topics' },
+          { date: '2024-01-05T00:00:00', count: 7, label: 'International News' }
         ],
         topTerms: [
           { name: 'Politics', count: 45 },
@@ -259,6 +333,7 @@
       };
 
       self.log('Debug data loaded: ' + window.chartDebugData.timelineData.length + ' timeline entries');
+      self.log('Using publication date format: Y-m-d\\TH:i:s');
       self.updateDebugStatus('Debug data loaded: ' + window.chartDebugData.timelineData.length + ' entries', 'info');
     },
 
@@ -345,7 +420,7 @@
     },
 
     /**
-     * Test timeline chart creation with date adapter.
+     * Enhanced timeline chart test with multiple fallback strategies.
      */
     testTimelineChart: function() {
       this.log('Testing timeline chart creation...');
@@ -364,63 +439,121 @@
 
         const ctx = canvas.getContext('2d');
         
-        // Test timeline chart with time scale
-        window.debugChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            datasets: [{
-              label: 'Article Timeline',
-              data: window.chartDebugData.timelineData.map(item => ({
-                x: item.date,
-                y: item.count
-              })),
-              borderColor: 'rgba(54, 162, 235, 1)',
-              backgroundColor: 'rgba(54, 162, 235, 0.1)',
-              fill: true,
-              tension: 0.4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              title: {
-                display: true,
-                text: 'The Truth Perspective - Timeline Chart Test',
-                font: { size: 16 }
-              }
+        // Enhanced timeline chart test with better error handling
+        this.log('Attempting timeline chart with time scale...');
+        
+        try {
+          // Test 1: Full timeline chart with time scale
+          window.debugChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              datasets: [{
+                label: 'Article Timeline (Publication Dates)',
+                data: window.chartDebugData.timelineData.map(item => ({
+                  x: item.date,
+                  y: item.count
+                })),
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                fill: true,
+                tension: 0.4
+              }]
             },
-            scales: {
-              x: {
-                type: 'time',
-                time: {
-                  unit: 'day'
-                },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
                 title: {
                   display: true,
-                  text: 'Date'
+                  text: 'The Truth Perspective - Timeline Chart (Publication Dates)',
+                  font: { size: 16 }
                 }
               },
-              y: {
-                beginAtZero: true,
-                title: {
-                  display: true,
-                  text: 'Article Count'
+              scales: {
+                x: {
+                  type: 'time',
+                  time: {
+                    unit: 'day',
+                    parser: 'YYYY-MM-DDTHH:mm:ss'
+                  },
+                  title: {
+                    display: true,
+                    text: 'Publication Date'
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Article Count'
+                  }
                 }
               }
             }
-          }
-        });
+          });
 
-        this.log('✅ Timeline chart test successful');
-        this.updateDebugStatus('✅ Timeline chart created successfully', 'success');
+          this.log('✅ Timeline chart with time scale successful');
+          this.updateDebugStatus('✅ Timeline chart with time scale created successfully', 'success');
+          
+        } catch (timeScaleError) {
+          this.log('Timeline with time scale failed: ' + timeScaleError.message);
+          this.log('Falling back to linear scale timeline...');
+          
+          // Test 2: Timeline chart with linear scale (fallback)
+          window.debugChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: window.chartDebugData.timelineData.map(item => {
+                // Format date for display
+                const date = new Date(item.date);
+                return date.toLocaleDateString();
+              }),
+              datasets: [{
+                label: 'Article Timeline (Linear Scale)',
+                data: window.chartDebugData.timelineData.map(item => item.count),
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                fill: true,
+                tension: 0.4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                title: {
+                  display: true,
+                  text: 'The Truth Perspective - Timeline Chart (Linear Scale Fallback)',
+                  font: { size: 16 }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Article Count'
+                  }
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Publication Date'
+                  }
+                }
+              }
+            }
+          });
+          
+          this.log('✅ Timeline chart with linear scale fallback successful');
+          this.updateDebugStatus('✅ Timeline chart created (linear scale fallback)', 'warning');
+        }
 
       } catch (error) {
-        this.log('❌ Timeline chart test failed: ' + error.message);
+        this.log('❌ Timeline chart test completely failed: ' + error.message);
         this.updateDebugStatus('❌ Timeline chart test failed: ' + error.message, 'error');
         
-        // If timeline fails, create a simple line chart instead
-        this.log('Falling back to simple line chart...');
+        // Final fallback: simple line chart
         this.createFallbackLineChart();
       }
     },
@@ -438,10 +571,10 @@
           data: {
             labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
             datasets: [{
-              label: 'Article Count (Simple)',
+              label: 'Article Count (Simple Fallback)',
               data: [5, 8, 3, 12, 7],
-              borderColor: 'rgba(54, 162, 235, 1)',
-              backgroundColor: 'rgba(54, 162, 235, 0.1)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              backgroundColor: 'rgba(75, 192, 192, 0.1)',
               fill: true,
               tension: 0.4
             }]
@@ -452,7 +585,7 @@
             plugins: {
               title: {
                 display: true,
-                text: 'The Truth Perspective - Fallback Line Chart',
+                text: 'The Truth Perspective - Simple Line Chart (Final Fallback)',
                 font: { size: 16 }
               }
             }
@@ -460,10 +593,11 @@
         });
         
         this.log('✅ Fallback line chart created');
-        this.updateDebugStatus('✅ Fallback line chart created (no date adapter)', 'warning');
+        this.updateDebugStatus('✅ Simple line chart created (final fallback)', 'warning');
         
       } catch (error) {
         this.log('❌ Fallback chart also failed: ' + error.message);
+        this.updateDebugStatus('❌ All chart creation attempts failed', 'error');
       }
     },
 
