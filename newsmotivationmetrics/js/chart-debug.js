@@ -5,14 +5,14 @@
  * Provides debugging functionality for Chart.js environment detection,
  * chart creation testing, and comprehensive dataset debugging.
  * 
- * @version 1.3.2
+ * @version 1.3.3
  */
 
 (function (Drupal, once) {
   'use strict';
 
   // Chart Debug Console Version
-  const CHART_DEBUG_VERSION = '1.3.2';
+  const CHART_DEBUG_VERSION = '1.3.3';
   
   let currentChart = null;
   let loadingRetryCount = 0;
@@ -263,36 +263,44 @@
   }
 
   /**
-   * Robust canvas preparation - target template's chart testing area
+   * Enhanced canvas preparation - target template's chart testing area with validation
    */
   function prepareCanvas() {
-    debugLog('Starting canvas preparation with template chart testing area...', 'info');
+    debugLog('Starting canvas preparation v1.3.3 - targeting template chart testing area...', 'info');
     
     try {
-      // Step 1: Target the specific chart testing container from template
-      let container = document.getElementById('debug-charts-container');
+      // Step 1: Validate template chart testing container exists
+      const container = document.getElementById('debug-charts-container');
       
       if (!container) {
-        debugLog('Template chart container #debug-charts-container not found', 'error');
-        throw new Error('Chart testing area container not found in template');
+        debugLog('CRITICAL: Template chart container #debug-charts-container not found in DOM', 'error');
+        debugLog('Available containers:', 'info', document.querySelectorAll('[id*="chart"], [class*="chart"]'));
+        throw new Error('Chart testing area container #debug-charts-container not found in template');
       }
       
-      debugLog('Found template chart testing area container', 'info');
+      debugLog('✅ Found template chart testing area container #debug-charts-container', 'success');
       
-      // Step 2: Clear any existing content in the container
+      // Step 2: Log container details for validation
+      debugLog(`Container details: ${container.tagName}, classes: ${container.className}, parent: ${container.parentElement ? container.parentElement.tagName : 'none'}`, 'info');
+      
+      // Step 3: Clear any existing content in the container
+      const existingContent = container.innerHTML.trim();
+      if (existingContent) {
+        debugLog(`Clearing existing container content: ${existingContent.substring(0, 100)}...`, 'info');
+      }
       container.innerHTML = '';
       
-      // Step 3: Clean up any existing canvas elements
+      // Step 4: Clean up any existing canvas elements globally
       const existingCanvas = document.getElementById('debug-main-chart');
       if (existingCanvas) {
         existingCanvas.remove();
-        debugLog('Previous canvas element removed', 'info');
+        debugLog('Previous canvas element removed from DOM', 'info');
       }
       
-      // Step 4: Create new canvas for the chart testing area
+      // Step 5: Create new canvas specifically for chart testing area
       const newCanvas = document.createElement('canvas');
       newCanvas.id = 'debug-main-chart';
-      newCanvas.className = 'chart-debug-canvas';
+      newCanvas.className = 'chart-debug-canvas template-chart';
       newCanvas.width = 800;
       newCanvas.height = 400;
       newCanvas.style.cssText = `
@@ -302,25 +310,37 @@
         margin: 0 auto;
         border-radius: 4px;
         background: white;
+        border: 1px solid #e1e1e1;
       `;
-      newCanvas.setAttribute('aria-label', 'Chart Debug Canvas');
+      newCanvas.setAttribute('aria-label', 'Chart Debug Canvas v1.3.3');
+      newCanvas.setAttribute('data-chart-version', '1.3.3');
       
-      // Step 5: Append canvas to the chart testing container
+      // Step 6: Append canvas to the correct template container
       container.appendChild(newCanvas);
-      debugLog('Canvas element successfully added to chart testing area', 'success');
+      debugLog('✅ Canvas element successfully added to #debug-charts-container', 'success');
       
-      // Step 6: Verify canvas context
+      // Step 7: Verify canvas context and container relationship
       const ctx = newCanvas.getContext('2d');
       if (!ctx) {
         debugLog('Canvas 2D context not available', 'error');
         throw new Error('Canvas 2D rendering context not supported');
       }
       
-      debugLog('Canvas preparation completed in chart testing area', 'success');
+      // Step 8: Final validation
+      const validationContainer = document.getElementById('debug-charts-container');
+      const validationCanvas = validationContainer.querySelector('#debug-main-chart');
+      if (!validationCanvas) {
+        debugLog('VALIDATION FAILED: Canvas not found in container after creation', 'error');
+        throw new Error('Canvas validation failed');
+      }
+      
+      debugLog('✅ Canvas preparation v1.3.3 completed successfully in template chart testing area', 'success');
+      debugLog(`Final container children count: ${container.children.length}`, 'info');
+      
       return newCanvas;
       
     } catch (error) {
-      debugLog(`Canvas preparation failed: ${error.message}`, 'error');
+      debugLog(`❌ Canvas preparation v1.3.3 failed: ${error.message}`, 'error');
       throw error;
     }
   }
@@ -329,7 +349,7 @@
    * Test simple bar chart
    */
   function testSimpleChart() {
-    debugLog('Testing simple bar chart creation...', 'info');
+    debugLog('Testing simple bar chart creation in template container...', 'info');
     
     try {
       destroyExistingChart();
@@ -365,7 +385,7 @@
         plugins: {
           title: {
             display: true,
-            text: 'Simple Bar Chart Test - The Truth Perspective',
+            text: 'Simple Bar Chart Test - The Truth Perspective v1.3.3',
             font: {
               size: 16,
               weight: 'bold'
@@ -399,10 +419,10 @@
         options: chartOptions
       });
 
-      debugLog('Simple bar chart created successfully', 'success');
+      debugLog('✅ Simple bar chart created successfully in template container', 'success');
 
     } catch (error) {
-      debugLog(`Simple chart creation failed: ${error.message}`, 'error');
+      debugLog(`❌ Simple chart creation failed: ${error.message}`, 'error');
     }
   }
 
@@ -410,7 +430,7 @@
    * Test timeline chart with time scale
    */
   function testTimelineChart() {
-    debugLog('Testing timeline chart with time scale...', 'info');
+    debugLog('Testing timeline chart with time scale in template container...', 'info');
     
     try {
       destroyExistingChart();
@@ -444,7 +464,7 @@
         plugins: {
           title: {
             display: true,
-            text: 'Timeline Chart Test - Processing Activity',
+            text: 'Timeline Chart Test - Processing Activity v1.3.3',
             font: {
               size: 16,
               weight: 'bold'
@@ -481,10 +501,10 @@
         options: timelineOptions
       });
 
-      debugLog('Timeline chart with time scale created successfully', 'success');
+      debugLog('✅ Timeline chart with time scale created successfully in template container', 'success');
 
     } catch (error) {
-      debugLog(`Timeline chart creation failed: ${error.message}`, 'error');
+      debugLog(`❌ Timeline chart creation failed: ${error.message}`, 'error');
       
       // Fallback to category scale
       debugLog('Attempting fallback to category scale...', 'warning');
@@ -507,9 +527,9 @@
           options: fallbackOptions
         });
         
-        debugLog('Fallback chart created successfully', 'success');
+        debugLog('✅ Fallback chart created successfully in template container', 'success');
       } catch (fallbackError) {
-        debugLog(`Fallback chart creation failed: ${fallbackError.message}`, 'error');
+        debugLog(`❌ Fallback chart creation failed: ${fallbackError.message}`, 'error');
       }
     }
   }
@@ -518,7 +538,7 @@
    * Test real data chart
    */
   function testRealDataChart() {
-    debugLog('Testing real data doughnut chart...', 'info');
+    debugLog('Testing real data doughnut chart in template container...', 'info');
     
     try {
       destroyExistingChart();
@@ -552,7 +572,7 @@
         plugins: {
           title: {
             display: true,
-            text: 'Real Data Distribution - Article Analytics',
+            text: 'Real Data Distribution - Article Analytics v1.3.3',
             font: {
               size: 16,
               weight: 'bold'
@@ -571,10 +591,10 @@
         options: doughnutOptions
       });
 
-      debugLog('Real data doughnut chart created successfully', 'success');
+      debugLog('✅ Real data doughnut chart created successfully in template container', 'success');
 
     } catch (error) {
-      debugLog(`Real data chart creation failed: ${error.message}`, 'error');
+      debugLog(`❌ Real data chart creation failed: ${error.message}`, 'error');
     }
   }
 
@@ -582,7 +602,7 @@
    * Enhanced clear charts function for template chart testing area
    */
   function clearCharts() {
-    debugLog('Clearing charts in template testing area...', 'info');
+    debugLog('Clearing charts in template testing area v1.3.3...', 'info');
     
     try {
       destroyExistingChart();
@@ -603,9 +623,9 @@
             Click a test button above to generate debug charts
           </p>
         `;
-        debugLog('Chart testing area reset to placeholder', 'success');
+        debugLog('✅ Chart testing area reset to placeholder v1.3.3', 'success');
       } else {
-        debugLog('Chart testing container not found during clear operation', 'warning');
+        debugLog('❌ Chart testing container #debug-charts-container not found during clear operation', 'warning');
       }
       
       debugLog('Charts cleared successfully', 'success');
@@ -619,7 +639,7 @@
    * Refresh debug data
    */
   function refreshDebugData() {
-    debugLog('Refreshing debug data and re-detecting environment...', 'info');
+    debugLog('Refreshing debug data and re-detecting environment v1.3.3...', 'info');
     
     loadingRetryCount = 0; // Reset retry count
     
@@ -681,7 +701,7 @@
    * Attach event listeners for debug controls
    */
   function attachEventListeners() {
-    debugLog('Attaching event listeners to debug control buttons...', 'info');
+    debugLog('Attaching event listeners to debug control buttons v1.3.3...', 'info');
     
     const simpleBtn = document.getElementById('test-simple-chart');
     if (simpleBtn) {
@@ -723,7 +743,7 @@
       debugLog('Refresh data button not found', 'warning');
     }
 
-    debugLog('Event listeners attachment completed', 'success');
+    debugLog('Event listeners attachment completed v1.3.3', 'success');
   }
 
 })(Drupal, once);

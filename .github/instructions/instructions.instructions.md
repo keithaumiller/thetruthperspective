@@ -26,7 +26,10 @@ applyTo: '**'
 Skip giving "Immediate Fix:" solutions
 Instead, focus on the fix for the codebase.
 Code is tested on the server, not locally in the workspace.
-Always generate the commit and push commands for the code changes after changes are generated and applied to the workspace.
+Always generate the commit and push commands for the code changes after changes are generated and applied to the workspace. Do not include curl commands or testing commands just commit and push commands.
+
+When generating code, always assume the code is being written for the production server.
+
 Always assume we are troubleshooting on the production server
 all curl testing functions should assume they need to run against the production URL:
 https://thetruthperspective.org
