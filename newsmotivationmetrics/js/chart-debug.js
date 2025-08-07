@@ -1,7 +1,7 @@
 /**
  * @file
  * Chart.js debug console for The Truth Perspective news motivation metrics.
- * Production-ready with proper chart lifecycle management and date formatting.
+ * Production-ready with enhanced chart lifecycle management and date formatting.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -470,38 +470,104 @@
     },
 
     /**
-     * Properly destroy existing chart before creating new one.
+     * Enhanced chart destruction with comprehensive cleanup for Chart.js v4.x.
      */
     destroyExistingChart: function() {
       const self = this;
       
       try {
+        self.log('Starting comprehensive chart destruction...');
+        
         // Method 1: Destroy via global reference
         if (window.debugChart) {
           self.log('Destroying existing chart via global reference');
-          window.debugChart.destroy();
+          try {
+            window.debugChart.destroy();
+            self.log('Global chart reference destroyed successfully');
+          } catch (globalError) {
+            self.log('Error destroying global chart: ' + globalError.message);
+          }
           window.debugChart = null;
         }
         
-        // Method 2: Find chart instance via Chart.js registry
+        // Method 2: Find and destroy all chart instances via Chart.js registry
         const canvas = document.getElementById('debug-main-chart');
         if (canvas) {
-          const existingChart = Chart.getChart(canvas);
-          if (existingChart) {
-            self.log('Destroying existing chart via Chart.getChart()');
-            existingChart.destroy();
+          // Get all chart instances associated with this canvas
+          try {
+            const existingChart = Chart.getChart(canvas);
+            if (existingChart) {
+              self.log('Destroying existing chart via Chart.getChart() - ID: ' + existingChart.id);
+              existingChart.destroy();
+              self.log('Chart instance destroyed via Chart.getChart()');
+            } else {
+              self.log('No chart instance found via Chart.getChart()');
+            }
+          } catch (getChartError) {
+            self.log('Error with Chart.getChart(): ' + getChartError.message);
+          }
+          
+          // Method 3: Destroy all charts globally (aggressive cleanup)
+          try {
+            // Get all registered charts and destroy any using our canvas
+            Object.values(Chart.instances || {}).forEach(function(chart) {
+              if (chart && chart.canvas && chart.canvas.id === 'debug-main-chart') {
+                self.log('Destroying chart instance found in Chart.instances - ID: ' + chart.id);
+                chart.destroy();
+              }
+            });
+          } catch (instancesError) {
+            self.log('Error checking Chart.instances: ' + instancesError.message);
+          }
+          
+          // Method 4: Remove canvas and recreate it (nuclear option)
+          const container = canvas.parentNode;
+          if (container) {
+            self.log('Removing and recreating canvas element');
+            container.removeChild(canvas);
+            
+            // Create new canvas
+            const newCanvas = document.createElement('canvas');
+            newCanvas.id = 'debug-main-chart';
+            newCanvas.width = 800;
+            newCanvas.height = 400;
+            newCanvas.style.maxWidth = '100%';
+            newCanvas.style.height = 'auto';
+            container.appendChild(newCanvas);
+            self.log('New canvas element created');
           }
         }
         
-        // Method 3: Clear canvas context
-        if (canvas) {
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          self.log('Canvas context cleared');
+        // Method 5: Force garbage collection if available
+        if (typeof window.gc === 'function') {
+          window.gc();
+          self.log('Forced garbage collection');
         }
+        
+        self.log('Chart destruction completed');
         
       } catch (error) {
         self.log('Error during chart destruction: ' + error.message);
+        
+        // Fallback: Try to recreate the canvas container entirely
+        try {
+          const chartsContainer = document.getElementById('debug-charts-container');
+          if (chartsContainer) {
+            self.log('Recreating entire charts container as fallback');
+            chartsContainer.innerHTML = '';
+            
+            const newCanvas = document.createElement('canvas');
+            newCanvas.id = 'debug-main-chart';
+            newCanvas.width = 800;
+            newCanvas.height = 400;
+            newCanvas.style.maxWidth = '100%';
+            newCanvas.style.height = 'auto';
+            chartsContainer.appendChild(newCanvas);
+            self.log('Charts container recreated successfully');
+          }
+        } catch (fallbackError) {
+          self.log('Fallback canvas recreation failed: ' + fallbackError.message);
+        }
       }
     },
 
@@ -513,71 +579,80 @@
       this.updateDebugStatus('Creating simple test chart...', 'info');
 
       try {
-        const canvas = document.getElementById('debug-main-chart');
-        if (!canvas) {
-          throw new Error('Debug chart canvas not found');
-        }
-
-        // Properly destroy any existing chart
+        // Enhanced chart destruction before creation
         this.destroyExistingChart();
-
-        const ctx = canvas.getContext('2d');
-        window.debugChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['Political', 'Economic', 'Social', 'Cultural'],
-            datasets: [{
-              label: 'News Motivation Categories',
-              data: [12, 19, 3, 5],
-              backgroundColor: [
-                'rgba(54, 162, 235, 0.8)',
-                'rgba(255, 99, 132, 0.8)',
-                'rgba(255, 205, 86, 0.8)',
-                'rgba(75, 192, 192, 0.8)'
-              ],
-              borderColor: [
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 99, 132, 1)',
-                'rgba(255, 205, 86, 1)',
-                'rgba(75, 192, 192, 1)'
-              ],
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              title: {
-                display: true,
-                text: 'The Truth Perspective - Simple Chart Test',
-                font: { size: 16 }
-              },
-              legend: {
-                display: true,
-                position: 'top'
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                title: {
-                  display: true,
-                  text: 'Article Count'
-                }
-              },
-              x: {
-                title: {
-                  display: true,
-                  text: 'Motivation Categories'
-                }
-              }
+        
+        // Small delay to ensure cleanup is complete
+        setTimeout(() => {
+          try {
+            const canvas = document.getElementById('debug-main-chart');
+            if (!canvas) {
+              throw new Error('Debug chart canvas not found after cleanup');
             }
-          }
-        });
 
-        this.log('✅ Simple chart test successful');
-        this.updateDebugStatus('✅ Simple chart created successfully', 'success');
+            const ctx = canvas.getContext('2d');
+            window.debugChart = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: ['Political', 'Economic', 'Social', 'Cultural'],
+                datasets: [{
+                  label: 'News Motivation Categories',
+                  data: [12, 19, 3, 5],
+                  backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(255, 205, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)'
+                  ],
+                  borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 205, 86, 1)',
+                    'rgba(75, 192, 192, 1)'
+                  ],
+                  borderWidth: 2
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  title: {
+                    display: true,
+                    text: 'The Truth Perspective - Simple Chart Test',
+                    font: { size: 16 }
+                  },
+                  legend: {
+                    display: true,
+                    position: 'top'
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Article Count'
+                    }
+                  },
+                  x: {
+                    title: {
+                      display: true,
+                      text: 'Motivation Categories'
+                    }
+                  }
+                }
+              }
+            });
+
+            this.log('✅ Simple chart test successful');
+            this.updateDebugStatus('✅ Simple chart created successfully', 'success');
+
+          } catch (delayedError) {
+            this.log('❌ Simple chart test failed after cleanup: ' + delayedError.message);
+            this.updateDebugStatus('❌ Simple chart test failed: ' + delayedError.message, 'error');
+          }
+        }, 100);
 
       } catch (error) {
         this.log('❌ Simple chart test failed: ' + error.message);
@@ -593,155 +668,175 @@
       this.updateDebugStatus('Creating timeline test chart...', 'info');
 
       try {
-        const canvas = document.getElementById('debug-main-chart');
-        if (!canvas) {
-          throw new Error('Debug chart canvas not found');
-        }
-
-        // Properly destroy any existing chart
+        // Enhanced chart destruction before creation
         this.destroyExistingChart();
+        
+        // Small delay to ensure cleanup is complete
+        setTimeout(() => {
+          try {
+            const canvas = document.getElementById('debug-main-chart');
+            if (!canvas) {
+              throw new Error('Debug chart canvas not found after cleanup');
+            }
 
-        const ctx = canvas.getContext('2d');
-        
-        this.log('Attempting timeline chart with time scale...');
-        
-        try {
-          // Use estimatedDate when available, fallback to date
-          const timelineData = window.chartDebugData.timelineData.map(item => ({
-            x: item.estimatedDate || item.date,
-            y: item.count,
-            label: item.label
-          }));
-          
-          window.debugChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-              datasets: [{
-                label: 'Article Timeline (Publication Dates)',
-                data: timelineData,
-                borderColor: 'rgba(54, 162, 235, 1)',
-                backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 6,
-                pointHoverRadius: 8
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                title: {
-                  display: true,
-                  text: 'The Truth Perspective - Timeline Chart (Publication Dates)',
-                  font: { size: 16 }
+            const ctx = canvas.getContext('2d');
+            
+            this.log('Attempting timeline chart with time scale...');
+            
+            try {
+              // Use estimatedDate when available, fallback to date
+              const timelineData = window.chartDebugData.timelineData.map(item => ({
+                x: item.estimatedDate || item.date,
+                y: item.count,
+                label: item.label
+              }));
+              
+              window.debugChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  datasets: [{
+                    label: 'Article Timeline (Publication Dates)',
+                    data: timelineData,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                  }]
                 },
-                tooltip: {
-                  callbacks: {
-                    title: function(context) {
-                      return 'Publication: ' + new Date(context[0].parsed.x).toLocaleDateString();
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    title: {
+                      display: true,
+                      text: 'The Truth Perspective - Timeline Chart (Publication Dates)',
+                      font: { size: 16 }
                     },
-                    label: function(context) {
-                      const dataPoint = timelineData[context.dataIndex];
-                      return [
-                        'Articles: ' + context.parsed.y,
-                        'Category: ' + (dataPoint.label || 'Unknown')
-                      ];
-                    }
-                  }
-                }
-              },
-              scales: {
-                x: {
-                  type: 'time',
-                  time: {
-                    unit: 'day',
-                    parser: 'yyyy-MM-ddTHH:mm:ss', // Fixed: use 'yyyy' instead of 'YYYY'
-                    displayFormats: {
-                      day: 'MMM dd'
+                    tooltip: {
+                      callbacks: {
+                        title: function(context) {
+                          return 'Publication: ' + new Date(context[0].parsed.x).toLocaleDateString();
+                        },
+                        label: function(context) {
+                          const dataPoint = timelineData[context.dataIndex];
+                          return [
+                            'Articles: ' + context.parsed.y,
+                            'Category: ' + (dataPoint.label || 'Unknown')
+                          ];
+                        }
+                      }
                     }
                   },
-                  title: {
-                    display: true,
-                    text: 'Publication Date (Estimated)'
-                  }
-                },
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Article Count'
+                  scales: {
+                    x: {
+                      type: 'time',
+                      time: {
+                        unit: 'day',
+                        parser: 'yyyy-MM-dd\'T\'HH:mm:ss', // Fixed: proper escape for literal 'T'
+                        displayFormats: {
+                          day: 'MMM dd'
+                        }
+                      },
+                      title: {
+                        display: true,
+                        text: 'Publication Date (Estimated)'
+                      }
+                    },
+                    y: {
+                      beginAtZero: true,
+                      title: {
+                        display: true,
+                        text: 'Article Count'
+                      }
+                    }
                   }
                 }
-              }
-            }
-          });
+              });
 
-          this.log('✅ Timeline chart with time scale successful');
-          this.updateDebugStatus('✅ Timeline chart with time scale created successfully', 'success');
-          
-        } catch (timeScaleError) {
-          this.log('Timeline with time scale failed: ' + timeScaleError.message);
-          this.log('Falling back to linear scale timeline...');
-          
-          // Properly destroy failed chart attempt before fallback
-          this.destroyExistingChart();
-          
-          // Fallback: Timeline chart with linear scale
-          window.debugChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: window.chartDebugData.timelineData.map(item => {
-                const dateToUse = item.estimatedDate || item.date;
-                const date = new Date(dateToUse);
-                return date.toLocaleDateString();
-              }),
-              datasets: [{
-                label: 'Article Timeline (Linear Scale)',
-                data: window.chartDebugData.timelineData.map(item => item.count),
-                borderColor: 'rgba(255, 99, 132, 1)',
-                backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                fill: true,
-                tension: 0.4
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                title: {
-                  display: true,
-                  text: 'The Truth Perspective - Timeline Chart (Linear Scale Fallback)',
-                  font: { size: 16 }
+              this.log('✅ Timeline chart with time scale successful');
+              this.updateDebugStatus('✅ Timeline chart with time scale created successfully', 'success');
+              
+            } catch (timeScaleError) {
+              this.log('Timeline with time scale failed: ' + timeScaleError.message);
+              this.log('Falling back to linear scale timeline...');
+              
+              // Properly destroy failed chart attempt before fallback
+              this.destroyExistingChart();
+              
+              setTimeout(() => {
+                try {
+                  const fallbackCanvas = document.getElementById('debug-main-chart');
+                  const fallbackCtx = fallbackCanvas.getContext('2d');
+                  
+                  // Fallback: Timeline chart with linear scale
+                  window.debugChart = new Chart(fallbackCtx, {
+                    type: 'line',
+                    data: {
+                      labels: window.chartDebugData.timelineData.map(item => {
+                        const dateToUse = item.estimatedDate || item.date;
+                        const date = new Date(dateToUse);
+                        return date.toLocaleDateString();
+                      }),
+                      datasets: [{
+                        label: 'Article Timeline (Linear Scale)',
+                        data: window.chartDebugData.timelineData.map(item => item.count),
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                      }]
+                    },
+                    options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        title: {
+                          display: true,
+                          text: 'The Truth Perspective - Timeline Chart (Linear Scale Fallback)',
+                          font: { size: 16 }
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          title: {
+                            display: true,
+                            text: 'Article Count'
+                          }
+                        },
+                        x: {
+                          title: {
+                            display: true,
+                            text: 'Publication Date'
+                          }
+                        }
+                      }
+                    }
+                  });
+                  
+                  this.log('✅ Timeline chart with linear scale fallback successful');
+                  this.updateDebugStatus('✅ Timeline chart created (linear scale fallback)', 'warning');
+                  
+                } catch (fallbackError) {
+                  this.log('❌ Linear scale fallback failed: ' + fallbackError.message);
+                  this.updateDebugStatus('❌ Timeline chart fallback failed: ' + fallbackError.message, 'error');
+                  this.createFallbackLineChart();
                 }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Article Count'
-                  }
-                },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Publication Date'
-                  }
-                }
-              }
+              }, 100);
             }
-          });
-          
-          this.log('✅ Timeline chart with linear scale fallback successful');
-          this.updateDebugStatus('✅ Timeline chart created (linear scale fallback)', 'warning');
-        }
+
+          } catch (delayedError) {
+            this.log('❌ Timeline chart test failed after cleanup: ' + delayedError.message);
+            this.updateDebugStatus('❌ Timeline chart test failed: ' + delayedError.message, 'error');
+            this.createFallbackLineChart();
+          }
+        }, 100);
 
       } catch (error) {
         this.log('❌ Timeline chart test completely failed: ' + error.message);
         this.updateDebugStatus('❌ Timeline chart test failed: ' + error.message, 'error');
-        
-        // Final fallback: simple line chart
         this.createFallbackLineChart();
       }
     },
@@ -751,44 +846,50 @@
      */
     createFallbackLineChart: function() {
       try {
-        const canvas = document.getElementById('debug-main-chart');
-        
-        // Properly destroy any existing chart
         this.destroyExistingChart();
         
-        const ctx = canvas.getContext('2d');
-        
-        window.debugChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
-            datasets: [{
-              label: 'Article Count (Simple Fallback)',
-              data: [5, 8, 3, 12, 7],
-              borderColor: 'rgba(75, 192, 192, 1)',
-              backgroundColor: 'rgba(75, 192, 192, 0.1)',
-              fill: true,
-              tension: 0.4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              title: {
-                display: true,
-                text: 'The Truth Perspective - Simple Line Chart (Final Fallback)',
-                font: { size: 16 }
+        setTimeout(() => {
+          try {
+            const canvas = document.getElementById('debug-main-chart');
+            const ctx = canvas.getContext('2d');
+            
+            window.debugChart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
+                datasets: [{
+                  label: 'Article Count (Simple Fallback)',
+                  data: [5, 8, 3, 12, 7],
+                  borderColor: 'rgba(75, 192, 192, 1)',
+                  backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                  fill: true,
+                  tension: 0.4
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  title: {
+                    display: true,
+                    text: 'The Truth Perspective - Simple Line Chart (Final Fallback)',
+                    font: { size: 16 }
+                  }
+                }
               }
-            }
+            });
+            
+            this.log('✅ Fallback line chart created');
+            this.updateDebugStatus('✅ Simple line chart created (final fallback)', 'warning');
+            
+          } catch (fallbackError) {
+            this.log('❌ Fallback chart creation failed: ' + fallbackError.message);
+            this.updateDebugStatus('❌ All chart creation attempts failed', 'error');
           }
-        });
-        
-        this.log('✅ Fallback line chart created');
-        this.updateDebugStatus('✅ Simple line chart created (final fallback)', 'warning');
+        }, 100);
         
       } catch (error) {
-        this.log('❌ Fallback chart also failed: ' + error.message);
+        this.log('❌ Fallback chart setup failed: ' + error.message);
         this.updateDebugStatus('❌ All chart creation attempts failed', 'error');
       }
     },
@@ -801,50 +902,59 @@
       this.updateDebugStatus('Creating real data test chart...', 'info');
 
       try {
-        const canvas = document.getElementById('debug-main-chart');
-        if (!canvas) {
-          throw new Error('Debug chart canvas not found');
-        }
-
-        // Properly destroy any existing chart
+        // Enhanced chart destruction before creation
         this.destroyExistingChart();
-
-        const ctx = canvas.getContext('2d');
-        window.debugChart = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: window.chartDebugData.topTerms.map(term => term.name),
-            datasets: [{
-              label: 'Top Terms Distribution',
-              data: window.chartDebugData.topTerms.map(term => term.count),
-              backgroundColor: [
-                'rgba(255, 99, 132, 0.8)',
-                'rgba(54, 162, 235, 0.8)',
-                'rgba(255, 205, 86, 0.8)',
-                'rgba(75, 192, 192, 0.8)'
-              ],
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              title: {
-                display: true,
-                text: 'The Truth Perspective - Top Terms Analysis',
-                font: { size: 16 }
-              },
-              legend: {
-                display: true,
-                position: 'right'
-              }
+        
+        // Small delay to ensure cleanup is complete
+        setTimeout(() => {
+          try {
+            const canvas = document.getElementById('debug-main-chart');
+            if (!canvas) {
+              throw new Error('Debug chart canvas not found after cleanup');
             }
-          }
-        });
 
-        this.log('✅ Real data chart test successful');
-        this.updateDebugStatus('✅ Real data chart created successfully', 'success');
+            const ctx = canvas.getContext('2d');
+            window.debugChart = new Chart(ctx, {
+              type: 'doughnut',
+              data: {
+                labels: window.chartDebugData.topTerms.map(term => term.name),
+                datasets: [{
+                  label: 'Top Terms Distribution',
+                  data: window.chartDebugData.topTerms.map(term => term.count),
+                  backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 205, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)'
+                  ],
+                  borderWidth: 2
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  title: {
+                    display: true,
+                    text: 'The Truth Perspective - Top Terms Analysis',
+                    font: { size: 16 }
+                  },
+                  legend: {
+                    display: true,
+                    position: 'right'
+                  }
+                }
+              }
+            });
+
+            this.log('✅ Real data chart test successful');
+            this.updateDebugStatus('✅ Real data chart created successfully', 'success');
+
+          } catch (delayedError) {
+            this.log('❌ Real data chart test failed after cleanup: ' + delayedError.message);
+            this.updateDebugStatus('❌ Real data chart test failed: ' + delayedError.message, 'error');
+          }
+        }, 100);
 
       } catch (error) {
         this.log('❌ Real data chart test failed: ' + error.message);
