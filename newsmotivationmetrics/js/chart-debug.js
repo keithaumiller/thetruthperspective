@@ -5,14 +5,14 @@
  * Provides debugging functionality for Chart.js environment detection,
  * chart creation testing, and comprehensive dataset debugging.
  * 
- * @version 1.3.3
+ * @version 1.3.4
  */
 
 (function (Drupal, once) {
   'use strict';
 
   // Chart Debug Console Version
-  const CHART_DEBUG_VERSION = '1.3.3';
+  const CHART_DEBUG_VERSION = '1.3.4';
   
   let currentChart = null;
   let loadingRetryCount = 0;
@@ -33,6 +33,23 @@
     if (statusElement) {
       statusElement.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
       statusElement.className = `debug-status ${type}`;
+    }
+    
+    // Update debug output console
+    const outputElement = document.getElementById('debug-output');
+    if (outputElement) {
+      const newLine = `${new Date().toLocaleTimeString()}: ${message}`;
+      const currentContent = outputElement.textContent || '';
+      const lines = currentContent.split('\n');
+      
+      // Keep only last 50 lines to prevent memory issues
+      if (lines.length > 50) {
+        lines.shift();
+      }
+      
+      lines.push(newLine);
+      outputElement.textContent = lines.join('\n');
+      outputElement.scrollTop = outputElement.scrollHeight;
     }
   }
 
@@ -190,13 +207,13 @@
         element.innerHTML = content;
         // Add success styling for positive confirmations
         if (content.includes('✅')) {
-          element.className = 'version-display status-success';
+          element.className = 'environment-value status-success';
         } else if (content.includes('❌')) {
-          element.className = 'version-display status-error';
+          element.className = 'environment-value status-error';
         } else if (content.includes('Loading...') || content.includes('Detecting...')) {
-          element.className = 'version-display status-loading';
+          element.className = 'environment-value status-loading';
         } else {
-          element.className = 'version-display';
+          element.className = 'environment-value';
         }
         debugLog(`Updated display element ${elementId}: ${content}`, 'info');
       } else {
@@ -266,7 +283,7 @@
    * Enhanced canvas preparation - target template's chart testing area with validation
    */
   function prepareCanvas() {
-    debugLog('Starting canvas preparation v1.3.3 - targeting template chart testing area...', 'info');
+    debugLog('Starting canvas preparation v1.3.4 - targeting template chart testing area...', 'info');
     
     try {
       // Step 1: Validate template chart testing container exists
@@ -312,8 +329,8 @@
         background: white;
         border: 1px solid #e1e1e1;
       `;
-      newCanvas.setAttribute('aria-label', 'Chart Debug Canvas v1.3.3');
-      newCanvas.setAttribute('data-chart-version', '1.3.3');
+      newCanvas.setAttribute('aria-label', 'Chart Debug Canvas v1.3.4');
+      newCanvas.setAttribute('data-chart-version', '1.3.4');
       
       // Step 6: Append canvas to the correct template container
       container.appendChild(newCanvas);
@@ -334,13 +351,13 @@
         throw new Error('Canvas validation failed');
       }
       
-      debugLog('✅ Canvas preparation v1.3.3 completed successfully in template chart testing area', 'success');
+      debugLog('✅ Canvas preparation v1.3.4 completed successfully in template chart testing area', 'success');
       debugLog(`Final container children count: ${container.children.length}`, 'info');
       
       return newCanvas;
       
     } catch (error) {
-      debugLog(`❌ Canvas preparation v1.3.3 failed: ${error.message}`, 'error');
+      debugLog(`❌ Canvas preparation v1.3.4 failed: ${error.message}`, 'error');
       throw error;
     }
   }
@@ -385,7 +402,7 @@
         plugins: {
           title: {
             display: true,
-            text: 'Simple Bar Chart Test - The Truth Perspective v1.3.3',
+            text: 'Simple Bar Chart Test - The Truth Perspective v1.3.4',
             font: {
               size: 16,
               weight: 'bold'
@@ -464,7 +481,7 @@
         plugins: {
           title: {
             display: true,
-            text: 'Timeline Chart Test - Processing Activity v1.3.3',
+            text: 'Timeline Chart Test - Processing Activity v1.3.4',
             font: {
               size: 16,
               weight: 'bold'
@@ -572,7 +589,7 @@
         plugins: {
           title: {
             display: true,
-            text: 'Real Data Distribution - Article Analytics v1.3.3',
+            text: 'Real Data Distribution - Article Analytics v1.3.4',
             font: {
               size: 16,
               weight: 'bold'
@@ -602,7 +619,7 @@
    * Enhanced clear charts function for template chart testing area
    */
   function clearCharts() {
-    debugLog('Clearing charts in template testing area v1.3.3...', 'info');
+    debugLog('Clearing charts in template testing area v1.3.4...', 'info');
     
     try {
       destroyExistingChart();
@@ -623,7 +640,7 @@
             Click a test button above to generate debug charts
           </p>
         `;
-        debugLog('✅ Chart testing area reset to placeholder v1.3.3', 'success');
+        debugLog('✅ Chart testing area reset to placeholder v1.3.4', 'success');
       } else {
         debugLog('❌ Chart testing container #debug-charts-container not found during clear operation', 'warning');
       }
@@ -639,7 +656,7 @@
    * Refresh debug data
    */
   function refreshDebugData() {
-    debugLog('Refreshing debug data and re-detecting environment v1.3.3...', 'info');
+    debugLog('Refreshing debug data and re-detecting environment v1.3.4...', 'info');
     
     loadingRetryCount = 0; // Reset retry count
     
@@ -681,7 +698,7 @@
             // Attach event listeners only after Chart.js is ready
             attachEventListeners();
             
-            debugLog(`Chart Debug Console v${CHART_DEBUG_VERSION} initialization completed`, 'success');
+            debugLog(`Chart Debug Console v${CHART_DEBUG_VERSION} initialization completed successfully`, 'success');
           })
           .catch((error) => {
             debugLog(`Chart.js loading failed: ${error.message}`, 'error');
@@ -701,7 +718,7 @@
    * Attach event listeners for debug controls
    */
   function attachEventListeners() {
-    debugLog('Attaching event listeners to debug control buttons v1.3.3...', 'info');
+    debugLog('Attaching event listeners to debug control buttons v1.3.4...', 'info');
     
     const simpleBtn = document.getElementById('test-simple-chart');
     if (simpleBtn) {
@@ -743,7 +760,7 @@
       debugLog('Refresh data button not found', 'warning');
     }
 
-    debugLog('Event listeners attachment completed v1.3.3', 'success');
+    debugLog('Event listeners attachment completed v1.3.4', 'success');
   }
 
 })(Drupal, once);
