@@ -5,14 +5,14 @@
  * Provides debugging functionality for Chart.js environment detection,
  * chart creation testing, and comprehensive dataset debugging.
  * 
- * @version 1.3.1
+ * @version 1.3.2
  */
 
 (function (Drupal, once) {
   'use strict';
 
   // Chart Debug Console Version
-  const CHART_DEBUG_VERSION = '1.3.1';
+  const CHART_DEBUG_VERSION = '1.3.2';
   
   let currentChart = null;
   let loadingRetryCount = 0;
@@ -263,73 +263,128 @@
   }
 
   /**
-   * Enhanced canvas preparation with container creation
+   * Robust canvas preparation with comprehensive container management
    */
   function prepareCanvas() {
-    debugLog('Preparing canvas element for chart rendering...', 'info');
+    debugLog('Starting canvas preparation with robust container management...', 'info');
     
-    // Step 1: Find or create chart container
-    let container = document.querySelector('.chart-container');
-    
-    if (!container) {
-      debugLog('Chart container not found, creating dynamically...', 'warning');
+    try {
+      // Step 1: Attempt to find existing chart container
+      let container = document.querySelector('.chart-container');
       
-      // Try to find a parent element to append to
-      const possibleParents = [
-        document.querySelector('.chart-debug-content'),
-        document.querySelector('.debug-console-content'),
-        document.querySelector('main'),
-        document.querySelector('body')
-      ];
-      
-      const parentElement = possibleParents.find(el => el !== null);
-      
-      if (!parentElement) {
-        debugLog('No suitable parent element found for chart container', 'error');
-        throw new Error('Cannot create chart container - no parent element available');
+      if (!container) {
+        debugLog('Chart container (.chart-container) not found - creating dynamically...', 'warning');
+        
+        // Define potential parent elements in order of preference
+        const parentSelectors = [
+          '.chart-debug-content',
+          '.debug-console-content', 
+          '.region-content',
+          'main',
+          '.page-content',
+          '#main-content',
+          'body'
+        ];
+        
+        let parentElement = null;
+        
+        // Search for first available parent element
+        for (let selector of parentSelectors) {
+          parentElement = document.querySelector(selector);
+          if (parentElement) {
+            debugLog(`Found suitable parent element: ${selector}`, 'info');
+            break;
+          }
+        }
+        
+        if (!parentElement) {
+          debugLog('Critical error: No suitable parent element found for chart container', 'error');
+          throw new Error('Cannot create chart container - no DOM parent available');
+        }
+        
+        // Create chart container with comprehensive styling
+        container = document.createElement('div');
+        container.className = 'chart-container chart-debug-dynamic';
+        container.style.cssText = `
+          width: 100%; 
+          min-height: 450px; 
+          margin: 20px 0; 
+          padding: 15px;
+          border: 2px solid #007cba; 
+          border-radius: 8px;
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          position: relative;
+        `;
+        
+        // Add informative header
+        const containerHeader = document.createElement('div');
+        containerHeader.className = 'chart-debug-header';
+        containerHeader.innerHTML = `
+          <h3 style="margin: 0 0 15px 0; color: #007cba; font-size: 16px; font-weight: bold; border-bottom: 1px solid #007cba; padding-bottom: 8px;">
+            📊 Chart Debug Testing Area (Dynamically Created)
+          </h3>
+          <p style="margin: 0 0 10px 0; font-size: 12px; color: #666; font-style: italic;">
+            The Truth Perspective - Chart.js Debug Console v${CHART_DEBUG_VERSION}
+          </p>
+        `;
+        
+        container.appendChild(containerHeader);
+        parentElement.appendChild(container);
+        
+        debugLog('Dynamic chart container created and styled successfully', 'success');
+      } else {
+        debugLog('Existing chart container found and ready for use', 'info');
       }
       
-      // Create container dynamically
-      container = document.createElement('div');
-      container.className = 'chart-container';
-      container.style.cssText = 'width: 100%; height: 400px; margin: 20px 0; border: 1px solid #ddd; background: #f9f9f9;';
+      // Step 2: Clean up any existing canvas elements
+      const existingCanvas = document.getElementById('debug-main-chart');
+      if (existingCanvas) {
+        existingCanvas.remove();
+        debugLog('Previous canvas element removed', 'info');
+      }
       
-      // Add a header for the dynamically created container
-      const containerHeader = document.createElement('h3');
-      containerHeader.textContent = 'Chart Debug Testing Area';
-      containerHeader.style.cssText = 'margin: 0 0 10px 0; padding: 10px; background: #e0e0e0; font-size: 14px;';
+      // Step 3: Create new canvas with enhanced attributes
+      const newCanvas = document.createElement('canvas');
+      newCanvas.id = 'debug-main-chart';
+      newCanvas.className = 'chart-debug-canvas';
+      newCanvas.width = 800;
+      newCanvas.height = 400;
+      newCanvas.style.cssText = `
+        max-width: 100%; 
+        height: auto; 
+        display: block; 
+        margin: 0 auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: white;
+      `;
+      newCanvas.setAttribute('aria-label', 'Chart Debug Canvas');
+      newCanvas.textContent = 'Your browser does not support the HTML5 canvas element required for chart rendering.';
       
-      container.appendChild(containerHeader);
-      parentElement.appendChild(container);
+      // Step 4: Safely append canvas to container
+      try {
+        container.appendChild(newCanvas);
+        debugLog('Canvas element successfully created and appended to container', 'success');
+      } catch (appendError) {
+        debugLog(`Critical error appending canvas to container: ${appendError.message}`, 'error');
+        throw new Error(`Canvas append failed: ${appendError.message}`);
+      }
       
-      debugLog('Chart container created and added to DOM', 'success');
-    }
-    
-    // Step 2: Remove existing canvas
-    const existingCanvas = document.getElementById('debug-main-chart');
-    if (existingCanvas) {
-      existingCanvas.remove();
-      debugLog('Existing canvas removed', 'info');
-    }
-    
-    // Step 3: Create new canvas
-    const newCanvas = document.createElement('canvas');
-    newCanvas.id = 'debug-main-chart';
-    newCanvas.width = 800;
-    newCanvas.height = 400;
-    newCanvas.style.cssText = 'max-width: 100%; height: auto; display: block; margin: 0 auto;';
-    newCanvas.textContent = 'Your browser does not support the canvas element.';
-    
-    // Step 4: Append to container
-    try {
-      container.appendChild(newCanvas);
-      debugLog('Canvas element created and added to container successfully', 'success');
+      // Step 5: Verify canvas context availability
+      const ctx = newCanvas.getContext('2d');
+      if (!ctx) {
+        debugLog('Canvas 2D context not available', 'error');
+        throw new Error('Canvas 2D rendering context not supported');
+      }
+      
+      debugLog('Canvas preparation completed successfully with 2D context ready', 'success');
+      return newCanvas;
+      
     } catch (error) {
-      debugLog(`Error appending canvas to container: ${error.message}`, 'error');
+      debugLog(`Canvas preparation failed: ${error.message}`, 'error');
       throw error;
     }
-    
-    return newCanvas;
   }
 
   /**
@@ -586,7 +641,7 @@
   }
 
   /**
-   * Clear all charts
+   * Enhanced clear charts function with robust error handling
    */
   function clearCharts() {
     debugLog('Clearing all charts and resetting canvas...', 'info');
@@ -599,23 +654,37 @@
       
       if (canvas) {
         canvas.remove();
-        debugLog('Canvas element removed', 'info');
+        debugLog('Canvas element removed successfully', 'info');
       }
       
       if (container) {
+        // Create styled placeholder
         const placeholder = document.createElement('div');
         placeholder.className = 'chart-placeholder';
-        placeholder.innerHTML = '<p>No charts currently displayed. Use the control buttons above to test chart functionality.</p>';
-        placeholder.style.cssText = 'text-align: center; padding: 40px; color: #666; font-style: italic;';
+        placeholder.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px; color: #666;">
+            <h4 style="margin: 0 0 10px 0; color: #007cba;">No Charts Currently Displayed</h4>
+            <p style="margin: 0; font-style: italic; font-size: 14px;">
+              Use the control buttons above to test Chart.js functionality.<br>
+              Console v${CHART_DEBUG_VERSION} ready for testing.
+            </p>
+            <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 4px; font-size: 12px;">
+              📊 Chart.js v4.4.0 with 8 controllers and 6 scales available
+            </div>
+          </div>
+        `;
+        placeholder.style.cssText = 'border: 2px dashed #ccc; border-radius: 8px; margin: 10px 0;';
         
         container.appendChild(placeholder);
-        debugLog('Chart placeholder added', 'info');
+        debugLog('Enhanced chart placeholder added', 'success');
+      } else {
+        debugLog('Chart container not found during clear operation', 'warning');
       }
       
       debugLog('Charts cleared successfully', 'success');
       
     } catch (error) {
-      debugLog(`Error clearing charts: ${error.message}`, 'error');
+      debugLog(`Error during chart clearing: ${error.message}`, 'error');
     }
   }
 
