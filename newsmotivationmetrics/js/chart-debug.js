@@ -357,306 +357,97 @@
     },
 
     /**
-     * Setup debug event listeners.
+     * Display dataset information before chart creation for debugging.
      */
-    setupDebugEventListeners: function() {
-      const self = this;
-
-      // Test Simple Chart button
-      $('#test-simple-chart').on('click', function() {
-        self.testSimpleChart();
-      });
-
-      // Test Timeline Chart button
-      $('#test-timeline-chart').on('click', function() {
-        self.testTimelineChart();
-      });
-
-      // Test Real Data Chart button
-      $('#test-real-data-chart').on('click', function() {
-        self.testRealDataChart();
-      });
-
-      // Clear Charts button
-      $('#clear-debug-charts').on('click', function() {
-        self.clearDebugCharts();
-      });
-
-      // Refresh Data button
-      $('#refresh-debug-data').on('click', function() {
-        self.refreshDebugData();
-      });
-
-      this.log('Debug event listeners configured');
-    },
-
-    /**
-     * Initialize debug charts area.
-     */
-    initializeDebugCharts: function() {
-      const chartsContainer = document.getElementById('debug-charts-container');
-      if (!chartsContainer) {
-        this.log('Debug charts container not found');
-        return;
-      }
-
-      // Clear any existing content
-      chartsContainer.innerHTML = '';
-      
-      // Create canvas for debug charts
-      const canvas = document.createElement('canvas');
-      canvas.id = 'debug-main-chart';
-      canvas.width = 800;
-      canvas.height = 400;
-      canvas.style.maxWidth = '100%';
-      canvas.style.height = 'auto';
-      chartsContainer.appendChild(canvas);
-
-      this.log('Debug charts area initialized');
-    },
-
-    /**
-     * Load debug data using The Truth Perspective publication date format.
-     */
-    loadDebugData: function() {
+    displayDatasetInfo: function(chartConfig, chartType) {
       const self = this;
       
-      // Create sample data using publication date format prioritizing estimatedDate
-      window.chartDebugData = {
-        timelineData: [
-          { 
-            date: '2024-01-01T00:00:00', 
-            estimatedDate: '2024-01-01T08:30:00',
-            count: 5, 
-            label: 'Political Analysis' 
-          },
-          { 
-            date: '2024-01-02T00:00:00', 
-            estimatedDate: '2024-01-02T14:15:00',
-            count: 8, 
-            label: 'Economic Reports' 
-          },
-          { 
-            date: '2024-01-03T00:00:00', 
-            estimatedDate: '2024-01-03T09:45:00',
-            count: 3, 
-            label: 'Social Issues' 
-          },
-          { 
-            date: '2024-01-04T00:00:00', 
-            estimatedDate: '2024-01-04T16:20:00',
-            count: 12, 
-            label: 'Cultural Topics' 
-          },
-          { 
-            date: '2024-01-05T00:00:00', 
-            estimatedDate: '2024-01-05T11:10:00',
-            count: 7, 
-            label: 'International News' 
-          }
-        ],
-        topTerms: [
-          { name: 'Politics', count: 45 },
-          { name: 'Economy', count: 32 },
-          { name: 'Society', count: 28 },
-          { name: 'Culture', count: 15 }
-        ]
-      };
-
-      self.log('Sample debug data created for testing');
-      self.log('Timeline entries: ' + window.chartDebugData.timelineData.length);
-      self.log('Using Y-m-d\\TH:i:s format with estimatedDate priority');
-      self.updateDebugStatus('Sample debug data created for testing', 'info');
-    },
-
-    /**
-     * Get comprehensive Chart.js element configuration to prevent hitRadius errors.
-     */
-    getElementDefaults: function() {
-      return {
-        // Point element configuration for line charts - fixes hitRadius error
-        point: {
-          radius: 4,
-          hoverRadius: 6,
-          hitRadius: 12,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointHitRadius: 12,
-          borderWidth: 2,
-          hoverBorderWidth: 3,
-          backgroundColor: 'rgba(54, 162, 235, 0.8)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          hoverBackgroundColor: 'rgba(54, 162, 235, 1)',
-          hoverBorderColor: 'rgba(54, 162, 235, 1)'
-        },
-        
-        // Arc element configuration for doughnut/pie charts
-        arc: {
-          borderWidth: 2,
-          hoverBorderWidth: 3,
-          borderColor: '#fff',
-          hoverBorderColor: '#fff'
-        },
-        
-        // Bar element configuration
-        bar: {
-          borderWidth: 1,
-          hoverBorderWidth: 2,
-          borderSkipped: 'bottom'
-        },
-        
-        // Line element configuration
-        line: {
-          tension: 0.4,
-          borderWidth: 2,
-          borderCapStyle: 'round',
-          borderJoinStyle: 'round',
-          fill: false
-        }
-      };
-    },
-
-    /**
-     * Get comprehensive interaction configuration for Chart.js v4.x.
-     */
-    getInteractionDefaults: function() {
-      return {
-        mode: 'nearest',
-        intersect: false,
-        includeInvisible: false
-      };
-    },
-
-    /**
-     * Comprehensive chart destruction with complete Chart.js cleanup for v4.x.
-     */
-    destroyExistingChart: function() {
-      const self = this;
+      self.log('=== DATASET DEBUG INFO ===');
+      self.log('Chart Type: ' + chartType);
+      self.log('Chart Config Structure:');
       
       try {
-        self.log('Starting comprehensive chart destruction and cleanup...');
+        // Display basic config structure
+        self.log('Config keys: ' + Object.keys(chartConfig).join(', '));
         
-        // Step 1: Destroy via global reference
-        if (window.debugChart) {
-          self.log('Destroying chart via global reference - ID: ' + (window.debugChart.id || 'unknown'));
-          try {
-            window.debugChart.destroy();
-            self.log('Global chart reference destroyed successfully');
-          } catch (globalError) {
-            self.log('Error destroying global chart: ' + globalError.message);
+        if (chartConfig.data) {
+          self.log('Data object exists');
+          self.log('Data keys: ' + Object.keys(chartConfig.data).join(', '));
+          
+          // Display labels if present
+          if (chartConfig.data.labels) {
+            self.log('Labels (' + chartConfig.data.labels.length + '): ' + JSON.stringify(chartConfig.data.labels));
           }
-          window.debugChart = null;
-        }
-        
-        // Step 2: Find and destroy all chart instances via Chart.js registry
-        const canvas = document.getElementById('debug-main-chart');
-        if (canvas) {
-          try {
-            const existingChart = Chart.getChart(canvas);
-            if (existingChart) {
-              self.log('Found chart via Chart.getChart() - ID: ' + existingChart.id);
-              existingChart.destroy();
-              self.log('Chart destroyed via Chart.getChart()');
-            } else {
-              self.log('No chart found via Chart.getChart()');
-            }
-          } catch (getChartError) {
-            self.log('Error with Chart.getChart(): ' + getChartError.message);
-          }
-        }
-        
-        // Step 3: Aggressive cleanup - destroy all charts in Chart.instances
-        try {
-          if (Chart.instances && typeof Chart.instances === 'object') {
-            const instanceIds = Object.keys(Chart.instances);
-            self.log('Found ' + instanceIds.length + ' Chart.js instances total');
+          
+          // Display datasets in detail
+          if (chartConfig.data.datasets) {
+            self.log('Datasets count: ' + chartConfig.data.datasets.length);
             
-            instanceIds.forEach(function(id) {
-              const chart = Chart.instances[id];
-              if (chart && chart.canvas && chart.canvas.id === 'debug-main-chart') {
-                self.log('Destroying chart instance from Chart.instances - ID: ' + id);
-                try {
-                  chart.destroy();
-                  delete Chart.instances[id];
-                  self.log('Chart instance ' + id + ' destroyed and removed from registry');
-                } catch (instanceError) {
-                  self.log('Error destroying chart instance ' + id + ': ' + instanceError.message);
+            chartConfig.data.datasets.forEach(function(dataset, index) {
+              self.log('--- Dataset ' + index + ' ---');
+              self.log('Dataset keys: ' + Object.keys(dataset).join(', '));
+              
+              // Show data array
+              if (dataset.data) {
+                self.log('Data array length: ' + dataset.data.length);
+                self.log('Data array type: ' + (Array.isArray(dataset.data) ? 'Array' : typeof dataset.data));
+                self.log('First 3 data points: ' + JSON.stringify(dataset.data.slice(0, 3)));
+                
+                // Check data point structure for timeline charts
+                if (dataset.data.length > 0 && typeof dataset.data[0] === 'object') {
+                  self.log('Data point structure (first item): ' + JSON.stringify(dataset.data[0]));
+                  
+                  // Check for x/y properties
+                  dataset.data.forEach(function(point, pointIndex) {
+                    if (pointIndex < 3) { // Only log first 3 points
+                      self.log('Point ' + pointIndex + ': x=' + point.x + ', y=' + point.y + ', label=' + point.label);
+                    }
+                  });
                 }
               }
+              
+              // Show element configuration properties that might affect hitRadius
+              const elementProps = ['pointRadius', 'pointHoverRadius', 'pointHitRadius', 'hitRadius', 'radius', 'hoverRadius'];
+              elementProps.forEach(function(prop) {
+                if (dataset.hasOwnProperty(prop)) {
+                  self.log('Dataset.' + prop + ': ' + dataset[prop]);
+                }
+              });
+              
+              // Show other important properties
+              if (dataset.label) self.log('Label: ' + dataset.label);
+              if (dataset.borderColor) self.log('Border Color: ' + dataset.borderColor);
+              if (dataset.backgroundColor) self.log('Background Color: ' + dataset.backgroundColor);
             });
-          } else {
-            self.log('Chart.instances not available or not an object');
-          }
-        } catch (instancesError) {
-          self.log('Error during Chart.instances cleanup: ' + instancesError.message);
-        }
-        
-        // Step 4: Canvas manipulation - remove and recreate
-        if (canvas) {
-          const container = canvas.parentNode;
-          if (container) {
-            self.log('Removing canvas element entirely');
-            container.removeChild(canvas);
-            
-            // Force a brief delay to ensure Chart.js cleanup completes
-            setTimeout(function() {
-              try {
-                // Create completely new canvas element
-                const newCanvas = document.createElement('canvas');
-                newCanvas.id = 'debug-main-chart';
-                newCanvas.width = 800;
-                newCanvas.height = 400;
-                newCanvas.style.maxWidth = '100%';
-                newCanvas.style.height = 'auto';
-                container.appendChild(newCanvas);
-                self.log('New canvas element created with fresh context');
-              } catch (canvasError) {
-                self.log('Error creating new canvas: ' + canvasError.message);
-              }
-            }, 50);
-          } else {
-            self.log('Canvas container not found');
-          }
-        } else {
-          self.log('Canvas element not found');
-        }
-        
-        // Step 5: Force garbage collection if available
-        if (typeof window.gc === 'function') {
-          try {
-            window.gc();
-            self.log('Forced garbage collection executed');
-          } catch (gcError) {
-            self.log('Garbage collection failed: ' + gcError.message);
           }
         }
         
-        self.log('Chart destruction and cleanup completed');
+        // Display options that might affect element configuration
+        if (chartConfig.options) {
+          self.log('Options object exists');
+          
+          if (chartConfig.options.elements) {
+            self.log('Elements configuration:');
+            Object.keys(chartConfig.options.elements).forEach(function(elementType) {
+              self.log('  ' + elementType + ': ' + JSON.stringify(chartConfig.options.elements[elementType]));
+            });
+          }
+          
+          if (chartConfig.options.interaction) {
+            self.log('Interaction config: ' + JSON.stringify(chartConfig.options.interaction));
+          }
+        }
+        
+        self.log('=== END DATASET DEBUG INFO ===');
+        
+        // Update debug display on page
+        const debugDatasetEl = document.getElementById('debug-dataset-info');
+        if (debugDatasetEl) {
+          debugDatasetEl.innerHTML = '<pre>' + JSON.stringify(chartConfig, null, 2) + '</pre>';
+        }
         
       } catch (error) {
-        self.log('Critical error during chart destruction: ' + error.message);
-        
-        // Nuclear fallback - recreate entire container
-        try {
-          self.log('Executing nuclear fallback - recreating charts container');
-          const chartsContainer = document.getElementById('debug-charts-container');
-          if (chartsContainer) {
-            chartsContainer.innerHTML = '';
-            
-            setTimeout(function() {
-              const newCanvas = document.createElement('canvas');
-              newCanvas.id = 'debug-main-chart';
-              newCanvas.width = 800;
-              newCanvas.height = 400;
-              newCanvas.style.maxWidth = '100%';
-              newCanvas.style.height = 'auto';
-              chartsContainer.appendChild(newCanvas);
-              self.log('Nuclear fallback completed - fresh container created');
-            }, 100);
-          }
-        } catch (fallbackError) {
-          self.log('Nuclear fallback failed: ' + fallbackError.message);
-        }
+        self.log('Error displaying dataset info: ' + error.message);
       }
     },
 
@@ -684,7 +475,7 @@
             const elementDefaults = self.getElementDefaults();
             const interactionDefaults = self.getInteractionDefaults();
             
-            window.debugChart = new Chart(ctx, {
+            const chartConfig = {
               type: 'bar',
               data: {
                 labels: ['Political', 'Economic', 'Social', 'Cultural'],
@@ -743,7 +534,12 @@
                   }
                 }
               }
-            });
+            };
+
+            // Display dataset info before creating chart
+            self.displayDatasetInfo(chartConfig, 'bar');
+
+            window.debugChart = new Chart(ctx, chartConfig);
 
             self.log('✅ Simple chart test successful - Chart ID: ' + window.debugChart.id);
             self.updateDebugStatus('✅ Simple chart created successfully', 'success');
@@ -794,7 +590,7 @@
                 label: item.label
               }));
               
-              window.debugChart = new Chart(ctx, {
+              const chartConfig = {
                 type: 'line',
                 data: {
                   datasets: [{
@@ -867,7 +663,12 @@
                     }
                   }
                 }
-              });
+              };
+
+              // Display dataset info before creating chart
+              self.displayDatasetInfo(chartConfig, 'line');
+
+              window.debugChart = new Chart(ctx, chartConfig);
 
               self.log('✅ Timeline chart with time scale successful - Chart ID: ' + window.debugChart.id);
               self.updateDebugStatus('✅ Timeline chart with time scale created successfully', 'success');
@@ -884,7 +685,7 @@
                   const fallbackCanvas = document.getElementById('debug-main-chart');
                   const fallbackCtx = fallbackCanvas.getContext('2d');
                   
-                  window.debugChart = new Chart(fallbackCtx, {
+                  const fallbackConfig = {
                     type: 'line',
                     data: {
                       labels: window.chartDebugData.timelineData.map(item => {
@@ -943,7 +744,12 @@
                         }
                       }
                     }
-                  });
+                  };
+
+                  // Display dataset info before creating fallback chart
+                  self.displayDatasetInfo(fallbackConfig, 'line');
+                  
+                  window.debugChart = new Chart(fallbackCtx, fallbackConfig);
                   
                   self.log('✅ Timeline chart with linear scale fallback successful - Chart ID: ' + window.debugChart.id);
                   self.updateDebugStatus('✅ Timeline chart created (linear scale fallback)', 'warning');
@@ -986,7 +792,7 @@
             const elementDefaults = self.getElementDefaults();
             const interactionDefaults = self.getInteractionDefaults();
             
-            window.debugChart = new Chart(ctx, {
+            const fallbackConfig = {
               type: 'line',
               data: {
                 labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
@@ -1026,7 +832,12 @@
                   }
                 }
               }
-            });
+            };
+
+            // Display dataset info before creating fallback chart
+            self.displayDatasetInfo(fallbackConfig, 'line');
+            
+            window.debugChart = new Chart(ctx, fallbackConfig);
             
             self.log('✅ Fallback line chart created - Chart ID: ' + window.debugChart.id);
             self.updateDebugStatus('✅ Simple line chart created (final fallback)', 'warning');
@@ -1067,7 +878,7 @@
             const elementDefaults = self.getElementDefaults();
             const interactionDefaults = self.getInteractionDefaults();
             
-            window.debugChart = new Chart(ctx, {
+            const chartConfig = {
               type: 'doughnut',
               data: {
                 labels: window.chartDebugData.topTerms.map(term => term.name),
@@ -1111,7 +922,12 @@
                   }
                 }
               }
-            });
+            };
+
+            // Display dataset info before creating chart
+            self.displayDatasetInfo(chartConfig, 'doughnut');
+
+            window.debugChart = new Chart(ctx, chartConfig);
 
             self.log('✅ Real data chart test successful - Chart ID: ' + window.debugChart.id);
             self.updateDebugStatus('✅ Real data chart created successfully', 'success');
