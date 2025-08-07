@@ -1,7 +1,7 @@
 /**
  * @file
  * Chart.js debug console for The Truth Perspective news motivation metrics.
- * Production-ready with comprehensive chart lifecycle management.
+ * Production-ready with comprehensive chart lifecycle management and element configuration.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -470,6 +470,64 @@
     },
 
     /**
+     * Get comprehensive Chart.js element configuration to prevent hitRadius errors.
+     */
+    getElementDefaults: function() {
+      return {
+        // Point element configuration for line charts - fixes hitRadius error
+        point: {
+          radius: 4,
+          hoverRadius: 6,
+          hitRadius: 12,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointHitRadius: 12,
+          borderWidth: 2,
+          hoverBorderWidth: 3,
+          backgroundColor: 'rgba(54, 162, 235, 0.8)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          hoverBackgroundColor: 'rgba(54, 162, 235, 1)',
+          hoverBorderColor: 'rgba(54, 162, 235, 1)'
+        },
+        
+        // Arc element configuration for doughnut/pie charts
+        arc: {
+          borderWidth: 2,
+          hoverBorderWidth: 3,
+          borderColor: '#fff',
+          hoverBorderColor: '#fff'
+        },
+        
+        // Bar element configuration
+        bar: {
+          borderWidth: 1,
+          hoverBorderWidth: 2,
+          borderSkipped: 'bottom'
+        },
+        
+        // Line element configuration
+        line: {
+          tension: 0.4,
+          borderWidth: 2,
+          borderCapStyle: 'round',
+          borderJoinStyle: 'round',
+          fill: false
+        }
+      };
+    },
+
+    /**
+     * Get comprehensive interaction configuration for Chart.js v4.x.
+     */
+    getInteractionDefaults: function() {
+      return {
+        mode: 'nearest',
+        intersect: false,
+        includeInvisible: false
+      };
+    },
+
+    /**
      * Comprehensive chart destruction with complete Chart.js cleanup for v4.x.
      */
     destroyExistingChart: function() {
@@ -603,7 +661,7 @@
     },
 
     /**
-     * Test simple chart creation with enhanced cleanup timing.
+     * Test simple chart creation with comprehensive element configuration.
      */
     testSimpleChart: function() {
       const self = this;
@@ -623,6 +681,9 @@
             }
 
             const ctx = canvas.getContext('2d');
+            const elementDefaults = self.getElementDefaults();
+            const interactionDefaults = self.getInteractionDefaults();
+            
             window.debugChart = new Chart(ctx, {
               type: 'bar',
               data: {
@@ -648,6 +709,8 @@
               options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: interactionDefaults,
+                elements: elementDefaults,
                 plugins: {
                   title: {
                     display: true,
@@ -657,6 +720,11 @@
                   legend: {
                     display: true,
                     position: 'top'
+                  },
+                  tooltip: {
+                    enabled: true,
+                    mode: 'nearest',
+                    intersect: false
                   }
                 },
                 scales: {
@@ -693,7 +761,7 @@
     },
 
     /**
-     * Test timeline chart with enhanced cleanup timing.
+     * Test timeline chart with comprehensive element configuration.
      */
     testTimelineChart: function() {
       const self = this;
@@ -713,6 +781,9 @@
             }
 
             const ctx = canvas.getContext('2d');
+            const elementDefaults = self.getElementDefaults();
+            const interactionDefaults = self.getInteractionDefaults();
+            
             self.log('Attempting timeline chart with time scale...');
             
             try {
@@ -734,12 +805,21 @@
                     fill: true,
                     tension: 0.4,
                     pointRadius: 6,
-                    pointHoverRadius: 8
+                    pointHoverRadius: 8,
+                    pointHitRadius: 12,
+                    pointBorderWidth: 2,
+                    pointHoverBorderWidth: 3,
+                    pointBackgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    pointBorderColor: 'rgba(54, 162, 235, 1)',
+                    pointHoverBackgroundColor: 'rgba(54, 162, 235, 1)',
+                    pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
                   }]
                 },
                 options: {
                   responsive: true,
                   maintainAspectRatio: false,
+                  interaction: interactionDefaults,
+                  elements: elementDefaults,
                   plugins: {
                     title: {
                       display: true,
@@ -747,6 +827,9 @@
                       font: { size: 16 }
                     },
                     tooltip: {
+                      enabled: true,
+                      mode: 'nearest',
+                      intersect: false,
                       callbacks: {
                         title: function(context) {
                           return 'Publication: ' + new Date(context[0].parsed.x).toLocaleDateString();
@@ -815,17 +898,33 @@
                         borderColor: 'rgba(255, 99, 132, 1)',
                         backgroundColor: 'rgba(255, 99, 132, 0.1)',
                         fill: true,
-                        tension: 0.4
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointHitRadius: 12,
+                        pointBorderWidth: 2,
+                        pointHoverBorderWidth: 3,
+                        pointBackgroundColor: 'rgba(255, 99, 132, 0.8)',
+                        pointBorderColor: 'rgba(255, 99, 132, 1)',
+                        pointHoverBackgroundColor: 'rgba(255, 99, 132, 1)',
+                        pointHoverBorderColor: 'rgba(255, 99, 132, 1)'
                       }]
                     },
                     options: {
                       responsive: true,
                       maintainAspectRatio: false,
+                      interaction: interactionDefaults,
+                      elements: elementDefaults,
                       plugins: {
                         title: {
                           display: true,
                           text: 'The Truth Perspective - Timeline Chart (Linear Scale Fallback)',
                           font: { size: 16 }
+                        },
+                        tooltip: {
+                          enabled: true,
+                          mode: 'nearest',
+                          intersect: false
                         }
                       },
                       scales: {
@@ -872,7 +971,7 @@
     },
 
     /**
-     * Create fallback line chart with enhanced cleanup.
+     * Create fallback line chart with comprehensive element configuration.
      */
     createFallbackLineChart: function() {
       const self = this;
@@ -884,6 +983,8 @@
           try {
             const canvas = document.getElementById('debug-main-chart');
             const ctx = canvas.getContext('2d');
+            const elementDefaults = self.getElementDefaults();
+            const interactionDefaults = self.getInteractionDefaults();
             
             window.debugChart = new Chart(ctx, {
               type: 'line',
@@ -895,17 +996,33 @@
                   borderColor: 'rgba(75, 192, 192, 1)',
                   backgroundColor: 'rgba(75, 192, 192, 0.1)',
                   fill: true,
-                  tension: 0.4
+                  tension: 0.4,
+                  pointRadius: 6,
+                  pointHoverRadius: 8,
+                  pointHitRadius: 12,
+                  pointBorderWidth: 2,
+                  pointHoverBorderWidth: 3,
+                  pointBackgroundColor: 'rgba(75, 192, 192, 0.8)',
+                  pointBorderColor: 'rgba(75, 192, 192, 1)',
+                  pointHoverBackgroundColor: 'rgba(75, 192, 192, 1)',
+                  pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
                 }]
               },
               options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: interactionDefaults,
+                elements: elementDefaults,
                 plugins: {
                   title: {
                     display: true,
                     text: 'The Truth Perspective - Simple Line Chart (Final Fallback)',
                     font: { size: 16 }
+                  },
+                  tooltip: {
+                    enabled: true,
+                    mode: 'nearest',
+                    intersect: false
                   }
                 }
               }
@@ -927,7 +1044,7 @@
     },
 
     /**
-     * Test real data chart creation with enhanced cleanup timing.
+     * Test real data chart creation with comprehensive element configuration.
      */
     testRealDataChart: function() {
       const self = this;
@@ -947,6 +1064,9 @@
             }
 
             const ctx = canvas.getContext('2d');
+            const elementDefaults = self.getElementDefaults();
+            const interactionDefaults = self.getInteractionDefaults();
+            
             window.debugChart = new Chart(ctx, {
               type: 'doughnut',
               data: {
@@ -960,12 +1080,20 @@
                     'rgba(255, 205, 86, 0.8)',
                     'rgba(75, 192, 192, 0.8)'
                   ],
+                  borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 205, 86, 1)',
+                    'rgba(75, 192, 192, 1)'
+                  ],
                   borderWidth: 2
                 }]
               },
               options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: interactionDefaults,
+                elements: elementDefaults,
                 plugins: {
                   title: {
                     display: true,
@@ -975,6 +1103,11 @@
                   legend: {
                     display: true,
                     position: 'right'
+                  },
+                  tooltip: {
+                    enabled: true,
+                    mode: 'nearest',
+                    intersect: false
                   }
                 }
               }
