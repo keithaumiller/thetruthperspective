@@ -1,7 +1,7 @@
 /**
  * @file
  * Chart.js debug console for The Truth Perspective news motivation metrics.
- * Production-ready with verified paths and enhanced date adapter detection.
+ * Production-ready with proper chart lifecycle management and date formatting.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -193,78 +193,7 @@
             }
           }
           
-          // Method 3: Functional test - try to create a time scale chart
-          if (!hasDateAdapter) {
-            self.log('Attempting functional time scale test...');
-            
-            try {
-              // Create a hidden test canvas
-              const testCanvas = document.createElement('canvas');
-              testCanvas.style.display = 'none';
-              testCanvas.width = 100;
-              testCanvas.height = 100;
-              document.body.appendChild(testCanvas);
-              
-              const testCtx = testCanvas.getContext('2d');
-              
-              // Try to create a minimal time chart
-              const testChart = new Chart(testCtx, {
-                type: 'line',
-                data: {
-                  datasets: [{
-                    data: [
-                      { x: '2024-01-01T00:00:00', y: 1 },
-                      { x: '2024-01-02T00:00:00', y: 2 }
-                    ]
-                  }]
-                },
-                options: {
-                  responsive: false,
-                  animation: false,
-                  scales: {
-                    x: { 
-                      type: 'time',
-                      time: { unit: 'day' }
-                    }
-                  }
-                }
-              });
-              
-              // If we get here, time scale works
-              testChart.destroy();
-              document.body.removeChild(testCanvas);
-              
-              hasDateAdapter = true;
-              adapterType = 'functional-test-passed';
-              detectionMethod = 'functional-test';
-              dateAdapterDetails = 'Time scale functional test passed - adapter working';
-              self.log('✅ Time scale functional test passed');
-              
-            } catch (functionalTestError) {
-              self.log('Time scale functional test failed: ' + functionalTestError.message);
-              
-              // Clean up test canvas if it exists
-              const testCanvas = document.querySelector('canvas[style*="display: none"]');
-              if (testCanvas && testCanvas.parentNode) {
-                testCanvas.parentNode.removeChild(testCanvas);
-              }
-              
-              dateAdapterDetails = 'Functional test failed: ' + functionalTestError.message;
-            }
-          }
-          
-          // Method 4: Check for global date-fns library
-          if (typeof window.dateFns !== 'undefined') {
-            self.log('Global date-fns library detected');
-            if (!hasDateAdapter) {
-              hasDateAdapter = true;
-              adapterType = 'global-date-fns';
-              detectionMethod = 'global-date-fns';
-              dateAdapterDetails = 'Global date-fns library available';
-            }
-          }
-          
-          // Method 5: Check Chart.js version specific behavior
+          // Method 3: Check Chart.js version specific behavior
           if (window.Chart.version) {
             const version = window.Chart.version;
             self.log('Chart.js version: ' + version);
@@ -541,7 +470,43 @@
     },
 
     /**
-     * Test simple chart creation.
+     * Properly destroy existing chart before creating new one.
+     */
+    destroyExistingChart: function() {
+      const self = this;
+      
+      try {
+        // Method 1: Destroy via global reference
+        if (window.debugChart) {
+          self.log('Destroying existing chart via global reference');
+          window.debugChart.destroy();
+          window.debugChart = null;
+        }
+        
+        // Method 2: Find chart instance via Chart.js registry
+        const canvas = document.getElementById('debug-main-chart');
+        if (canvas) {
+          const existingChart = Chart.getChart(canvas);
+          if (existingChart) {
+            self.log('Destroying existing chart via Chart.getChart()');
+            existingChart.destroy();
+          }
+        }
+        
+        // Method 3: Clear canvas context
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          self.log('Canvas context cleared');
+        }
+        
+      } catch (error) {
+        self.log('Error during chart destruction: ' + error.message);
+      }
+    },
+
+    /**
+     * Test simple chart creation with proper cleanup.
      */
     testSimpleChart: function() {
       this.log('Testing simple chart creation...');
@@ -553,10 +518,8 @@
           throw new Error('Debug chart canvas not found');
         }
 
-        // Clear any existing chart
-        if (window.debugChart) {
-          window.debugChart.destroy();
-        }
+        // Properly destroy any existing chart
+        this.destroyExistingChart();
 
         const ctx = canvas.getContext('2d');
         window.debugChart = new Chart(ctx, {
@@ -623,7 +586,7 @@
     },
 
     /**
-     * Test timeline chart with enhanced publication date support.
+     * Test timeline chart with enhanced publication date support and proper chart lifecycle.
      */
     testTimelineChart: function() {
       this.log('Testing timeline chart creation...');
@@ -635,10 +598,8 @@
           throw new Error('Debug chart canvas not found');
         }
 
-        // Clear any existing chart
-        if (window.debugChart) {
-          window.debugChart.destroy();
-        }
+        // Properly destroy any existing chart
+        this.destroyExistingChart();
 
         const ctx = canvas.getContext('2d');
         
@@ -695,9 +656,9 @@
                   type: 'time',
                   time: {
                     unit: 'day',
-                    parser: 'YYYY-MM-DDTHH:mm:ss',
+                    parser: 'yyyy-MM-ddTHH:mm:ss', // Fixed: use 'yyyy' instead of 'YYYY'
                     displayFormats: {
-                      day: 'MMM DD'
+                      day: 'MMM dd'
                     }
                   },
                   title: {
@@ -716,12 +677,15 @@
             }
           });
 
-          this.log('✅ Timeline chart test successful');
-          this.updateDebugStatus('✅ Timeline chart created successfully', 'success');
+          this.log('✅ Timeline chart with time scale successful');
+          this.updateDebugStatus('✅ Timeline chart with time scale created successfully', 'success');
           
         } catch (timeScaleError) {
           this.log('Timeline with time scale failed: ' + timeScaleError.message);
           this.log('Falling back to linear scale timeline...');
+          
+          // Properly destroy failed chart attempt before fallback
+          this.destroyExistingChart();
           
           // Fallback: Timeline chart with linear scale
           window.debugChart = new Chart(ctx, {
@@ -783,11 +747,15 @@
     },
 
     /**
-     * Create fallback line chart when timeline fails.
+     * Create fallback line chart when timeline fails with proper cleanup.
      */
     createFallbackLineChart: function() {
       try {
         const canvas = document.getElementById('debug-main-chart');
+        
+        // Properly destroy any existing chart
+        this.destroyExistingChart();
+        
         const ctx = canvas.getContext('2d');
         
         window.debugChart = new Chart(ctx, {
@@ -826,7 +794,7 @@
     },
 
     /**
-     * Test real data chart creation.
+     * Test real data chart creation with proper cleanup.
      */
     testRealDataChart: function() {
       this.log('Testing real data chart creation...');
@@ -838,10 +806,8 @@
           throw new Error('Debug chart canvas not found');
         }
 
-        // Clear any existing chart
-        if (window.debugChart) {
-          window.debugChart.destroy();
-        }
+        // Properly destroy any existing chart
+        this.destroyExistingChart();
 
         const ctx = canvas.getContext('2d');
         window.debugChart = new Chart(ctx, {
@@ -887,22 +853,13 @@
     },
 
     /**
-     * Clear all debug charts.
+     * Clear all debug charts with enhanced cleanup.
      */
     clearDebugCharts: function() {
       this.log('Clearing debug charts...');
       
-      if (window.debugChart) {
-        window.debugChart.destroy();
-        window.debugChart = null;
-        this.log('Debug chart cleared');
-      }
-
-      const canvas = document.getElementById('debug-main-chart');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
+      // Use the enhanced destroy method
+      this.destroyExistingChart();
 
       this.updateDebugStatus('Charts cleared', 'info');
     },
