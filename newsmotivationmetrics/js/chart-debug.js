@@ -263,93 +263,33 @@
   }
 
   /**
-   * Robust canvas preparation - prioritize existing template containers
+   * Robust canvas preparation - target template's chart testing area
    */
   function prepareCanvas() {
-    debugLog('Starting canvas preparation with template container priority...', 'info');
+    debugLog('Starting canvas preparation with template chart testing area...', 'info');
     
     try {
-      // Step 1: Search for existing containers in order of preference
-      let container = null;
-      const containerSelectors = [
-        '.chart-container',           // Primary designated container
-        '.chart-testing-area',        // Template's chart testing area
-        '.chart-test-container',      // Alternative naming
-        '#chart-testing-area',        // ID-based selector
-        '#chart-container',           // ID-based primary
-        '.debug-chart-area',          // Debug-specific area
-        '.chart-debug-content',       // Content area
-        '.region-content .chart',     // Region-based chart area
-      ];
+      // Step 1: Target the specific chart testing container from template
+      let container = document.getElementById('debug-charts-container');
       
-      for (let selector of containerSelectors) {
-        container = document.querySelector(selector);
-        if (container) {
-          debugLog(`Found existing template container: ${selector}`, 'info');
-          break;
-        } else {
-          debugLog(`Container not found: ${selector}`, 'info');
-        }
-      }
-      
-      // Step 2: If no dedicated container found, create one in the template area
       if (!container) {
-        debugLog('No dedicated chart container found - searching for template integration points...', 'warning');
-        
-        // Look for template-specific integration points
-        const integrationSelectors = [
-          '.chart-testing-section',    // Template section for charts
-          '.debug-console-content',    // Console content area
-          '.chart-debug-interface',    // Debug interface area
-          '.page-content',             // Page content area
-          '.region-content',           // Drupal region content
-          'main',                      // Main content area
-          '.content-wrapper',          // Content wrapper
-          '#main-content'              // Main content ID
-        ];
-        
-        let integrationPoint = null;
-        for (let selector of integrationSelectors) {
-          integrationPoint = document.querySelector(selector);
-          if (integrationPoint) {
-            debugLog(`Found template integration point: ${selector}`, 'info');
-            break;
-          }
-        }
-        
-        if (!integrationPoint) {
-          debugLog('Critical error: No suitable template integration point found', 'error');
-          throw new Error('Cannot integrate with template - no suitable DOM parent available');
-        }
-        
-        // Create container within the template structure
-        container = document.createElement('div');
-        container.className = 'chart-container chart-template-integrated';
-        container.style.cssText = `
-          width: 100%; 
-          min-height: 400px; 
-          margin: 15px 0; 
-          padding: 20px;
-          border: 1px solid #ddd; 
-          border-radius: 6px;
-          background: #ffffff;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        `;
-        
-        // Insert at the beginning of the integration point (not at the end)
-        integrationPoint.insertBefore(container, integrationPoint.firstChild);
-        debugLog('Template-integrated chart container created successfully', 'success');
+        debugLog('Template chart container #debug-charts-container not found', 'error');
+        throw new Error('Chart testing area container not found in template');
       }
+      
+      debugLog('Found template chart testing area container', 'info');
+      
+      // Step 2: Clear any existing content in the container
+      container.innerHTML = '';
       
       // Step 3: Clean up any existing canvas elements
-      const existingCanvas = container.querySelector('#debug-main-chart') || 
-                            document.getElementById('debug-main-chart');
+      const existingCanvas = document.getElementById('debug-main-chart');
       if (existingCanvas) {
         existingCanvas.remove();
         debugLog('Previous canvas element removed', 'info');
       }
       
-      // Step 4: Create new canvas optimized for template integration
+      // Step 4: Create new canvas for the chart testing area
       const newCanvas = document.createElement('canvas');
       newCanvas.id = 'debug-main-chart';
       newCanvas.className = 'chart-debug-canvas';
@@ -359,16 +299,15 @@
         max-width: 100%; 
         height: auto; 
         display: block; 
-        margin: 10px auto;
-        border: 1px solid #e1e1e1;
+        margin: 0 auto;
         border-radius: 4px;
         background: white;
       `;
       newCanvas.setAttribute('aria-label', 'Chart Debug Canvas');
       
-      // Step 5: Append canvas to container
+      // Step 5: Append canvas to the chart testing container
       container.appendChild(newCanvas);
-      debugLog('Canvas element successfully integrated into template container', 'success');
+      debugLog('Canvas element successfully added to chart testing area', 'success');
       
       // Step 6: Verify canvas context
       const ctx = newCanvas.getContext('2d');
@@ -377,7 +316,7 @@
         throw new Error('Canvas 2D rendering context not supported');
       }
       
-      debugLog('Canvas preparation completed with template integration', 'success');
+      debugLog('Canvas preparation completed in chart testing area', 'success');
       return newCanvas;
       
     } catch (error) {
@@ -640,32 +579,16 @@
   }
 
   /**
-   * Enhanced clear charts function with template container support
+   * Enhanced clear charts function for template chart testing area
    */
   function clearCharts() {
-    debugLog('Clearing charts and resetting template container...', 'info');
+    debugLog('Clearing charts in template testing area...', 'info');
     
     try {
       destroyExistingChart();
       
-      // Find the container (prefer template containers)
-      const containerSelectors = [
-        '.chart-container',
-        '.chart-testing-area', 
-        '.chart-test-container',
-        '#chart-testing-area',
-        '#chart-container'
-      ];
-      
-      let container = null;
-      for (let selector of containerSelectors) {
-        container = document.querySelector(selector);
-        if (container) {
-          debugLog(`Found container for clearing: ${selector}`, 'info');
-          break;
-        }
-      }
-      
+      // Target the template's chart testing container
+      const container = document.getElementById('debug-charts-container');
       const canvas = document.getElementById('debug-main-chart');
       
       if (canvas) {
@@ -674,27 +597,18 @@
       }
       
       if (container) {
-        // Create minimal placeholder for template containers
-        const placeholder = document.createElement('div');
-        placeholder.className = 'chart-placeholder template-integrated';
-        placeholder.innerHTML = `
-          <div style="text-align: center; padding: 30px 15px; color: #666; background: #f9f9f9; border-radius: 4px;">
-            <p style="margin: 0; font-size: 14px; color: #888;">
-              Click a test button above to generate debug charts
-            </p>
-            <small style="font-size: 11px; color: #aaa; margin-top: 8px; display: block;">
-              Chart Debug Console v${CHART_DEBUG_VERSION} ready
-            </small>
-          </div>
+        // Reset to original placeholder content
+        container.innerHTML = `
+          <p style="color: #6c757d; text-align: center; margin: 0;">
+            Click a test button above to generate debug charts
+          </p>
         `;
-        
-        container.appendChild(placeholder);
-        debugLog('Template-friendly placeholder added', 'success');
+        debugLog('Chart testing area reset to placeholder', 'success');
       } else {
-        debugLog('No container found during clear operation', 'warning');
+        debugLog('Chart testing container not found during clear operation', 'warning');
       }
       
-      debugLog('Charts cleared successfully with template integration', 'success');
+      debugLog('Charts cleared successfully', 'success');
       
     } catch (error) {
       debugLog(`Error during chart clearing: ${error.message}`, 'error');
