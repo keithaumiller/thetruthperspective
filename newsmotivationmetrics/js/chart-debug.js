@@ -39,8 +39,14 @@
     const outputElement = document.getElementById('debug-output');
     if (outputElement) {
       const newLine = `${new Date().toLocaleTimeString()}: ${message}`;
-      const currentContent = outputElement.textContent || '';
-      const lines = currentContent.split('\n');
+      let currentContent = outputElement.textContent || '';
+      
+      // Clear initial placeholder text on first real log entry
+      if (currentContent.includes('Waiting for Chart.js initialization...')) {
+        currentContent = '';
+      }
+      
+      const lines = currentContent.split('\n').filter(line => line.trim() !== '');
       
       // Keep only last 50 lines to prevent memory issues
       if (lines.length > 50) {
