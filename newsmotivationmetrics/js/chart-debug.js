@@ -41,9 +41,11 @@
       const newLine = `${new Date().toLocaleTimeString()}: ${message}`;
       let currentContent = outputElement.textContent || '';
       
-      // Clear initial placeholder text on first real log entry
-      if (currentContent.includes('Waiting for Chart.js initialization...')) {
-        currentContent = '';
+      // Clear initial placeholder text on first real log entry or if it's still showing
+      if (currentContent.includes('Waiting for Chart.js initialization...') || currentContent.trim() === 'Waiting for Chart.js initialization...') {
+        outputElement.textContent = newLine; // Replace completely, don't append
+        outputElement.scrollTop = outputElement.scrollHeight;
+        return;
       }
       
       const lines = currentContent.split('\n').filter(line => line.trim() !== '');
@@ -686,6 +688,12 @@
   Drupal.behaviors.chartDebugConsole = {
     attach: function (context, settings) {
       once('chart-debug-init', 'body', context).forEach(function () {
+        // Clear debug output immediately on initialization
+        const outputElement = document.getElementById('debug-output');
+        if (outputElement) {
+          outputElement.textContent = ''; // Clear placeholder immediately
+        }
+        
         debugLog(`Initializing Chart Debug Console v${CHART_DEBUG_VERSION} with template integration...`, 'info');
         
         // Show initial loading state
