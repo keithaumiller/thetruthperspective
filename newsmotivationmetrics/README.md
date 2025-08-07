@@ -1,234 +1,303 @@
 # News Motivation Metrics Module
 
-A comprehensive analytics dashboard for The Truth Perspective news analysis system, providing real-time insights into AI-powered content evaluation, narrative tracking, and media source analysis.
+A comprehensive Drupal 11 module for The Truth Perspective platform that provides public analytics dashboards and advanced Chart.js debugging tools for news article motivation analysis.
 
 ## Overview
 
-The News Motivation Metrics module creates a public-facing analytics dashboard that showcases the depth and scope of news analysis performed by The Truth Perspective platform. It provides transparency into the AI-driven content evaluation process and offers insights into media narrative patterns.
+The News Motivation Metrics module serves as the public-facing analytics dashboard for The Truth Perspective, displaying aggregated statistics and insights from AI-powered news analysis. It includes professional Chart.js debugging tools for development and testing of data visualizations.
 
 ## Features
 
-### 📊 Public Analytics Dashboard (`/metrics`)
-- **Real-time content analysis metrics** showing processing coverage and success rates
-- **Activity tracking** with recent article processing and daily averages  
-- **Analysis quality indicators** measuring AI response depth and classification density
-- **Dominant narrative themes** with interactive tag exploration
-- **Media source distribution** showing content source diversity
-- **Methodology transparency** explaining the analysis process
+### Public Analytics Dashboard
+- **Article Statistics**: Total articles analyzed, processing timeline
+- **Motivation Analysis**: Distribution of political, economic, and social motivations
+- **Entity Recognition**: People, organizations, locations, and concepts
+- **Temporal Analysis**: Trends over time with interactive charts
+- **Geographic Insights**: Location-based article distribution
+- **Mobile-Responsive Design**: Professional presentation suitable for public use
 
-### 🏷️ Interactive Theme Analysis (`/metrics/tag/{tid}`)
-- **Detailed theme breakdowns** for individual narrative topics
-- **Article timelines** showing theme prevalence over time
-- **Cross-source analysis** revealing which outlets cover specific themes
-- **Direct links** to analyzed articles for deeper investigation
+### Chart.js Debug Console
+- **Environment Detection**: Comprehensive Chart.js v4.4.0 analysis
+- **Interactive Testing**: Multiple chart type generation and testing
+- **Real-Time Debugging**: Live console output with timestamps
+- **Performance Monitoring**: Chart rendering and data processing analysis
+- **Template Integration**: Seamless Drupal theme integration
 
-### 🔧 Admin Dashboard (`/admin/reports/news-motivation-metrics`)
-- **Enhanced administrative view** with additional operational metrics
-- **Full data access** for system administrators
-- **Performance monitoring** and system health indicators
-
-## Technical Architecture
-
-### Data Sources
-- **Article Content**: Extracted via Diffbot API from 15+ media sources
-- **AI Analysis**: Powered by Claude language models for motivation and entity analysis
-- **Taxonomy Classification**: Automated tag generation based on content themes
-- **Publication Metadata**: Including source attribution and publication timing
-
-### Database Queries
-The module uses optimized database queries to aggregate metrics from:
-- `node_field_data` - Core article information
-- `node__field_*` - Custom field data (AI responses, tags, metadata)
-- `taxonomy_term_field_data` - Tag and classification information
-
-### Performance Considerations
-- **Efficient aggregation queries** with proper indexing
-- **Caching-friendly architecture** for public dashboard performance
-- **Batch processing** for large datasets
-- **Responsive design** for mobile accessibility
+### Technical Capabilities
+- **Large Dataset Optimization**: Efficient handling of 1000+ articles
+- **Caching Strategy**: Performance optimization for public dashboards
+- **API Integration**: Real-time data from news_extractor module
+- **Professional UI**: The Truth Perspective branded interface
+- **Mobile Compatibility**: Responsive design across all devices
 
 ## Installation
 
-1. **Enable the module**:
-   ```bash
-   drush en newsmotivationmetrics -y
-   drush cr
-   ```
+### Prerequisites
+- Drupal 11.x
+- PHP 8.3+
+- news_extractor module (provides core data)
+- Modern web browser with JavaScript support
 
-2. **Set permissions** (for admin dashboard):
-   ```bash
-   drush user:role:add administrator "access news motivation metrics"
-   ```
+### Module Installation
+```bash
+# Enable the module
+drush en newsmotivationmetrics
 
-3. **Access dashboards**:
-   - Public: `/metrics`
-   - Admin: `/admin/reports/news-motivation-metrics`
+# Clear caches
+drush cr
+
+# Import configuration
+drush cim
+```
 
 ## Configuration
 
-### Public Access
-The public dashboard (`/metrics`) is accessible to all visitors without authentication, providing transparency into the analysis process.
+### Dashboard Settings
+Navigate to `/admin/config/newsmotivationmetrics` to configure:
+- **Display Options**: Choose which metrics to show publicly
+- **Cache Settings**: Configure caching duration for performance
+- **Chart Preferences**: Default chart types and styling options
+- **Data Sources**: Select which article data to include
 
-### Admin Access
-The admin dashboard requires the "access news motivation metrics" permission and provides additional operational insights.
+### Permissions
+- **Access news motivation metrics**: Public access to analytics dashboard
+- **Administer news motivation metrics**: Administrative configuration access
+- **Access chart debug console**: Development and debugging access
 
-### Customization
-Module behavior can be customized by modifying:
-- **MetricsController.php** - Dashboard layout and content
-- **newsmotivationmetrics.module** - Data aggregation functions
-- **CSS styling** - Visual presentation and branding
+## Usage
 
-## API Functions
+### Public Analytics Dashboard
+Visit `/newsmotivationmetrics` to view:
+- Overview statistics and key metrics
+- Interactive charts showing motivation trends
+- Entity analysis with geographic distribution
+- Timeline analysis of article processing
 
-### Core Metrics Functions
+### Chart Debug Console
+Access `/newsmotivationmetrics/debug/chart` for:
+- Chart.js environment analysis and testing
+- Interactive chart generation with sample data
+- Real-time debugging output and performance monitoring
+- Template integration testing
 
-#### `newsmotivationmetrics_get_article_metrics()`
-Returns comprehensive article processing statistics:
-```php
-[
-  'total_articles' => 1250,
-  'articles_with_ai' => 1200,
-  'articles_with_json' => 1240,
-  'articles_with_tags' => 1180,
-  'articles_with_motivation' => 1150,
-  'articles_with_images' => 980,
-  'total_tags' => 450,
-  'articles_last_7_days' => 85,
-  'articles_last_30_days' => 340
-]
-```
+### Administrative Interface
+Manage settings at `/admin/config/newsmotivationmetrics`:
+- Configure dashboard display options
+- Set caching and performance parameters
+- Review processing statistics and system health
 
-#### `newsmotivationmetrics_get_tag_metrics()`
-Returns tag usage analytics with article counts:
-```php
-[
-  [
-    'tid' => 123,
-    'name' => 'Political Strategy',
-    'article_count' => 45
-  ],
-  // ... more tags
-]
-```
+## Chart.js Integration
 
-#### `newsmotivationmetrics_get_news_source_metrics()`
-Returns media source distribution data:
-```php
-[
-  [
-    'source' => 'CNN',
-    'article_count' => 156
-  ],
-  // ... more sources
-]
-```
+### Supported Chart Types
+- **Bar Charts**: Article counts, motivation distribution
+- **Line Charts**: Temporal trends and timeline analysis  
+- **Doughnut Charts**: Percentage breakdowns and category distribution
+- **Timeline Charts**: Date-based article processing with time scales
 
-#### `newsmotivationmetrics_get_motivation_insights()`
-Returns content analysis quality metrics:
-```php
-[
-  'avg_motivation_length' => 1250,
-  'avg_ai_response_length' => 2840,
-  'avg_tags_per_article' => 4.2
-]
-```
+### Debug Console Features
+- **Environment Detection**: Chart.js version, controllers, scales analysis
+- **Interactive Testing**: Generate test charts with various data types
+- **Real-Time Logging**: Comprehensive debug output with timestamps
+- **Canvas Management**: Chart creation, destruction, and cleanup
+- **Template Integration**: Drupal behavior attachment and theming
 
-## Data Privacy & Transparency
+### Performance Optimization
+- **Efficient Rendering**: Optimized for large datasets (1000+ data points)
+- **Memory Management**: Proper chart cleanup and resource management
+- **Responsive Design**: Charts adapt to various screen sizes
+- **Caching Strategy**: Chart data cached for improved performance
 
-### What We Track
-- **Article processing statistics** (counts, success rates, timing)
-- **Content classification data** (tags, themes, entities)
-- **Source attribution** (media outlet names, publication dates)
-- **Analysis quality metrics** (response lengths, classification density)
+## API Endpoints
 
-### What We Don't Track
-- **Individual user behavior** or analytics
-- **Personal identification** data
-- **Private content** or sensitive information
-- **User interactions** with the dashboard
+### Public Data Access
+- `GET /newsmotivationmetrics/api/stats` - Overall statistics
+- `GET /newsmotivationmetrics/api/motivations` - Motivation analysis data
+- `GET /newsmotivationmetrics/api/entities` - Entity recognition results
+- `GET /newsmotivationmetrics/api/timeline` - Temporal analysis data
 
-### Public Data Policy
-All data displayed on the public dashboard represents:
-- **Aggregated statistics** without individual article identification
-- **Public media content** already published by news organizations
-- **Analytical insights** derived through automated processing
-- **Transparent methodology** with clear source attribution
+### Administrative Endpoints
+- `GET /admin/newsmotivationmetrics/health` - System health check
+- `POST /admin/newsmotivationmetrics/refresh` - Force cache refresh
+- `GET /admin/newsmotivationmetrics/debug` - Debug information
 
-## Development & Extension
+## Database Schema
 
-### Adding New Metrics
-To add custom metrics, extend the core functions in `newsmotivationmetrics.module`:
+### Chart Debug Tables
+- **chart_debug_sessions**: Debug session tracking
+- **chart_performance_logs**: Chart rendering performance data
 
-```php
-function newsmotivationmetrics_get_custom_metric() {
-  $database = Database::getConnection();
-  
-  $query = $database->select('your_table', 't');
-  // Build your query
-  
-  return $results;
-}
-```
+### Analytics Cache Tables  
+- **motivation_metrics_cache**: Cached aggregated statistics
+- **entity_metrics_cache**: Cached entity analysis results
 
-### Customizing the Dashboard
-Modify `MetricsController::dashboard()` to:
-- **Add new sections** with custom data
-- **Modify visual presentation** with CSS updates
-- **Include additional charts** or visualizations
-- **Enhance interactivity** with JavaScript components
+## Templates
+
+### Public Templates
+- `templates/dashboard.html.twig` - Main analytics dashboard
+- `templates/chart-display.html.twig` - Individual chart rendering
+- `templates/motivation-breakdown.html.twig` - Motivation analysis display
+
+### Debug Templates
+- `templates/chart-debug.html.twig` - Complete Chart.js debug console
+- Professional interface with The Truth Perspective branding
+- Real-time debug output and interactive testing controls
+- Mobile-responsive design with comprehensive chart testing
+
+## JavaScript Architecture
+
+### Chart Management
+- `js/chart-manager.js` - Core chart creation and management
+- `js/chart-debug.js` - Debug console functionality with v1.3.4 features
+- `js/data-processor.js` - Data formatting for chart consumption
+
+### Debug Console Features
+- **Environment Detection**: Comprehensive Chart.js analysis
+- **Interactive Controls**: Test chart generation and management
+- **Real-Time Logging**: Debug output with professional formatting
+- **Template Integration**: Drupal behaviors and theme compatibility
+
+## Performance Considerations
+
+### Caching Strategy
+- **Page-level caching**: Public dashboards cached for 1 hour
+- **Data-level caching**: API responses cached for 30 minutes
+- **Chart data caching**: Pre-processed chart data cached for performance
 
 ### Database Optimization
-For large datasets, consider:
-- **Adding database indexes** on frequently queried fields
-- **Implementing caching** for expensive queries
-- **Using views** for complex aggregations
-- **Batch processing** for real-time updates
+- **Indexed queries**: Efficient data retrieval for large datasets
+- **Aggregation tables**: Pre-calculated statistics for faster display
+- **Query optimization**: Minimal database calls for dashboard rendering
+
+### Frontend Performance
+- **Lazy loading**: Charts load progressively as needed
+- **Responsive images**: Optimized for various screen sizes
+- **CDN integration**: Chart.js v4.4.0 loaded from reliable CDN
+- **Error handling**: Graceful degradation for offline scenarios
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Dashboard not accessible**: Check routing cache
+#### Charts Not Rendering
 ```bash
+# Check Chart.js loading
+curl -I https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js
+
+# Verify debug console access
+curl https://thetruthperspective.org/newsmotivationmetrics/debug/chart
+
+# Clear caches
 drush cr
 ```
 
-**Missing data**: Verify news_extractor module is processing articles
+#### Debug Console Issues
+- **Environment Detection Failure**: Check JavaScript console for CDN loading errors
+- **Template Integration Issues**: Verify Drupal behaviors are attaching properly
+- **Chart Generation Problems**: Use debug console real-time logging for diagnosis
+
+#### Performance Issues
 ```bash
-drush pml | grep news_extractor
+# Check cache status
+drush cache:get newsmotivationmetrics
+
+# Monitor database performance
+drush sql:query "SHOW PROCESSLIST;"
+
+# Clear all caches
+drush cr
 ```
 
-**Performance issues**: Check database indexes and query optimization
+### Debug Console Access
+The Chart.js debug console provides comprehensive analysis:
+- Real-time environment detection and status
+- Interactive chart testing with multiple data types
+- Professional debugging interface with detailed logging
+- Template integration verification and testing
+
+## Development
+
+### Adding New Chart Types
+1. Create chart configuration in `js/chart-manager.js`
+2. Add test button to debug console template
+3. Implement chart generation function
+4. Update debug console with new chart testing
+
+### Extending Analytics
+1. Add new metric calculation in module file
+2. Create corresponding template for display
+3. Update caching strategy for new data
+4. Add API endpoint for data access
+
+### Debug Console Enhancement
+1. Extend environment detection capabilities
+2. Add new interactive testing features
+3. Enhance real-time logging and monitoring
+4. Improve template integration and theming
+
+## Security
+
+### Public Access
+- No authentication required for public dashboards
+- Aggregate data only, no individual article access
+- Rate limiting on API endpoints
+- Proper input sanitization for all parameters
+
+### Administrative Access
+- Proper permission checks for admin functions
+- Secure configuration management
+- Audit logging for administrative changes
+- Protected debug console access
+
+## Integration
+
+### news_extractor Module
+- Consumes processed article data and AI analysis
+- Accesses motivation analysis and entity recognition
+- Uses shared field definitions and taxonomy
+- Depends on article processing pipeline completion
+
+### Drupal Core Integration
+- Follows Drupal 11 coding standards and best practices
+- Uses modern dependency injection patterns
+- Implements proper caching and performance optimization
+- Compatible with standard Drupal theming and configuration
+
+## Maintenance
+
+### Regular Tasks
 ```bash
-drush sqlq "SHOW PROCESSLIST;"
+# Update cached statistics (daily)
+drush newsmotivationmetrics:refresh-cache
+
+# Performance monitoring (weekly)
+drush newsmotivationmetrics:performance-report
+
+# Debug console health check
+curl https://thetruthperspective.org/newsmotivationmetrics/debug/chart
 ```
 
-### Debug Mode
-Enable detailed logging by adding to settings.php:
-```php
-$config['system.logging']['error_level'] = 'verbose';
-```
+### Monitoring
+- **Performance metrics**: Chart rendering times and database query performance
+- **Error tracking**: JavaScript errors and Chart.js integration issues
+- **Cache efficiency**: Hit rates and refresh frequency analysis
+- **User engagement**: Public dashboard access patterns and usage
 
-## Dependencies
+## Support
 
-- **Drupal Core**: 9.x or 10.x
-- **Node module**: For article content management
-- **Taxonomy module**: For tag classification
-- **Field module**: For custom field handling
-- **News Extractor module**: For content processing (custom)
+### Documentation
+- Comprehensive inline code documentation
+- API endpoint documentation with examples
+- Chart.js integration guide with debug console usage
+- Performance optimization recommendations
 
-## License & Attribution
-
-This module is part of The Truth Perspective platform and is designed to provide transparency into AI-powered news analysis. It respects media source attribution and promotes understanding of automated content evaluation processes.
-
-## Support & Contribution
-
-For issues, feature requests, or contributions:
-1. **Review existing functionality** in the codebase
-2. **Test changes** in a development environment
-3. **Document modifications** for future maintenance
-4. **Consider performance impact** of new features
+### Debugging Resources
+- Chart.js Debug Console at `/newsmotivationmetrics/debug/chart`
+- Real-time environment analysis and testing
+- Interactive chart generation and validation
+- Professional debugging interface for development
 
 ---
 
-**The Truth Perspective** - Bringing transparency to news analysis through AI-powered insights and public accountability.
+**The Truth Perspective Platform**  
+AI-Powered News Analysis System  
+Version: Drupal 11 Production Release
