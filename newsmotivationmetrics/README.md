@@ -1,4 +1,4 @@
-# News Motivation Metrics Module
+# News Motivation Metrics Module 2nd try
 
 A comprehensive Drupal 11 module for The Truth Perspective platform that provides public analytics dashboards and advanced Chart.js debugging tools for news article motivation analysis.
 
