@@ -88,6 +88,25 @@ class ChartDebugController extends ControllerBase {
   }
 
   /**
+   * Build the chart debug console page
+   */
+  public function buildPage() {
+    $build = [
+      '#theme' => 'chart_debug_console',
+      '#attached' => [
+        'library' => [
+          'newsmotivationmetrics/chart-debug-console',
+        ],
+      ],
+      '#cache' => [
+        'max-age' => 0, // Disable caching for debug console
+      ],
+    ];
+
+    return $build;
+  }
+
+  /**
    * Get timeline data for chart visualization.
    * 
    * @return array
