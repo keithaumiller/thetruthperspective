@@ -20,7 +20,7 @@ function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_matc
 }
 
 /**
- * Get all taxonomy tags with article counts.
+ * Get all taxonomy tags with article counts. Forcing a push
  *
  * @return array
  *   Array of tag data with counts.
