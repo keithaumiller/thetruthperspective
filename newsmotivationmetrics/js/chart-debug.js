@@ -4,11 +4,16 @@
  * 
  * Provides debugging functionality for Chart.js environment detection,
  * chart creation testing, and comprehensive dataset debugging.
+ * 
+ * @version 1.2.0
  */
 
 (function (Drupal, once) {
   'use strict';
 
+  // Chart Debug Console Version
+  const CHART_DEBUG_VERSION = '1.2.0';
+  
   let currentChart = null;
 
   /**
@@ -486,7 +491,13 @@
   Drupal.behaviors.chartDebugConsole = {
     attach: function (context, settings) {
       once('chart-debug-init', 'body', context).forEach(function () {
-        debugLog('Initializing The Truth Perspective Chart.js Debug Console...', 'info');
+        debugLog(`Initializing The Truth Perspective Chart.js Debug Console v${CHART_DEBUG_VERSION}...`, 'info');
+        
+        // Log debug console version and environment details
+        console.log(`Chart Debug Console Version: ${CHART_DEBUG_VERSION}`);
+        console.log('The Truth Perspective - News Analytics Platform');
+        console.log('Drupal 11 Environment - Production Server');
+        console.log('Date:', new Date().toISOString());
         
         // Detect Chart.js environment
         const environment = detectChartEnvironment();
@@ -518,7 +529,7 @@
           refreshBtn.addEventListener('click', refreshDebugData);
         }
 
-        debugLog('Chart Debug Console initialization completed', 'success');
+        debugLog(`Chart Debug Console v${CHART_DEBUG_VERSION} initialization completed`, 'success');
       });
     }
   };
