@@ -5,14 +5,14 @@
  * Provides debugging functionality for Chart.js environment detection,
  * chart creation testing, and comprehensive dataset debugging.
  * 
- * @version 1.3.0
+ * @version 1.3.1
  */
 
 (function (Drupal, once) {
   'use strict';
 
   // Chart Debug Console Version
-  const CHART_DEBUG_VERSION = '1.3.0';
+  const CHART_DEBUG_VERSION = '1.3.1';
   
   let currentChart = null;
   let loadingRetryCount = 0;
@@ -184,50 +184,65 @@
    * Update version display elements with loading states
    */
   function updateVersionDisplay(elementId, content) {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.innerHTML = content;
-      // Add success styling for positive confirmations
-      if (content.includes('✅')) {
-        element.className = 'version-display status-success';
-      } else if (content.includes('❌')) {
-        element.className = 'version-display status-error';
-      } else if (content.includes('Loading...') || content.includes('Detecting...')) {
-        element.className = 'version-display status-loading';
+    try {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.innerHTML = content;
+        // Add success styling for positive confirmations
+        if (content.includes('✅')) {
+          element.className = 'version-display status-success';
+        } else if (content.includes('❌')) {
+          element.className = 'version-display status-error';
+        } else if (content.includes('Loading...') || content.includes('Detecting...')) {
+          element.className = 'version-display status-loading';
+        } else {
+          element.className = 'version-display';
+        }
+        debugLog(`Updated display element ${elementId}: ${content}`, 'info');
       } else {
-        element.className = 'version-display';
+        debugLog(`Display element ${elementId} not found in DOM`, 'warning');
       }
+    } catch (error) {
+      debugLog(`Error updating display element ${elementId}: ${error.message}`, 'error');
     }
   }
 
   /**
-   * Update environment display with loading states
+   * Update environment display with comprehensive error handling
    */
   function updateEnvironmentDisplay(environment) {
-    // Show loading state initially
-    updateVersionDisplay('chartjs-version', 
-      environment.chartjs.available && environment.chartjs.version !== 'Not Available'
+    debugLog('Updating environment display with detected values...', 'info');
+    
+    try {
+      // Update Chart.js version with proper status
+      const versionText = environment.chartjs.available && environment.chartjs.version !== 'Not Available'
         ? `v${environment.chartjs.version} ✅` 
-        : 'Detecting...'
-    );
-    
-    updateVersionDisplay('date-adapter-status',
-      environment.dateAdapter.available 
+        : 'Not Available ❌';
+      updateVersionDisplay('chartjs-version', versionText);
+      
+      // Update date adapter status
+      const adapterText = environment.dateAdapter.available 
         ? `${environment.dateAdapter.method} ✅`
-        : 'Loading...'
-    );
-    
-    updateVersionDisplay('controllers-count',
-      environment.chartjs.controllers > 0
+        : 'Not Available ❌';
+      updateVersionDisplay('date-adapter-status', adapterText);
+      
+      // Update controllers with proper count display
+      const controllersText = environment.chartjs.controllers > 0
         ? `${environment.chartjs.controllers} registered ✅`
-        : 'Loading...'
-    );
-    
-    updateVersionDisplay('scales-count',
-      environment.chartjs.scales > 0
+        : environment.chartjs.available ? 'None detected ❌' : 'Chart.js not loaded ❌';
+      updateVersionDisplay('controllers-count', controllersText);
+      
+      // Update scales with proper count display
+      const scalesText = environment.chartjs.scales > 0
         ? `${environment.chartjs.scales} available ✅`
-        : 'Loading...'
-    );
+        : environment.chartjs.available ? 'None detected ❌' : 'Chart.js not loaded ❌';
+      updateVersionDisplay('scales-count', scalesText);
+      
+      debugLog('Environment display updated successfully', 'success');
+      
+    } catch (error) {
+      debugLog(`Error updating environment display: ${error.message}`, 'error');
+    }
   }
 
   /**
@@ -248,24 +263,71 @@
   }
 
   /**
-   * Canvas element validation and recreation
+   * Enhanced canvas preparation with container creation
    */
   function prepareCanvas() {
-    const container = document.querySelector('.chart-container');
-    const existingCanvas = document.getElementById('debug-main-chart');
+    debugLog('Preparing canvas element for chart rendering...', 'info');
     
-    if (existingCanvas) {
-      existingCanvas.remove();
+    // Step 1: Find or create chart container
+    let container = document.querySelector('.chart-container');
+    
+    if (!container) {
+      debugLog('Chart container not found, creating dynamically...', 'warning');
+      
+      // Try to find a parent element to append to
+      const possibleParents = [
+        document.querySelector('.chart-debug-content'),
+        document.querySelector('.debug-console-content'),
+        document.querySelector('main'),
+        document.querySelector('body')
+      ];
+      
+      const parentElement = possibleParents.find(el => el !== null);
+      
+      if (!parentElement) {
+        debugLog('No suitable parent element found for chart container', 'error');
+        throw new Error('Cannot create chart container - no parent element available');
+      }
+      
+      // Create container dynamically
+      container = document.createElement('div');
+      container.className = 'chart-container';
+      container.style.cssText = 'width: 100%; height: 400px; margin: 20px 0; border: 1px solid #ddd; background: #f9f9f9;';
+      
+      // Add a header for the dynamically created container
+      const containerHeader = document.createElement('h3');
+      containerHeader.textContent = 'Chart Debug Testing Area';
+      containerHeader.style.cssText = 'margin: 0 0 10px 0; padding: 10px; background: #e0e0e0; font-size: 14px;';
+      
+      container.appendChild(containerHeader);
+      parentElement.appendChild(container);
+      
+      debugLog('Chart container created and added to DOM', 'success');
     }
     
+    // Step 2: Remove existing canvas
+    const existingCanvas = document.getElementById('debug-main-chart');
+    if (existingCanvas) {
+      existingCanvas.remove();
+      debugLog('Existing canvas removed', 'info');
+    }
+    
+    // Step 3: Create new canvas
     const newCanvas = document.createElement('canvas');
     newCanvas.id = 'debug-main-chart';
     newCanvas.width = 800;
     newCanvas.height = 400;
+    newCanvas.style.cssText = 'max-width: 100%; height: auto; display: block; margin: 0 auto;';
     newCanvas.textContent = 'Your browser does not support the canvas element.';
     
-    container.appendChild(newCanvas);
-    debugLog('Canvas element recreated and ready', 'success');
+    // Step 4: Append to container
+    try {
+      container.appendChild(newCanvas);
+      debugLog('Canvas element created and added to container successfully', 'success');
+    } catch (error) {
+      debugLog(`Error appending canvas to container: ${error.message}`, 'error');
+      throw error;
+    }
     
     return newCanvas;
   }
@@ -276,11 +338,11 @@
   function testSimpleChart() {
     debugLog('Testing simple bar chart creation...', 'info');
     
-    destroyExistingChart();
-    const canvas = prepareCanvas();
-    const ctx = canvas.getContext('2d');
-
     try {
+      destroyExistingChart();
+      const canvas = prepareCanvas();
+      const ctx = canvas.getContext('2d');
+
       const chartData = {
         labels: ['Politics', 'Economy', 'Healthcare', 'Technology', 'Environment'],
         datasets: [{
@@ -357,11 +419,11 @@
   function testTimelineChart() {
     debugLog('Testing timeline chart with time scale...', 'info');
     
-    destroyExistingChart();
-    const canvas = prepareCanvas();
-    const ctx = canvas.getContext('2d');
-
     try {
+      destroyExistingChart();
+      const canvas = prepareCanvas();
+      const ctx = canvas.getContext('2d');
+
       const timelineData = {
         labels: [
           '2024-01-01',
@@ -434,6 +496,9 @@
       // Fallback to category scale
       debugLog('Attempting fallback to category scale...', 'warning');
       try {
+        const canvas = prepareCanvas();
+        const ctx = canvas.getContext('2d');
+        
         const fallbackOptions = { ...timelineOptions };
         fallbackOptions.scales.x = {
           type: 'category',
@@ -462,11 +527,11 @@
   function testRealDataChart() {
     debugLog('Testing real data doughnut chart...', 'info');
     
-    destroyExistingChart();
-    const canvas = prepareCanvas();
-    const ctx = canvas.getContext('2d');
-
     try {
+      destroyExistingChart();
+      const canvas = prepareCanvas();
+      const ctx = canvas.getContext('2d');
+
       const realData = {
         labels: ['Analyzed Articles', 'Tagged Articles', 'With Images', 'Recent Articles'],
         datasets: [{
@@ -526,23 +591,32 @@
   function clearCharts() {
     debugLog('Clearing all charts and resetting canvas...', 'info');
     
-    destroyExistingChart();
-    
-    const container = document.querySelector('.chart-container');
-    const canvas = document.getElementById('debug-main-chart');
-    
-    if (canvas) {
-      canvas.remove();
+    try {
+      destroyExistingChart();
+      
+      const container = document.querySelector('.chart-container');
+      const canvas = document.getElementById('debug-main-chart');
+      
+      if (canvas) {
+        canvas.remove();
+        debugLog('Canvas element removed', 'info');
+      }
+      
+      if (container) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'chart-placeholder';
+        placeholder.innerHTML = '<p>No charts currently displayed. Use the control buttons above to test chart functionality.</p>';
+        placeholder.style.cssText = 'text-align: center; padding: 40px; color: #666; font-style: italic;';
+        
+        container.appendChild(placeholder);
+        debugLog('Chart placeholder added', 'info');
+      }
+      
+      debugLog('Charts cleared successfully', 'success');
+      
+    } catch (error) {
+      debugLog(`Error clearing charts: ${error.message}`, 'error');
     }
-    
-    const placeholder = document.createElement('div');
-    placeholder.className = 'chart-placeholder';
-    placeholder.innerHTML = '<p>No charts currently displayed. Use the control buttons above to test chart functionality.</p>';
-    placeholder.style.cssText = 'text-align: center; padding: 40px; color: #666; font-style: italic;';
-    
-    container.appendChild(placeholder);
-    
-    debugLog('Charts cleared successfully', 'success');
   }
 
   /**
@@ -617,32 +691,49 @@
    * Attach event listeners for debug controls
    */
   function attachEventListeners() {
+    debugLog('Attaching event listeners to debug control buttons...', 'info');
+    
     const simpleBtn = document.getElementById('test-simple-chart');
     if (simpleBtn) {
       simpleBtn.addEventListener('click', testSimpleChart);
+      debugLog('Simple chart button listener attached', 'info');
+    } else {
+      debugLog('Simple chart button not found', 'warning');
     }
 
     const timelineBtn = document.getElementById('test-timeline-chart');
     if (timelineBtn) {
       timelineBtn.addEventListener('click', testTimelineChart);
+      debugLog('Timeline chart button listener attached', 'info');
+    } else {
+      debugLog('Timeline chart button not found', 'warning');
     }
 
     const realDataBtn = document.getElementById('test-real-data-chart');
     if (realDataBtn) {
       realDataBtn.addEventListener('click', testRealDataChart);
+      debugLog('Real data chart button listener attached', 'info');
+    } else {
+      debugLog('Real data chart button not found', 'warning');
     }
 
     const clearBtn = document.getElementById('clear-debug-charts');
     if (clearBtn) {
       clearBtn.addEventListener('click', clearCharts);
+      debugLog('Clear charts button listener attached', 'info');
+    } else {
+      debugLog('Clear charts button not found', 'warning');
     }
 
     const refreshBtn = document.getElementById('refresh-debug-data');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', refreshDebugData);
+      debugLog('Refresh data button listener attached', 'info');
+    } else {
+      debugLog('Refresh data button not found', 'warning');
     }
 
-    debugLog('Event listeners attached successfully', 'success');
+    debugLog('Event listeners attachment completed', 'success');
   }
 
 })(Drupal, once);
