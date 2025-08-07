@@ -263,88 +263,93 @@
   }
 
   /**
-   * Robust canvas preparation with comprehensive container management
+   * Robust canvas preparation - prioritize existing template containers
    */
   function prepareCanvas() {
-    debugLog('Starting canvas preparation with robust container management...', 'info');
+    debugLog('Starting canvas preparation with template container priority...', 'info');
     
     try {
-      // Step 1: Attempt to find existing chart container
-      let container = document.querySelector('.chart-container');
+      // Step 1: Search for existing containers in order of preference
+      let container = null;
+      const containerSelectors = [
+        '.chart-container',           // Primary designated container
+        '.chart-testing-area',        // Template's chart testing area
+        '.chart-test-container',      // Alternative naming
+        '#chart-testing-area',        // ID-based selector
+        '#chart-container',           // ID-based primary
+        '.debug-chart-area',          // Debug-specific area
+        '.chart-debug-content',       // Content area
+        '.region-content .chart',     // Region-based chart area
+      ];
       
+      for (let selector of containerSelectors) {
+        container = document.querySelector(selector);
+        if (container) {
+          debugLog(`Found existing template container: ${selector}`, 'info');
+          break;
+        } else {
+          debugLog(`Container not found: ${selector}`, 'info');
+        }
+      }
+      
+      // Step 2: If no dedicated container found, create one in the template area
       if (!container) {
-        debugLog('Chart container (.chart-container) not found - creating dynamically...', 'warning');
+        debugLog('No dedicated chart container found - searching for template integration points...', 'warning');
         
-        // Define potential parent elements in order of preference
-        const parentSelectors = [
-          '.chart-debug-content',
-          '.debug-console-content', 
-          '.region-content',
-          'main',
-          '.page-content',
-          '#main-content',
-          'body'
+        // Look for template-specific integration points
+        const integrationSelectors = [
+          '.chart-testing-section',    // Template section for charts
+          '.debug-console-content',    // Console content area
+          '.chart-debug-interface',    // Debug interface area
+          '.page-content',             // Page content area
+          '.region-content',           // Drupal region content
+          'main',                      // Main content area
+          '.content-wrapper',          // Content wrapper
+          '#main-content'              // Main content ID
         ];
         
-        let parentElement = null;
-        
-        // Search for first available parent element
-        for (let selector of parentSelectors) {
-          parentElement = document.querySelector(selector);
-          if (parentElement) {
-            debugLog(`Found suitable parent element: ${selector}`, 'info');
+        let integrationPoint = null;
+        for (let selector of integrationSelectors) {
+          integrationPoint = document.querySelector(selector);
+          if (integrationPoint) {
+            debugLog(`Found template integration point: ${selector}`, 'info');
             break;
           }
         }
         
-        if (!parentElement) {
-          debugLog('Critical error: No suitable parent element found for chart container', 'error');
-          throw new Error('Cannot create chart container - no DOM parent available');
+        if (!integrationPoint) {
+          debugLog('Critical error: No suitable template integration point found', 'error');
+          throw new Error('Cannot integrate with template - no suitable DOM parent available');
         }
         
-        // Create chart container with comprehensive styling
+        // Create container within the template structure
         container = document.createElement('div');
-        container.className = 'chart-container chart-debug-dynamic';
+        container.className = 'chart-container chart-template-integrated';
         container.style.cssText = `
           width: 100%; 
-          min-height: 450px; 
-          margin: 20px 0; 
-          padding: 15px;
-          border: 2px solid #007cba; 
-          border-radius: 8px;
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          position: relative;
+          min-height: 400px; 
+          margin: 15px 0; 
+          padding: 20px;
+          border: 1px solid #ddd; 
+          border-radius: 6px;
+          background: #ffffff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         `;
         
-        // Add informative header
-        const containerHeader = document.createElement('div');
-        containerHeader.className = 'chart-debug-header';
-        containerHeader.innerHTML = `
-          <h3 style="margin: 0 0 15px 0; color: #007cba; font-size: 16px; font-weight: bold; border-bottom: 1px solid #007cba; padding-bottom: 8px;">
-            📊 Chart Debug Testing Area (Dynamically Created)
-          </h3>
-          <p style="margin: 0 0 10px 0; font-size: 12px; color: #666; font-style: italic;">
-            The Truth Perspective - Chart.js Debug Console v${CHART_DEBUG_VERSION}
-          </p>
-        `;
-        
-        container.appendChild(containerHeader);
-        parentElement.appendChild(container);
-        
-        debugLog('Dynamic chart container created and styled successfully', 'success');
-      } else {
-        debugLog('Existing chart container found and ready for use', 'info');
+        // Insert at the beginning of the integration point (not at the end)
+        integrationPoint.insertBefore(container, integrationPoint.firstChild);
+        debugLog('Template-integrated chart container created successfully', 'success');
       }
       
-      // Step 2: Clean up any existing canvas elements
-      const existingCanvas = document.getElementById('debug-main-chart');
+      // Step 3: Clean up any existing canvas elements
+      const existingCanvas = container.querySelector('#debug-main-chart') || 
+                            document.getElementById('debug-main-chart');
       if (existingCanvas) {
         existingCanvas.remove();
         debugLog('Previous canvas element removed', 'info');
       }
       
-      // Step 3: Create new canvas with enhanced attributes
+      // Step 4: Create new canvas optimized for template integration
       const newCanvas = document.createElement('canvas');
       newCanvas.id = 'debug-main-chart';
       newCanvas.className = 'chart-debug-canvas';
@@ -354,31 +359,25 @@
         max-width: 100%; 
         height: auto; 
         display: block; 
-        margin: 0 auto;
-        border: 1px solid #ddd;
+        margin: 10px auto;
+        border: 1px solid #e1e1e1;
         border-radius: 4px;
         background: white;
       `;
       newCanvas.setAttribute('aria-label', 'Chart Debug Canvas');
-      newCanvas.textContent = 'Your browser does not support the HTML5 canvas element required for chart rendering.';
       
-      // Step 4: Safely append canvas to container
-      try {
-        container.appendChild(newCanvas);
-        debugLog('Canvas element successfully created and appended to container', 'success');
-      } catch (appendError) {
-        debugLog(`Critical error appending canvas to container: ${appendError.message}`, 'error');
-        throw new Error(`Canvas append failed: ${appendError.message}`);
-      }
+      // Step 5: Append canvas to container
+      container.appendChild(newCanvas);
+      debugLog('Canvas element successfully integrated into template container', 'success');
       
-      // Step 5: Verify canvas context availability
+      // Step 6: Verify canvas context
       const ctx = newCanvas.getContext('2d');
       if (!ctx) {
         debugLog('Canvas 2D context not available', 'error');
         throw new Error('Canvas 2D rendering context not supported');
       }
       
-      debugLog('Canvas preparation completed successfully with 2D context ready', 'success');
+      debugLog('Canvas preparation completed with template integration', 'success');
       return newCanvas;
       
     } catch (error) {
@@ -641,15 +640,32 @@
   }
 
   /**
-   * Enhanced clear charts function with robust error handling
+   * Enhanced clear charts function with template container support
    */
   function clearCharts() {
-    debugLog('Clearing all charts and resetting canvas...', 'info');
+    debugLog('Clearing charts and resetting template container...', 'info');
     
     try {
       destroyExistingChart();
       
-      const container = document.querySelector('.chart-container');
+      // Find the container (prefer template containers)
+      const containerSelectors = [
+        '.chart-container',
+        '.chart-testing-area', 
+        '.chart-test-container',
+        '#chart-testing-area',
+        '#chart-container'
+      ];
+      
+      let container = null;
+      for (let selector of containerSelectors) {
+        container = document.querySelector(selector);
+        if (container) {
+          debugLog(`Found container for clearing: ${selector}`, 'info');
+          break;
+        }
+      }
+      
       const canvas = document.getElementById('debug-main-chart');
       
       if (canvas) {
@@ -658,30 +674,27 @@
       }
       
       if (container) {
-        // Create styled placeholder
+        // Create minimal placeholder for template containers
         const placeholder = document.createElement('div');
-        placeholder.className = 'chart-placeholder';
+        placeholder.className = 'chart-placeholder template-integrated';
         placeholder.innerHTML = `
-          <div style="text-align: center; padding: 40px 20px; color: #666;">
-            <h4 style="margin: 0 0 10px 0; color: #007cba;">No Charts Currently Displayed</h4>
-            <p style="margin: 0; font-style: italic; font-size: 14px;">
-              Use the control buttons above to test Chart.js functionality.<br>
-              Console v${CHART_DEBUG_VERSION} ready for testing.
+          <div style="text-align: center; padding: 30px 15px; color: #666; background: #f9f9f9; border-radius: 4px;">
+            <p style="margin: 0; font-size: 14px; color: #888;">
+              Click a test button above to generate debug charts
             </p>
-            <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 4px; font-size: 12px;">
-              📊 Chart.js v4.4.0 with 8 controllers and 6 scales available
-            </div>
+            <small style="font-size: 11px; color: #aaa; margin-top: 8px; display: block;">
+              Chart Debug Console v${CHART_DEBUG_VERSION} ready
+            </small>
           </div>
         `;
-        placeholder.style.cssText = 'border: 2px dashed #ccc; border-radius: 8px; margin: 10px 0;';
         
         container.appendChild(placeholder);
-        debugLog('Enhanced chart placeholder added', 'success');
+        debugLog('Template-friendly placeholder added', 'success');
       } else {
-        debugLog('Chart container not found during clear operation', 'warning');
+        debugLog('No container found during clear operation', 'warning');
       }
       
-      debugLog('Charts cleared successfully', 'success');
+      debugLog('Charts cleared successfully with template integration', 'success');
       
     } catch (error) {
       debugLog(`Error during chart clearing: ${error.message}`, 'error');
@@ -711,18 +724,12 @@
   }
 
   /**
-   * Initialize debug console with serial loading
+   * Initialize debug console with template integration priority
    */
   Drupal.behaviors.chartDebugConsole = {
     attach: function (context, settings) {
       once('chart-debug-init', 'body', context).forEach(function () {
-        debugLog(`Initializing The Truth Perspective Chart.js Debug Console v${CHART_DEBUG_VERSION}...`, 'info');
-        
-        // Log debug console version and environment details
-        console.log(`Chart Debug Console Version: ${CHART_DEBUG_VERSION}`);
-        console.log('The Truth Perspective - News Analytics Platform');
-        console.log('Drupal 11 Environment - Production Server');
-        console.log('Date:', new Date().toISOString());
+        debugLog(`Initializing Chart Debug Console v${CHART_DEBUG_VERSION} with template integration...`, 'info');
         
         // Show initial loading state
         updateVersionDisplay('chartjs-version', 'Detecting...');
