@@ -56,3 +56,39 @@ charts-base:
     js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
   dependencies:
     - core/drupal
+
+chart-libraries:
+  version: 1.x
+  js:
+    js/chart.umd.js: { minified: true, weight: -10 }
+    js/chartjs-adapter-date-fns.bundle.min.js: { minified: true, weight: -9 }
+  dependencies:
+    - core/drupal
+    - core/once
+
+chart-debug-console:
+  version: 1.x
+  js:
+    js/chart-debug.js: { weight: -5 }
+  dependencies:
+    - newsmotivationmetrics/chart-libraries
+    - core/drupal
+    - core/once
+
+public-dashboard:
+  version: 1.x
+  js:
+    js/public-dashboard.js: { weight: -5 }
+  dependencies:
+    - newsmotivationmetrics/chart-libraries
+    - core/drupal
+    - core/once
+
+admin-dashboard:
+  version: 1.x
+  js:
+    js/admin-dashboard.js: { weight: -5 }
+  dependencies:
+    - newsmotivationmetrics/chart-libraries
+    - core/drupal
+    - core/once
