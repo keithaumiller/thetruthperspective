@@ -5,16 +5,19 @@
  * Provides debugging functionality for Chart.js environment detection,
  * chart creation testing, and comprehensive dataset debugging.
  * 
- * @version 1.2.0
+ * @version 1.3.0
  */
 
 (function (Drupal, once) {
   'use strict';
 
   // Chart Debug Console Version
-  const CHART_DEBUG_VERSION = '1.2.0';
+  const CHART_DEBUG_VERSION = '1.3.0';
   
   let currentChart = null;
+  let loadingRetryCount = 0;
+  const MAX_LOADING_RETRIES = 20;
+  const LOADING_RETRY_INTERVAL = 250; // milliseconds
 
   /**
    * Enhanced logging with timestamps for production debugging
@@ -39,6 +42,73 @@
   function setupDebugEventListeners() {
     const stackTrace = new Error().stack;
     console.log('setupDebugEventListeners called from:', stackTrace);
+  }
+
+  /**
+   * Serial loading verification with retry logic
+   */
+  function waitForChartJsComplete() {
+    return new Promise((resolve, reject) => {
+      const checkChartReadiness = () => {
+        loadingRetryCount++;
+        
+        debugLog(`Checking Chart.js readiness (attempt ${loadingRetryCount}/${MAX_LOADING_RETRIES})...`, 'info');
+        
+        // Step 1: Check basic Chart.js availability
+        if (typeof window.Chart === 'undefined') {
+          debugLog('Chart.js not yet available', 'warning');
+          scheduleRetry();
+          return;
+        }
+        
+        // Step 2: Check version availability
+        if (!window.Chart.version) {
+          debugLog('Chart.js version not yet available', 'warning');
+          scheduleRetry();
+          return;
+        }
+        
+        // Step 3: Check registry population
+        if (!window.Chart.registry || !window.Chart.registry.controllers) {
+          debugLog('Chart.js registry not yet available', 'warning');
+          scheduleRetry();
+          return;
+        }
+        
+        // Step 4: Check controller count (should be > 0)
+        const controllerCount = Object.keys(window.Chart.registry.controllers.items || {}).length;
+        if (controllerCount === 0) {
+          debugLog('Chart.js controllers not yet loaded', 'warning');
+          scheduleRetry();
+          return;
+        }
+        
+        // Step 5: Check scale count (should be > 0)
+        const scaleCount = Object.keys(window.Chart.registry.scales.items || {}).length;
+        if (scaleCount === 0) {
+          debugLog('Chart.js scales not yet loaded', 'warning');
+          scheduleRetry();
+          return;
+        }
+        
+        // All checks passed
+        debugLog(`Chart.js fully loaded: v${window.Chart.version}, ${controllerCount} controllers, ${scaleCount} scales`, 'success');
+        resolve();
+      };
+      
+      const scheduleRetry = () => {
+        if (loadingRetryCount >= MAX_LOADING_RETRIES) {
+          debugLog('Chart.js loading timeout - proceeding with partial initialization', 'error');
+          reject(new Error('Chart.js loading timeout'));
+          return;
+        }
+        
+        setTimeout(checkChartReadiness, LOADING_RETRY_INTERVAL);
+      };
+      
+      // Start the checking process
+      checkChartReadiness();
+    });
   }
 
   /**
@@ -99,13 +169,6 @@
       // Time scale support verification
       try {
         if (environment.dateAdapter.available) {
-          // Try to create a minimal time scale configuration
-          const testConfig = {
-            type: 'time',
-            time: {
-              unit: 'day'
-            }
-          };
           environment.dateAdapter.timeScaleSupport = true;
         }
       } catch (error) {
@@ -118,7 +181,7 @@
   }
 
   /**
-   * Update version display elements
+   * Update version display elements with loading states
    */
   function updateVersionDisplay(elementId, content) {
     const element = document.getElementById(elementId);
@@ -129,10 +192,42 @@
         element.className = 'version-display status-success';
       } else if (content.includes('❌')) {
         element.className = 'version-display status-error';
+      } else if (content.includes('Loading...') || content.includes('Detecting...')) {
+        element.className = 'version-display status-loading';
       } else {
         element.className = 'version-display';
       }
     }
+  }
+
+  /**
+   * Update environment display with loading states
+   */
+  function updateEnvironmentDisplay(environment) {
+    // Show loading state initially
+    updateVersionDisplay('chartjs-version', 
+      environment.chartjs.available && environment.chartjs.version !== 'Not Available'
+        ? `v${environment.chartjs.version} ✅` 
+        : 'Detecting...'
+    );
+    
+    updateVersionDisplay('date-adapter-status',
+      environment.dateAdapter.available 
+        ? `${environment.dateAdapter.method} ✅`
+        : 'Loading...'
+    );
+    
+    updateVersionDisplay('controllers-count',
+      environment.chartjs.controllers > 0
+        ? `${environment.chartjs.controllers} registered ✅`
+        : 'Loading...'
+    );
+    
+    updateVersionDisplay('scales-count',
+      environment.chartjs.scales > 0
+        ? `${environment.chartjs.scales} available ✅`
+        : 'Loading...'
+    );
   }
 
   /**
@@ -456,37 +551,24 @@
   function refreshDebugData() {
     debugLog('Refreshing debug data and re-detecting environment...', 'info');
     
-    const environment = detectChartEnvironment();
-    updateEnvironmentDisplay(environment);
+    loadingRetryCount = 0; // Reset retry count
     
-    debugLog('Debug data refreshed successfully', 'success');
+    waitForChartJsComplete()
+      .then(() => {
+        const environment = detectChartEnvironment();
+        updateEnvironmentDisplay(environment);
+        debugLog('Debug data refreshed successfully', 'success');
+      })
+      .catch((error) => {
+        debugLog(`Debug refresh failed: ${error.message}`, 'error');
+        // Still try to display partial environment
+        const environment = detectChartEnvironment();
+        updateEnvironmentDisplay(environment);
+      });
   }
 
   /**
-   * Update environment display
-   */
-  function updateEnvironmentDisplay(environment) {
-    updateVersionDisplay('chartjs-version', 
-      environment.chartjs.available 
-        ? `v${environment.chartjs.version} ✅` 
-        : 'Not Available ❌'
-    );
-    
-    updateVersionDisplay('date-adapter-status',
-      environment.dateAdapter.available 
-        ? `${environment.dateAdapter.method} ✅`
-        : 'Not Available ❌'
-    );
-    
-    updateVersionDisplay('time-scale-status',
-      environment.dateAdapter.timeScaleSupport 
-        ? 'Available ✅'
-        : 'Not Available ❌'
-    );
-  }
-
-  /**
-   * Initialize debug console
+   * Initialize debug console with serial loading
    */
   Drupal.behaviors.chartDebugConsole = {
     attach: function (context, settings) {
@@ -499,39 +581,68 @@
         console.log('Drupal 11 Environment - Production Server');
         console.log('Date:', new Date().toISOString());
         
-        // Detect Chart.js environment
-        const environment = detectChartEnvironment();
-        updateEnvironmentDisplay(environment);
-
-        // Attach event listeners
-        const simpleBtn = document.getElementById('test-simple-chart');
-        if (simpleBtn) {
-          simpleBtn.addEventListener('click', testSimpleChart);
-        }
-
-        const timelineBtn = document.getElementById('test-timeline-chart');
-        if (timelineBtn) {
-          timelineBtn.addEventListener('click', testTimelineChart);
-        }
-
-        const realDataBtn = document.getElementById('test-real-data-chart');
-        if (realDataBtn) {
-          realDataBtn.addEventListener('click', testRealDataChart);
-        }
-
-        const clearBtn = document.getElementById('clear-debug-charts');
-        if (clearBtn) {
-          clearBtn.addEventListener('click', clearCharts);
-        }
-
-        const refreshBtn = document.getElementById('refresh-debug-data');
-        if (refreshBtn) {
-          refreshBtn.addEventListener('click', refreshDebugData);
-        }
-
-        debugLog(`Chart Debug Console v${CHART_DEBUG_VERSION} initialization completed`, 'success');
+        // Show initial loading state
+        updateVersionDisplay('chartjs-version', 'Detecting...');
+        updateVersionDisplay('date-adapter-status', 'Loading...');
+        updateVersionDisplay('controllers-count', 'Loading...');
+        updateVersionDisplay('scales-count', 'Loading...');
+        
+        // Wait for Chart.js to fully load, then proceed
+        waitForChartJsComplete()
+          .then(() => {
+            debugLog('Chart.js fully loaded - proceeding with environment detection', 'success');
+            const environment = detectChartEnvironment();
+            updateEnvironmentDisplay(environment);
+            
+            // Attach event listeners only after Chart.js is ready
+            attachEventListeners();
+            
+            debugLog(`Chart Debug Console v${CHART_DEBUG_VERSION} initialization completed`, 'success');
+          })
+          .catch((error) => {
+            debugLog(`Chart.js loading failed: ${error.message}`, 'error');
+            
+            // Still try partial initialization
+            const environment = detectChartEnvironment();
+            updateEnvironmentDisplay(environment);
+            attachEventListeners();
+            
+            debugLog(`Chart Debug Console v${CHART_DEBUG_VERSION} partial initialization completed`, 'warning');
+          });
       });
     }
   };
+
+  /**
+   * Attach event listeners for debug controls
+   */
+  function attachEventListeners() {
+    const simpleBtn = document.getElementById('test-simple-chart');
+    if (simpleBtn) {
+      simpleBtn.addEventListener('click', testSimpleChart);
+    }
+
+    const timelineBtn = document.getElementById('test-timeline-chart');
+    if (timelineBtn) {
+      timelineBtn.addEventListener('click', testTimelineChart);
+    }
+
+    const realDataBtn = document.getElementById('test-real-data-chart');
+    if (realDataBtn) {
+      realDataBtn.addEventListener('click', testRealDataChart);
+    }
+
+    const clearBtn = document.getElementById('clear-debug-charts');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', clearCharts);
+    }
+
+    const refreshBtn = document.getElementById('refresh-debug-data');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', refreshDebugData);
+    }
+
+    debugLog('Event listeners attached successfully', 'success');
+  }
 
 })(Drupal, once);
