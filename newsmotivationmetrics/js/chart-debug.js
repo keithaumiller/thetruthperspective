@@ -1,7 +1,7 @@
 /**
  * @file
  * Chart.js debug console for The Truth Perspective news motivation metrics.
- * Production-ready with enhanced chart lifecycle management and date formatting.
+ * Production-ready with comprehensive chart lifecycle management.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -470,17 +470,17 @@
     },
 
     /**
-     * Enhanced chart destruction with comprehensive cleanup for Chart.js v4.x.
+     * Comprehensive chart destruction with complete Chart.js cleanup for v4.x.
      */
     destroyExistingChart: function() {
       const self = this;
       
       try {
-        self.log('Starting comprehensive chart destruction...');
+        self.log('Starting comprehensive chart destruction and cleanup...');
         
-        // Method 1: Destroy via global reference
+        // Step 1: Destroy via global reference
         if (window.debugChart) {
-          self.log('Destroying existing chart via global reference');
+          self.log('Destroying chart via global reference - ID: ' + (window.debugChart.id || 'unknown'));
           try {
             window.debugChart.destroy();
             self.log('Global chart reference destroyed successfully');
@@ -490,100 +490,132 @@
           window.debugChart = null;
         }
         
-        // Method 2: Find and destroy all chart instances via Chart.js registry
+        // Step 2: Find and destroy all chart instances via Chart.js registry
         const canvas = document.getElementById('debug-main-chart');
         if (canvas) {
-          // Get all chart instances associated with this canvas
           try {
             const existingChart = Chart.getChart(canvas);
             if (existingChart) {
-              self.log('Destroying existing chart via Chart.getChart() - ID: ' + existingChart.id);
+              self.log('Found chart via Chart.getChart() - ID: ' + existingChart.id);
               existingChart.destroy();
-              self.log('Chart instance destroyed via Chart.getChart()');
+              self.log('Chart destroyed via Chart.getChart()');
             } else {
-              self.log('No chart instance found via Chart.getChart()');
+              self.log('No chart found via Chart.getChart()');
             }
           } catch (getChartError) {
             self.log('Error with Chart.getChart(): ' + getChartError.message);
           }
-          
-          // Method 3: Destroy all charts globally (aggressive cleanup)
-          try {
-            // Get all registered charts and destroy any using our canvas
-            Object.values(Chart.instances || {}).forEach(function(chart) {
+        }
+        
+        // Step 3: Aggressive cleanup - destroy all charts in Chart.instances
+        try {
+          if (Chart.instances && typeof Chart.instances === 'object') {
+            const instanceIds = Object.keys(Chart.instances);
+            self.log('Found ' + instanceIds.length + ' Chart.js instances total');
+            
+            instanceIds.forEach(function(id) {
+              const chart = Chart.instances[id];
               if (chart && chart.canvas && chart.canvas.id === 'debug-main-chart') {
-                self.log('Destroying chart instance found in Chart.instances - ID: ' + chart.id);
-                chart.destroy();
+                self.log('Destroying chart instance from Chart.instances - ID: ' + id);
+                try {
+                  chart.destroy();
+                  delete Chart.instances[id];
+                  self.log('Chart instance ' + id + ' destroyed and removed from registry');
+                } catch (instanceError) {
+                  self.log('Error destroying chart instance ' + id + ': ' + instanceError.message);
+                }
               }
             });
-          } catch (instancesError) {
-            self.log('Error checking Chart.instances: ' + instancesError.message);
+          } else {
+            self.log('Chart.instances not available or not an object');
           }
-          
-          // Method 4: Remove canvas and recreate it (nuclear option)
+        } catch (instancesError) {
+          self.log('Error during Chart.instances cleanup: ' + instancesError.message);
+        }
+        
+        // Step 4: Canvas manipulation - remove and recreate
+        if (canvas) {
           const container = canvas.parentNode;
           if (container) {
-            self.log('Removing and recreating canvas element');
+            self.log('Removing canvas element entirely');
             container.removeChild(canvas);
             
-            // Create new canvas
-            const newCanvas = document.createElement('canvas');
-            newCanvas.id = 'debug-main-chart';
-            newCanvas.width = 800;
-            newCanvas.height = 400;
-            newCanvas.style.maxWidth = '100%';
-            newCanvas.style.height = 'auto';
-            container.appendChild(newCanvas);
-            self.log('New canvas element created');
+            // Force a brief delay to ensure Chart.js cleanup completes
+            setTimeout(function() {
+              try {
+                // Create completely new canvas element
+                const newCanvas = document.createElement('canvas');
+                newCanvas.id = 'debug-main-chart';
+                newCanvas.width = 800;
+                newCanvas.height = 400;
+                newCanvas.style.maxWidth = '100%';
+                newCanvas.style.height = 'auto';
+                container.appendChild(newCanvas);
+                self.log('New canvas element created with fresh context');
+              } catch (canvasError) {
+                self.log('Error creating new canvas: ' + canvasError.message);
+              }
+            }, 50);
+          } else {
+            self.log('Canvas container not found');
+          }
+        } else {
+          self.log('Canvas element not found');
+        }
+        
+        // Step 5: Force garbage collection if available
+        if (typeof window.gc === 'function') {
+          try {
+            window.gc();
+            self.log('Forced garbage collection executed');
+          } catch (gcError) {
+            self.log('Garbage collection failed: ' + gcError.message);
           }
         }
         
-        // Method 5: Force garbage collection if available
-        if (typeof window.gc === 'function') {
-          window.gc();
-          self.log('Forced garbage collection');
-        }
-        
-        self.log('Chart destruction completed');
+        self.log('Chart destruction and cleanup completed');
         
       } catch (error) {
-        self.log('Error during chart destruction: ' + error.message);
+        self.log('Critical error during chart destruction: ' + error.message);
         
-        // Fallback: Try to recreate the canvas container entirely
+        // Nuclear fallback - recreate entire container
         try {
+          self.log('Executing nuclear fallback - recreating charts container');
           const chartsContainer = document.getElementById('debug-charts-container');
           if (chartsContainer) {
-            self.log('Recreating entire charts container as fallback');
             chartsContainer.innerHTML = '';
             
-            const newCanvas = document.createElement('canvas');
-            newCanvas.id = 'debug-main-chart';
-            newCanvas.width = 800;
-            newCanvas.height = 400;
-            newCanvas.style.maxWidth = '100%';
-            newCanvas.style.height = 'auto';
-            chartsContainer.appendChild(newCanvas);
-            self.log('Charts container recreated successfully');
+            setTimeout(function() {
+              const newCanvas = document.createElement('canvas');
+              newCanvas.id = 'debug-main-chart';
+              newCanvas.width = 800;
+              newCanvas.height = 400;
+              newCanvas.style.maxWidth = '100%';
+              newCanvas.style.height = 'auto';
+              chartsContainer.appendChild(newCanvas);
+              self.log('Nuclear fallback completed - fresh container created');
+            }, 100);
           }
         } catch (fallbackError) {
-          self.log('Fallback canvas recreation failed: ' + fallbackError.message);
+          self.log('Nuclear fallback failed: ' + fallbackError.message);
         }
       }
     },
 
     /**
-     * Test simple chart creation with proper cleanup.
+     * Test simple chart creation with enhanced cleanup timing.
      */
     testSimpleChart: function() {
-      this.log('Testing simple chart creation...');
-      this.updateDebugStatus('Creating simple test chart...', 'info');
+      const self = this;
+      self.log('Testing simple chart creation...');
+      self.updateDebugStatus('Creating simple test chart...', 'info');
 
       try {
-        // Enhanced chart destruction before creation
-        this.destroyExistingChart();
+        // Comprehensive chart destruction
+        self.destroyExistingChart();
         
-        // Small delay to ensure cleanup is complete
-        setTimeout(() => {
+        // Extended delay to ensure complete cleanup
+        setTimeout(function() {
           try {
             const canvas = document.getElementById('debug-main-chart');
             if (!canvas) {
@@ -645,34 +677,35 @@
               }
             });
 
-            this.log('✅ Simple chart test successful');
-            this.updateDebugStatus('✅ Simple chart created successfully', 'success');
+            self.log('✅ Simple chart test successful - Chart ID: ' + window.debugChart.id);
+            self.updateDebugStatus('✅ Simple chart created successfully', 'success');
 
           } catch (delayedError) {
-            this.log('❌ Simple chart test failed after cleanup: ' + delayedError.message);
-            this.updateDebugStatus('❌ Simple chart test failed: ' + delayedError.message, 'error');
+            self.log('❌ Simple chart test failed after cleanup: ' + delayedError.message);
+            self.updateDebugStatus('❌ Simple chart test failed: ' + delayedError.message, 'error');
           }
-        }, 100);
+        }, 200); // Extended delay for complete cleanup
 
       } catch (error) {
-        this.log('❌ Simple chart test failed: ' + error.message);
-        this.updateDebugStatus('❌ Simple chart test failed: ' + error.message, 'error');
+        self.log('❌ Simple chart test failed: ' + error.message);
+        self.updateDebugStatus('❌ Simple chart test failed: ' + error.message, 'error');
       }
     },
 
     /**
-     * Test timeline chart with enhanced publication date support and proper chart lifecycle.
+     * Test timeline chart with enhanced cleanup timing.
      */
     testTimelineChart: function() {
-      this.log('Testing timeline chart creation...');
-      this.updateDebugStatus('Creating timeline test chart...', 'info');
+      const self = this;
+      self.log('Testing timeline chart creation...');
+      self.updateDebugStatus('Creating timeline test chart...', 'info');
 
       try {
-        // Enhanced chart destruction before creation
-        this.destroyExistingChart();
+        // Comprehensive chart destruction
+        self.destroyExistingChart();
         
-        // Small delay to ensure cleanup is complete
-        setTimeout(() => {
+        // Extended delay to ensure complete cleanup
+        setTimeout(function() {
           try {
             const canvas = document.getElementById('debug-main-chart');
             if (!canvas) {
@@ -680,8 +713,7 @@
             }
 
             const ctx = canvas.getContext('2d');
-            
-            this.log('Attempting timeline chart with time scale...');
+            self.log('Attempting timeline chart with time scale...');
             
             try {
               // Use estimatedDate when available, fallback to date
@@ -734,7 +766,6 @@
                       type: 'time',
                       time: {
                         unit: 'day',
-                        parser: 'yyyy-MM-dd\'T\'HH:mm:ss', // Fixed: proper escape for literal 'T'
                         displayFormats: {
                           day: 'MMM dd'
                         }
@@ -755,22 +786,21 @@
                 }
               });
 
-              this.log('✅ Timeline chart with time scale successful');
-              this.updateDebugStatus('✅ Timeline chart with time scale created successfully', 'success');
+              self.log('✅ Timeline chart with time scale successful - Chart ID: ' + window.debugChart.id);
+              self.updateDebugStatus('✅ Timeline chart with time scale created successfully', 'success');
               
             } catch (timeScaleError) {
-              this.log('Timeline with time scale failed: ' + timeScaleError.message);
-              this.log('Falling back to linear scale timeline...');
+              self.log('Timeline with time scale failed: ' + timeScaleError.message);
+              self.log('Falling back to linear scale timeline...');
               
-              // Properly destroy failed chart attempt before fallback
-              this.destroyExistingChart();
+              // Linear scale fallback with fresh canvas
+              self.destroyExistingChart();
               
-              setTimeout(() => {
+              setTimeout(function() {
                 try {
                   const fallbackCanvas = document.getElementById('debug-main-chart');
                   const fallbackCtx = fallbackCanvas.getContext('2d');
                   
-                  // Fallback: Timeline chart with linear scale
                   window.debugChart = new Chart(fallbackCtx, {
                     type: 'line',
                     data: {
@@ -816,39 +846,41 @@
                     }
                   });
                   
-                  this.log('✅ Timeline chart with linear scale fallback successful');
-                  this.updateDebugStatus('✅ Timeline chart created (linear scale fallback)', 'warning');
+                  self.log('✅ Timeline chart with linear scale fallback successful - Chart ID: ' + window.debugChart.id);
+                  self.updateDebugStatus('✅ Timeline chart created (linear scale fallback)', 'warning');
                   
                 } catch (fallbackError) {
-                  this.log('❌ Linear scale fallback failed: ' + fallbackError.message);
-                  this.updateDebugStatus('❌ Timeline chart fallback failed: ' + fallbackError.message, 'error');
-                  this.createFallbackLineChart();
+                  self.log('❌ Linear scale fallback failed: ' + fallbackError.message);
+                  self.updateDebugStatus('❌ Timeline chart fallback failed: ' + fallbackError.message, 'error');
+                  self.createFallbackLineChart();
                 }
-              }, 100);
+              }, 200);
             }
 
           } catch (delayedError) {
-            this.log('❌ Timeline chart test failed after cleanup: ' + delayedError.message);
-            this.updateDebugStatus('❌ Timeline chart test failed: ' + delayedError.message, 'error');
-            this.createFallbackLineChart();
+            self.log('❌ Timeline chart test failed after cleanup: ' + delayedError.message);
+            self.updateDebugStatus('❌ Timeline chart test failed: ' + delayedError.message, 'error');
+            self.createFallbackLineChart();
           }
-        }, 100);
+        }, 200); // Extended delay for complete cleanup
 
       } catch (error) {
-        this.log('❌ Timeline chart test completely failed: ' + error.message);
-        this.updateDebugStatus('❌ Timeline chart test failed: ' + error.message, 'error');
-        this.createFallbackLineChart();
+        self.log('❌ Timeline chart test completely failed: ' + error.message);
+        self.updateDebugStatus('❌ Timeline chart test failed: ' + error.message, 'error');
+        self.createFallbackLineChart();
       }
     },
 
     /**
-     * Create fallback line chart when timeline fails with proper cleanup.
+     * Create fallback line chart with enhanced cleanup.
      */
     createFallbackLineChart: function() {
+      const self = this;
+      
       try {
-        this.destroyExistingChart();
+        self.destroyExistingChart();
         
-        setTimeout(() => {
+        setTimeout(function() {
           try {
             const canvas = document.getElementById('debug-main-chart');
             const ctx = canvas.getContext('2d');
@@ -879,34 +911,35 @@
               }
             });
             
-            this.log('✅ Fallback line chart created');
-            this.updateDebugStatus('✅ Simple line chart created (final fallback)', 'warning');
+            self.log('✅ Fallback line chart created - Chart ID: ' + window.debugChart.id);
+            self.updateDebugStatus('✅ Simple line chart created (final fallback)', 'warning');
             
           } catch (fallbackError) {
-            this.log('❌ Fallback chart creation failed: ' + fallbackError.message);
-            this.updateDebugStatus('❌ All chart creation attempts failed', 'error');
+            self.log('❌ Fallback chart creation failed: ' + fallbackError.message);
+            self.updateDebugStatus('❌ All chart creation attempts failed', 'error');
           }
-        }, 100);
+        }, 200);
         
       } catch (error) {
-        this.log('❌ Fallback chart setup failed: ' + error.message);
-        this.updateDebugStatus('❌ All chart creation attempts failed', 'error');
+        self.log('❌ Fallback chart setup failed: ' + error.message);
+        self.updateDebugStatus('❌ All chart creation attempts failed', 'error');
       }
     },
 
     /**
-     * Test real data chart creation with proper cleanup.
+     * Test real data chart creation with enhanced cleanup timing.
      */
     testRealDataChart: function() {
-      this.log('Testing real data chart creation...');
-      this.updateDebugStatus('Creating real data test chart...', 'info');
+      const self = this;
+      self.log('Testing real data chart creation...');
+      self.updateDebugStatus('Creating real data test chart...', 'info');
 
       try {
-        // Enhanced chart destruction before creation
-        this.destroyExistingChart();
+        // Comprehensive chart destruction
+        self.destroyExistingChart();
         
-        // Small delay to ensure cleanup is complete
-        setTimeout(() => {
+        // Extended delay to ensure complete cleanup
+        setTimeout(function() {
           try {
             const canvas = document.getElementById('debug-main-chart');
             if (!canvas) {
@@ -947,30 +980,27 @@
               }
             });
 
-            this.log('✅ Real data chart test successful');
-            this.updateDebugStatus('✅ Real data chart created successfully', 'success');
+            self.log('✅ Real data chart test successful - Chart ID: ' + window.debugChart.id);
+            self.updateDebugStatus('✅ Real data chart created successfully', 'success');
 
           } catch (delayedError) {
-            this.log('❌ Real data chart test failed after cleanup: ' + delayedError.message);
-            this.updateDebugStatus('❌ Real data chart test failed: ' + delayedError.message, 'error');
+            self.log('❌ Real data chart test failed after cleanup: ' + delayedError.message);
+            self.updateDebugStatus('❌ Real data chart test failed: ' + delayedError.message, 'error');
           }
-        }, 100);
+        }, 200); // Extended delay for complete cleanup
 
       } catch (error) {
-        this.log('❌ Real data chart test failed: ' + error.message);
-        this.updateDebugStatus('❌ Real data chart test failed: ' + error.message, 'error');
+        self.log('❌ Real data chart test failed: ' + error.message);
+        self.updateDebugStatus('❌ Real data chart test failed: ' + error.message, 'error');
       }
     },
 
     /**
-     * Clear all debug charts with enhanced cleanup.
+     * Clear all debug charts with comprehensive cleanup.
      */
     clearDebugCharts: function() {
       this.log('Clearing debug charts...');
-      
-      // Use the enhanced destroy method
       this.destroyExistingChart();
-
       this.updateDebugStatus('Charts cleared', 'info');
     },
 
