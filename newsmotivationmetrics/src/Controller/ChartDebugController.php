@@ -247,7 +247,7 @@ class ChartDebugController extends ControllerBase {
     ];
     
     // Attach libraries and pass data
-    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-debug';
+    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-debug-console';
     $build['#attached']['drupalSettings']['newsmotivationmetrics'] = [
       'timelineData' => $chart_data['timeline_data'],
       'topTerms' => $chart_data['top_terms'],

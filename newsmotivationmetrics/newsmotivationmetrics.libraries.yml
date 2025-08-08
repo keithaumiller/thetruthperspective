@@ -68,12 +68,17 @@ chart-libraries:
 
 chart-debug-console:
   version: 1.x
+  css:
+    theme:
+      css/chart-style.css: {}
   js:
+    js/chart.umd.js: { weight: -10 }
+    js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
     js/chart-debug.js: { weight: -5 }
   dependencies:
-    - newsmotivationmetrics/chart-libraries
     - core/drupal
     - core/once
+    - core/drupalSettings
 
 public-dashboard:
   version: 1.x
