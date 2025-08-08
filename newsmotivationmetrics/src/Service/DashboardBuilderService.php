@@ -220,9 +220,16 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
       '#attributes' => ['class' => ['chart-container']],
     ];
     
-    $section['chart_wrapper']['canvas_markup'] = [
-      '#type' => 'markup',
-      '#markup' => '<canvas id="taxonomy-timeline-chart" width="800" height="400" style="max-width: 100%; height: auto;"></canvas>',
+    $section['chart_wrapper']['canvas'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'canvas',
+      '#attributes' => [
+        'id' => 'taxonomy-timeline-chart',
+        'width' => 800,
+        'height' => 400,
+        'style' => 'max-width: 100%; height: auto;',
+        'aria-label' => 'Taxonomy Timeline Chart',
+      ],
     ];
     
     $section['chart_wrapper']['debug'] = [
