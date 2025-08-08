@@ -2,6 +2,7 @@
  * Chart.js behavior for News Motivation Metrics module.
  * Handles taxonomy timeline visualization with interactive controls.
  * Updated to match debug console functionality for taxonomy term occurrences over time.
+ * Version: 1.0.1 - Enhanced error handling and debugging (Aug 8, 2025)
  */
 
 (function ($, Drupal, drupalSettings, once) {
