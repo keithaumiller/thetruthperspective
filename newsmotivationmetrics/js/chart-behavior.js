@@ -28,8 +28,10 @@
         console.log('Timeline data points:', timelineData.length);
         console.log('Available terms:', topTerms.length);
 
-        // Initialize chart system
-        this.initializeChart(timelineData, topTerms);
+        // Initialize chart system with retry logic for canvas availability
+        setTimeout(() => {
+          this.initializeChart(timelineData, topTerms);
+        }, 100);
       }.bind(this));
     },
 
@@ -63,10 +65,14 @@
       
       console.log('Date adapter status:', dateAdapterStatus);
 
-      // Validate canvas element
+      // Validate canvas element with enhanced debugging
       const canvas = document.getElementById('taxonomy-timeline-chart');
       if (!canvas) {
-        console.log('Canvas element not found - chart not available on this page');
+        console.log('Canvas element not found - DOM elements:');
+        console.log('timeline sections:', document.querySelectorAll('.taxonomy-timeline-section').length);
+        console.log('all canvas elements:', document.querySelectorAll('canvas').length);
+        console.log('chart containers:', document.querySelectorAll('.chart-container').length);
+        self.updateStatus('Canvas element not found - chart not available on this page', 'error');
         return;
       }
 
