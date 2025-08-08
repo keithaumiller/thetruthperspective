@@ -1,0 +1,16 @@
+services:
+  newsmotivationmetrics.metrics_data_service:
+    class: Drupal\newsmotivationmetrics\Service\MetricsDataService
+    arguments: ['@database', '@logger.factory', '@entity_type.manager']
+
+  newsmotivationmetrics.timeline_service:
+    class: Drupal\newsmotivationmetrics\Service\TimelineService
+    arguments: ['@database', '@logger.factory', '@newsmotivationmetrics.metrics_data_service']
+
+  newsmotivationmetrics.chart_data_service:
+    class: Drupal\newsmotivationmetrics\Service\ChartDataService
+    arguments: ['@newsmotivationmetrics.timeline_service', '@newsmotivationmetrics.metrics_data_service', '@logger.factory']
+
+  newsmotivationmetrics.dashboard_builder:
+    class: Drupal\newsmotivationmetrics\Service\DashboardBuilderService
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@newsmotivationmetrics.metrics_data_service', '@renderer']

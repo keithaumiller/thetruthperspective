@@ -1,3 +1,8 @@
 access news motivation metrics:
   title: 'Access news motivation metrics'
   description: 'View analytics and metrics for news article motivations and AI analysis.'
+
+administer newsmotivationmetrics:
+  title: 'Administer News Motivation Metrics'
+  description: 'Access administrative features and debugging tools for the News Motivation Metrics module.'
+  restrict access: true

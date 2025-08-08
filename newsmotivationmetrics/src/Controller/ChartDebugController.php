@@ -3,7 +3,8 @@
 namespace Drupal\newsmotivationmetrics\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Database\Connection;
+use Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface;
+use Drupal\newsmotivationmetrics\Service\Interface\TimelineServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
@@ -11,25 +12,38 @@ use Symfony\Component\HttpFoundation\JsonResponse;
  * Chart debug controller for The Truth Perspective analytics development.
  * 
  * Provides comprehensive debugging tools for Chart.js integration,
- * data validation, and timeline visualization testing.
+ * data validation, and timeline visualization testing using services.
  */
 class ChartDebugController extends ControllerBase {
 
   /**
-   * The database connection.
+   * The chart data service.
    *
-   * @var \Drupal\Core\Database\Connection
+   * @var \Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface
    */
-  protected $database;
+  protected $chartDataService;
 
   /**
-   * Constructs a ChartDebugController object.
+   * The timeline service.
    *
-   * @param \Drupal\Core\Database\Connection $database
-   *   The database connection.
+   * @var \Drupal\newsmotivationmetrics\Service\Interface\TimelineServiceInterface
    */
-  public function __construct(Connection $database) {
-    $this->database = $database;
+  protected $timelineService;
+
+  /**
+   * Constructor.
+   *
+   * @param \Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface $chart_data_service
+   *   The chart data service.
+   * @param \Drupal\newsmotivationmetrics\Service\Interface\TimelineServiceInterface $timeline_service
+   *   The timeline service.
+   */
+  public function __construct(
+    ChartDataServiceInterface $chart_data_service,
+    TimelineServiceInterface $timeline_service
+  ) {
+    $this->chartDataService = $chart_data_service;
+    $this->timelineService = $timeline_service;
   }
 
   /**
@@ -37,7 +51,8 @@ class ChartDebugController extends ControllerBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('database')
+      $container->get('newsmotivationmetrics.chart_data_service'),
+      $container->get('newsmotivationmetrics.timeline_service')
     );
   }
 
@@ -48,178 +63,199 @@ class ChartDebugController extends ControllerBase {
    *   Render array for the debug page with comprehensive chart testing tools.
    */
   public function debugPage() {
-    // Get timeline data for charts
-    $timeline_data = $this->getTimelineData();
-    $top_terms = $this->getTopTerms();
+    $chart_data = $this->chartDataService->getTimelineChartData(['limit' => 20]);
     
-    // Debug information
-    $debug_info = [
-      'dataPoints' => count($timeline_data),
-      'termCount' => count($top_terms),
-      'timestamp' => time(),
+    $build = [];
+    
+    // Page header
+    $build['header'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['debug-header']],
     ];
-
-    // Prepare JavaScript settings for Chart.js integration
-    $js_settings = [
-      'timelineData' => $timeline_data,
-      'topTerms' => $top_terms,
+    
+    $build['header']['title'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'h1',
+      '#value' => '📊 Chart Debug Console',
+    ];
+    
+    $build['header']['description'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => 'Testing Chart.js integration for The Truth Perspective Analytics with service-based architecture',
+    ];
+    
+    // Debug information section
+    $build['debug_info'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['debug-info']],
+    ];
+    
+    $build['debug_info']['title'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'h3',
+      '#value' => 'Debug Information:',
+    ];
+    
+    $build['debug_info']['status'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#value' => 'Initializing services...',
+      '#attributes' => ['id' => 'debug-status'],
+    ];
+    
+    $debug_info = $chart_data['debug_info'];
+    
+    $build['debug_info']['stats'] = [
+      '#type' => 'markup',
+      '#markup' => '<div>Data Points: ' . $debug_info['dataPoints'] . '</div>
+                    <div>Terms Available: ' . $debug_info['termCount'] . '</div>
+                    <div>Timestamp: ' . $debug_info['date'] . '</div>
+                    <div>Memory Usage: ' . round($debug_info['memory_usage'] / 1024 / 1024, 2) . ' MB</div>
+                    <div>Chart.js Version: <span id="chartjs-version">Loading...</span></div>
+                    <div>Date Adapter: <span id="date-adapter-status">Loading...</span></div>',
+    ];
+    
+    // Chart controls section
+    $build['controls'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['chart-controls']],
+    ];
+    
+    $build['controls']['title'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'h3',
+      '#value' => 'Chart Controls',
+    ];
+    
+    $build['controls']['selector_group'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['control-group']],
+    ];
+    
+    $build['controls']['selector_group']['label'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'label',
+      '#value' => 'Select Terms to Display:',
+      '#attributes' => ['for' => 'term-selector'],
+    ];
+    
+    $build['controls']['selector_group']['selector'] = [
+      '#type' => 'select',
+      '#multiple' => TRUE,
+      '#options' => $this->chartDataService->buildTermOptionsArray($chart_data['top_terms']),
+      '#attributes' => [
+        'id' => 'term-selector',
+        'size' => 8,
+      ],
+    ];
+    
+    $build['controls']['buttons'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['control-buttons']],
+    ];
+    
+    $build['controls']['buttons']['update'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => 'Update Chart',
+      '#attributes' => [
+        'id' => 'update-chart',
+        'class' => ['btn', 'btn-primary'],
+        'type' => 'button',
+      ],
+    ];
+    
+    $build['controls']['buttons']['reset'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => 'Reset to Top 5',
+      '#attributes' => [
+        'id' => 'reset-chart',
+        'class' => ['btn', 'btn-secondary'],
+        'type' => 'button',
+      ],
+    ];
+    
+    $build['controls']['buttons']['clear'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => 'Clear All',
+      '#attributes' => [
+        'id' => 'clear-chart',
+        'class' => ['btn', 'btn-outline'],
+        'type' => 'button',
+      ],
+    ];
+    
+    $build['controls']['buttons']['test_simple'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => 'Test Simple Chart',
+      '#attributes' => [
+        'id' => 'test-simple',
+        'class' => ['btn', 'btn-outline'],
+        'type' => 'button',
+      ],
+    ];
+    
+    $build['controls']['buttons']['test_date'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => 'Test Date Chart',
+      '#attributes' => [
+        'id' => 'test-date',
+        'class' => ['btn', 'btn-outline'],
+        'type' => 'button',
+      ],
+    ];
+    
+    // Chart status
+    $build['status'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#value' => 'Chart Status: Waiting for initialization...',
+      '#attributes' => [
+        'id' => 'chart-status',
+        'class' => ['chart-status', 'info'],
+      ],
+    ];
+    
+    // Chart container
+    $build['chart_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['chart-container']],
+    ];
+    
+    $build['chart_container']['canvas'] = [
+      '#type' => 'markup',
+      '#markup' => '<canvas id="taxonomy-timeline-chart"></canvas>',
+    ];
+    
+    // Raw data preview
+    $build['data_preview'] = [
+      '#type' => 'details',
+      '#title' => 'Raw Data Preview',
+      '#attributes' => ['class' => ['debug-info']],
+    ];
+    
+    $build['data_preview']['content'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'pre',
+      '#value' => htmlspecialchars(json_encode($chart_data['timeline_data'], JSON_PRETTY_PRINT)),
+      '#attributes' => ['id' => 'data-preview'],
+    ];
+    
+    // Attach libraries and pass data
+    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-debug';
+    $build['#attached']['drupalSettings']['newsmotivationmetrics'] = [
+      'timelineData' => $chart_data['timeline_data'],
+      'topTerms' => $chart_data['top_terms'],
       'debugMode' => TRUE,
-      'debugInfo' => $debug_info,
+      'debugInfo' => $chart_data['debug_info'],
     ];
-
-    return [
-      '#theme' => 'chart_debug',
-      '#timelineData' => $timeline_data,
-      '#topTerms' => $top_terms,
-      '#debugInfo' => $debug_info,
-      '#attached' => [
-        'library' => [
-          'newsmotivationmetrics/chart-debug',
-        ],
-        'drupalSettings' => [
-          'newsmotivationmetrics' => $js_settings,
-        ],
-      ],
-      '#cache' => [
-        'max-age' => 300, // 5 minutes cache for debug data
-        'contexts' => ['url'],
-      ],
-    ];
-  }
-
-  /**
-   * Build the chart debug console page
-   */
-  public function buildPage() {
-    $build = [
-      '#theme' => 'chart_debug_console',
-      '#attached' => [
-        'library' => [
-          'newsmotivationmetrics/chart-debug-console',
-        ],
-      ],
-      '#cache' => [
-        'max-age' => 0, // Disable caching for debug console
-      ],
-    ];
-
+    
     return $build;
-  }
-
-  /**
-   * Get timeline data for chart visualization.
-   * 
-   * @return array
-   *   Array of timeline data with term information and daily counts.
-   */
-  protected function getTimelineData() {
-    try {
-      // Get date range (last 90 days)
-      $end_date = date('Y-m-d');
-      $start_date = date('Y-m-d', strtotime('-90 days'));
-
-      // Query for timeline data with proper term information
-      $query = $this->database->select('taxonomy_term_field_data', 't');
-      $query->fields('t', ['tid', 'name']);
-      $query->condition('t.vid', 'motivation_detection');
-      $query->orderBy('t.name');
-      
-      $terms = $query->execute()->fetchAll();
-      
-      $timeline_data = [];
-      
-      foreach ($terms as $term) {
-        // Get daily counts for this term
-        $count_query = $this->database->select('node__field_ai_detected_motivations', 'm');
-        $count_query->addExpression('DATE(FROM_UNIXTIME(n.created))', 'date');
-        $count_query->addExpression('COUNT(*)', 'count');
-        $count_query->join('node_field_data', 'n', 'm.entity_id = n.nid');
-        $count_query->condition('m.field_ai_detected_motivations_target_id', $term->tid);
-        $count_query->condition('n.status', 1);
-        $count_query->condition('n.type', 'article');
-        $count_query->where('DATE(FROM_UNIXTIME(n.created)) BETWEEN :start_date AND :end_date', [
-          ':start_date' => $start_date,
-          ':end_date' => $end_date,
-        ]);
-        $count_query->groupBy('DATE(FROM_UNIXTIME(n.created))');
-        $count_query->orderBy('date');
-
-        $counts_result = $count_query->execute()->fetchAllKeyed();
-        
-        // Generate complete date range with zero-filled gaps
-        $data_points = [];
-        $current_date = strtotime($start_date);
-        $end_timestamp = strtotime($end_date);
-        
-        while ($current_date <= $end_timestamp) {
-          $date_string = date('Y-m-d', $current_date);
-          $count = isset($counts_result[$date_string]) ? (int)$counts_result[$date_string] : 0;
-          
-          $data_points[] = [
-            'date' => $date_string,
-            'count' => $count,
-          ];
-          
-          $current_date = strtotime('+1 day', $current_date);
-        }
-        
-        $timeline_data[] = [
-          'term_id' => $term->tid,
-          'term_name' => $term->name,
-          'data' => $data_points,
-        ];
-      }
-
-      return $timeline_data;
-
-    } catch (\Exception $e) {
-      \Drupal::logger('newsmotivationmetrics')->error('Error getting timeline data for debug: @error', [
-        '@error' => $e->getMessage(),
-      ]);
-      return [];
-    }
-  }
-
-  /**
-   * Get top terms with usage counts for debug display.
-   * 
-   * @return array
-   *   Array of top terms with usage statistics.
-   */
-  protected function getTopTerms() {
-    try {
-      // Get terms with usage counts from AI detected motivations
-      $query = $this->database->select('taxonomy_term_field_data', 't');
-      $query->fields('t', ['tid', 'name']);
-      $query->addExpression('COUNT(m.field_ai_detected_motivations_target_id)', 'usage_count');
-      $query->leftJoin('node__field_ai_detected_motivations', 'm', 't.tid = m.field_ai_detected_motivations_target_id');
-      $query->leftJoin('node_field_data', 'n', 'm.entity_id = n.nid AND n.status = 1 AND n.type = :article_type', [':article_type' => 'article']);
-      $query->condition('t.vid', 'motivation_detection');
-      $query->groupBy('t.tid');
-      $query->groupBy('t.name');
-      $query->orderBy('usage_count', 'DESC');
-      $query->orderBy('t.name');
-      $query->range(0, 20); // Top 20 terms
-      
-      $results = $query->execute()->fetchAll();
-      
-      $top_terms = [];
-      foreach ($results as $result) {
-        $top_terms[] = [
-          'tid' => $result->tid,
-          'name' => $result->name,
-          'usage_count' => $result->usage_count,
-        ];
-      }
-
-      return $top_terms;
-
-    } catch (\Exception $e) {
-      \Drupal::logger('newsmotivationmetrics')->error('Error getting top terms for debug: @error', [
-        '@error' => $e->getMessage(),
-      ]);
-      return [];
-    }
   }
 
   /**
@@ -229,19 +265,12 @@ class ChartDebugController extends ControllerBase {
    *   JSON response with updated debug data.
    */
   public function refreshData() {
-    $timeline_data = $this->getTimelineData();
-    $top_terms = $this->getTopTerms();
+    $chart_data = $this->chartDataService->getTimelineChartData(['limit' => 20]);
     
-    $debug_info = [
-      'dataPoints' => count($timeline_data),
-      'termCount' => count($top_terms),
-      'timestamp' => time(),
-    ];
-
     return new JsonResponse([
-      'timelineData' => $timeline_data,
-      'topTerms' => $top_terms,
-      'debugInfo' => $debug_info,
+      'timelineData' => $chart_data['timeline_data'],
+      'topTerms' => $chart_data['top_terms'],
+      'debugInfo' => $chart_data['debug_info'],
       'status' => 'success',
     ]);
   }
@@ -253,23 +282,19 @@ class ChartDebugController extends ControllerBase {
    *   JSON response with library test results.
    */
   public function testLibraries() {
-    // This endpoint can be used for server-side library verification
-    // Currently focuses on data availability testing
-    
-    $timeline_data = $this->getTimelineData();
-    $top_terms = $this->getTopTerms();
+    $chart_data = $this->chartDataService->getTimelineChartData(['limit' => 20]);
     
     $test_results = [
-      'dataAvailable' => !empty($timeline_data),
-      'termsAvailable' => !empty($top_terms),
-      'dataPointCount' => count($timeline_data),
-      'termCount' => count($top_terms),
+      'dataAvailable' => !empty($chart_data['timeline_data']),
+      'termsAvailable' => !empty($chart_data['top_terms']),
+      'dataPointCount' => count($chart_data['timeline_data']),
+      'termCount' => count($chart_data['top_terms']),
       'timestamp' => time(),
     ];
     
     // Check for data quality
     $terms_with_data = 0;
-    foreach ($timeline_data as $term_data) {
+    foreach ($chart_data['timeline_data'] as $term_data) {
       if (!empty($term_data['data'])) {
         foreach ($term_data['data'] as $point) {
           if ($point['count'] > 0) {

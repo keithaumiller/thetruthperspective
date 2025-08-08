@@ -20,362 +20,115 @@ function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_matc
 }
 
 /**
- * Get all taxonomy tags with article counts. Forcing a push
+ * Get all taxonomy tags with article counts.
+ *
+ * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
+ *   newsmotivationmetrics.metrics_data_service service instead.
+ * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getTagMetrics()
  *
  * @return array
  *   Array of tag data with counts.
  */
 function newsmotivationmetrics_get_tag_metrics() {
-  $database = Database::getConnection();
+  @trigger_error('newsmotivationmetrics_get_tag_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
   
-  // Get all tags with article counts
-  $query = $database->select('taxonomy_term_field_data', 't');
-  $query->leftJoin('node__field_tags', 'nft', 't.tid = nft.field_tags_target_id');
-  $query->leftJoin('node_field_data', 'n', 'nft.entity_id = n.nid AND n.type = :type AND n.status = 1', [':type' => 'article']);
-  $query->fields('t', ['tid', 'name', 'vid']);
-  $query->addExpression('COUNT(DISTINCT n.nid)', 'article_count');
-  $query->condition('t.vid', 'tags');
-  $query->groupBy('t.tid');
-  $query->groupBy('t.name');
-  $query->groupBy('t.vid');
-  $query->orderBy('article_count', 'DESC');
-  
-  $results = $query->execute()->fetchAll();
-  
-  $tags = [];
-  foreach ($results as $result) {
-    $tags[] = [
-      'tid' => $result->tid,
-      'name' => $result->name,
-      'article_count' => (int) $result->article_count,
-    ];
-  }
-  
-  return $tags;
+  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getTagMetrics();
 }
 
 /**
  * Get general article metrics.
  *
+ * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
+ *   newsmotivationmetrics.metrics_data_service service instead.
+ * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getArticleMetrics()
+ *
  * @return array
  *   Array of key metrics.
  */
 function newsmotivationmetrics_get_article_metrics() {
-  $database = Database::getConnection();
+  @trigger_error('newsmotivationmetrics_get_article_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
   
-  $metrics = [];
-  
-  // Total articles
-  $query = $database->select('node_field_data', 'n');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $metrics['total_articles'] = $query->countQuery()->execute()->fetchField();
-  
-  // Articles with AI analysis
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('ai.field_ai_raw_response_value', '', '<>');
-  $metrics['articles_with_ai'] = $query->countQuery()->execute()->fetchField();
-  
-  // Articles with JSON data
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_json_scraped_article_data', 'json', 'n.nid = json.entity_id');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('json.field_json_scraped_article_data_value', '', '<>');
-  $metrics['articles_with_json'] = $query->countQuery()->execute()->fetchField();
-  
-  // Articles with tags
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_tags', 'tags', 'n.nid = tags.entity_id');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->isNotNull('tags.field_tags_target_id');
-  $metrics['articles_with_tags'] = $query->countQuery()->execute()->fetchField();
-  
-  // Articles with motivation analysis
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_motivation_analysis', 'mot', 'n.nid = mot.entity_id');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('mot.field_motivation_analysis_value', '', '<>');
-  $metrics['articles_with_motivation'] = $query->countQuery()->execute()->fetchField();
-  
-  // Articles with external images
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_external_image_url', 'img', 'n.nid = img.entity_id');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('img.field_external_image_url_uri', '', '<>');
-  $metrics['articles_with_images'] = $query->countQuery()->execute()->fetchField();
-  
-  // Total unique tags
-  $query = $database->select('taxonomy_term_field_data', 't');
-  $query->condition('t.vid', 'tags');
-  $metrics['total_tags'] = $query->countQuery()->execute()->fetchField();
-  
-  // Articles created in last 7 days
-  $query = $database->select('node_field_data', 'n');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('n.created', strtotime('-7 days'), '>=');
-  $metrics['articles_last_7_days'] = $query->countQuery()->execute()->fetchField();
-  
-  // Articles created in last 30 days
-  $query = $database->select('node_field_data', 'n');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('n.created', strtotime('-30 days'), '>=');
-  $metrics['articles_last_30_days'] = $query->countQuery()->execute()->fetchField();
-  
-  return $metrics;
+  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getArticleMetrics();
 }
 
 /**
  * Get news source metrics.
  *
+ * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
+ *   newsmotivationmetrics.metrics_data_service service instead.
+ * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getNewsSourceMetrics()
+ *
  * @return array
  *   Array of news source data with counts.
  */
 function newsmotivationmetrics_get_news_source_metrics() {
-  $database = Database::getConnection();
+  @trigger_error('newsmotivationmetrics_get_news_source_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
   
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_news_source', 'ns', 'n.nid = ns.entity_id');
-  $query->fields('ns', ['field_news_source_value']);
-  $query->addExpression('COUNT(n.nid)', 'article_count');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('ns.field_news_source_value', '', '<>');
-  $query->groupBy('ns.field_news_source_value');
-  $query->orderBy('article_count', 'DESC');
-  $query->range(0, 20); // Top 20 sources
-  
-  $results = $query->execute()->fetchAll();
-  
-  $sources = [];
-  foreach ($results as $result) {
-    $sources[] = [
-      'source' => $result->field_news_source_value,
-      'article_count' => (int) $result->article_count,
-    ];
-  }
-  
-  return $sources;
+  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getNewsSourceMetrics();
 }
 
 /**
  * Get motivation analysis metrics.
  *
+ * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
+ *   newsmotivationmetrics.metrics_data_service service instead.
+ * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getMotivationInsights()
+ *
  * @return array
  *   Array of motivation insights.
  */
 function newsmotivationmetrics_get_motivation_insights() {
-  $database = Database::getConnection();
+  @trigger_error('newsmotivationmetrics_get_motivation_insights() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
   
-  $insights = [];
-  
-  // Average motivation analysis length
-  $query = $database->select('node__field_motivation_analysis', 'mot');
-  $query->addExpression('AVG(LENGTH(mot.field_motivation_analysis_value))', 'avg_length');
-  $query->condition('mot.field_motivation_analysis_value', '', '<>');
-  $avg_length = $query->execute()->fetchField();
-  $insights['avg_motivation_length'] = round($avg_length);
-  
-  // Average AI response length
-  $query = $database->select('node__field_ai_raw_response', 'ai');
-  $query->addExpression('AVG(LENGTH(ai.field_ai_raw_response_value))', 'avg_length');
-  $query->condition('ai.field_ai_raw_response_value', '', '<>');
-  $avg_ai_length = $query->execute()->fetchField();
-  $insights['avg_ai_response_length'] = round($avg_ai_length);
-  
-  // Average tags per article
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_tags', 'tags', 'n.nid = tags.entity_id');
-  $query->addExpression('COUNT(tags.field_tags_target_id) / COUNT(DISTINCT n.nid)', 'avg_tags');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $avg_tags = $query->execute()->fetchField();
-  $insights['avg_tags_per_article'] = round($avg_tags, 1);
-  
-  return $insights;
+  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getMotivationInsights();
 }
 
 /**
- * NEW METRIC 1: Get temporal processing analytics.
+ * Get temporal processing analytics.
+ *
+ * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
+ *   newsmotivationmetrics.metrics_data_service service instead.
+ * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getTemporalMetrics()
  *
  * @return array
  *   Array of temporal processing metrics.
  */
 function newsmotivationmetrics_get_temporal_metrics() {
-  $database = Database::getConnection();
-  $metrics = [];
+  @trigger_error('newsmotivationmetrics_get_temporal_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
   
-  // Articles processed in last 24 hours
-  $query = $database->select('node_field_data', 'n');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('n.created', strtotime('-24 hours'), '>=');
-  $metrics['articles_last_24_hours'] = $query->countQuery()->execute()->fetchField();
-  
-  // Peak processing hour (hour of day with most articles created)
-  $query = $database->select('node_field_data', 'n');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('n.created', strtotime('-30 days'), '>=');
-  $query->addExpression('HOUR(FROM_UNIXTIME(created))', 'hour');
-  $query->addExpression('COUNT(*)', 'count');
-  $query->groupBy('hour');
-  $query->orderBy('count', 'DESC');
-  $query->range(0, 1);
-  $result = $query->execute()->fetchAssoc();
-  $metrics['peak_processing_hour'] = $result ? $result['hour'] . ':00' : 'Unknown';
-  
-  // Average processing time (estimated from creation to AI analysis completion)
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('n.created', strtotime('-7 days'), '>=');
-  $query->condition('ai.field_ai_raw_response_value', '', '<>');
-  $query->addExpression('AVG((n.changed - n.created) / 60)', 'avg_processing_minutes');
-  $result = $query->execute()->fetchField();
-  $metrics['avg_processing_time'] = $result ? (float) $result : 0;
-  
-  return $metrics;
+  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getTemporalMetrics();
 }
 
 /**
- * NEW METRIC 2: Get sentiment distribution metrics.
+ * Get sentiment distribution metrics.
+ *
+ * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
+ *   newsmotivationmetrics.metrics_data_service service instead.
+ * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getSentimentMetrics()
  *
  * @return array
  *   Array of sentiment analysis metrics.
  */
 function newsmotivationmetrics_get_sentiment_metrics() {
-  $database = Database::getConnection();
-  $metrics = [
-    'positive_sentiment_percentage' => 0,
-    'negative_sentiment_percentage' => 0,
-    'neutral_sentiment_percentage' => 0,
-  ];
+  @trigger_error('newsmotivationmetrics_get_sentiment_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
   
-  // Get total articles with AI analysis for percentage calculation
-  $query = $database->select('node_field_data', 'n');
-  $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
-  $query->condition('n.type', 'article');
-  $query->condition('n.status', 1);
-  $query->condition('ai.field_ai_raw_response_value', '', '<>');
-  $total_with_ai = $query->countQuery()->execute()->fetchField();
-  
-  if ($total_with_ai > 0) {
-    // Count articles with positive sentiment indicators in AI response
-    $query = $database->select('node_field_data', 'n');
-    $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
-    $query->condition('n.type', 'article');
-    $query->condition('n.status', 1);
-    $query->condition('ai.field_ai_raw_response_value', '%positive%', 'LIKE');
-    $positive_count = $query->countQuery()->execute()->fetchField();
-    
-    // Count articles with negative sentiment indicators
-    $query = $database->select('node_field_data', 'n');
-    $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
-    $query->condition('n.type', 'article');
-    $query->condition('n.status', 1);
-    $query->condition('ai.field_ai_raw_response_value', '%negative%', 'LIKE');
-    $negative_count = $query->countQuery()->execute()->fetchField();
-    
-    // Calculate percentages
-    $metrics['positive_sentiment_percentage'] = round(($positive_count / $total_with_ai) * 100, 2);
-    $metrics['negative_sentiment_percentage'] = round(($negative_count / $total_with_ai) * 100, 2);
-    $metrics['neutral_sentiment_percentage'] = 100 - $metrics['positive_sentiment_percentage'] - $metrics['negative_sentiment_percentage'];
-  }
-  
-  return $metrics;
+  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getSentimentMetrics();
 }
 
 /**
- * NEW METRIC 3: Get entity recognition metrics.
+ * Get entity recognition metrics.
+ *
+ * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
+ *   newsmotivationmetrics.metrics_data_service service instead.
+ * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getEntityMetrics()
  *
  * @return array
  *   Array of entity recognition metrics.
  */
 function newsmotivationmetrics_get_entity_metrics() {
-  $database = Database::getConnection();
-  $metrics = [
-    'unique_people_identified' => 0,
-    'unique_organizations_identified' => 0,
-    'unique_locations_identified' => 0,
-  ];
+  @trigger_error('newsmotivationmetrics_get_entity_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
   
-  try {
-    // Get total articles with AI analysis for baseline calculation
-    $query = $database->select('node_field_data', 'n');
-    $query->leftJoin('node__field_ai_raw_response', 'ai', 'n.nid = ai.entity_id');
-    $query->condition('n.type', 'article');
-    $query->condition('n.status', 1);
-    $query->condition('ai.field_ai_raw_response_value', '', '<>');
-    $total_with_ai = $query->countQuery()->execute()->fetchField();
-    
-    if ($total_with_ai > 0) {
-      // Count articles mentioning people-related terms
-      $query = $database->select('node__field_ai_raw_response', 'ai');
-      $query->leftJoin('node_field_data', 'n', 'ai.entity_id = n.nid');
-      $query->condition('n.type', 'article');
-      $query->condition('n.status', 1);
-      $query->condition($database->condition('OR')
-        ->condition('ai.field_ai_raw_response_value', '%person%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%people%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%individual%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%politician%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%official%', 'LIKE')
-      );
-      $people_mentions = $query->countQuery()->execute()->fetchField();
-      
-      // Count articles mentioning organization-related terms
-      $query = $database->select('node__field_ai_raw_response', 'ai');
-      $query->leftJoin('node_field_data', 'n', 'ai.entity_id = n.nid');
-      $query->condition('n.type', 'article');
-      $query->condition('n.status', 1);
-      $query->condition($database->condition('OR')
-        ->condition('ai.field_ai_raw_response_value', '%organization%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%company%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%corporation%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%agency%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%institution%', 'LIKE')
-      );
-      $org_mentions = $query->countQuery()->execute()->fetchField();
-      
-      // Count articles mentioning location-related terms
-      $query = $database->select('node__field_ai_raw_response', 'ai');
-      $query->leftJoin('node_field_data', 'n', 'ai.entity_id = n.nid');
-      $query->condition('n.type', 'article');
-      $query->condition('n.status', 1);
-      $query->condition($database->condition('OR')
-        ->condition('ai.field_ai_raw_response_value', '%location%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%country%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%state%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%city%', 'LIKE')
-        ->condition('ai.field_ai_raw_response_value', '%region%', 'LIKE')
-      );
-      $location_mentions = $query->countQuery()->execute()->fetchField();
-      
-      // Estimate unique entities based on mention patterns
-      // Using conservative multipliers to estimate unique entities from mentions
-      $metrics['unique_people_identified'] = round($people_mentions * 1.8);
-      $metrics['unique_organizations_identified'] = round($org_mentions * 1.5);
-      $metrics['unique_locations_identified'] = round($location_mentions * 1.3);
-    }
-    
-  } catch (\Exception $e) {
-    // Log error and return safe defaults
-    \Drupal::logger('newsmotivationmetrics')->error('Entity metrics processing error: @error', [
-      '@error' => $e->getMessage(),
-    ]);
-  }
-  
-  return $metrics;
+  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getEntityMetrics();
 }
 
 /**
