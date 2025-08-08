@@ -1,34 +1,35 @@
 /**
  * Chart.js behavior for News Motivation Metrics module.
  * Handles taxonomy timeline visualization with interactive controls.
+ * Updated to match debug console functionality for taxonomy term occurrences over time.
  */
 
-(function ($, Drupal, drupalSettings) {
+(function ($, Drupal, drupalSettings, once) {
   'use strict';
+
+  let currentChart = null;
+  let chartData = null;
 
   /**
    * Chart behavior for taxonomy timeline visualization.
    */
   Drupal.behaviors.newsMotivationMetricsChart = {
     attach: function (context, settings) {
-      // Only initialize once per page load
-      if (context !== document) {
-        return;
-      }
+      once('taxonomy-timeline-chart', 'body', context).forEach(function () {
+        console.log('=== News Motivation Metrics Chart Behavior (Updated) ===');
+        console.log('Settings:', settings.newsmotivationmetrics);
 
-      console.log('=== News Motivation Metrics Chart Behavior ===');
-      console.log('Settings:', settings.newsmotivationmetrics);
+        // Get chart data from drupalSettings
+        chartData = settings.newsmotivationmetrics || {};
+        const timelineData = chartData.timelineData || [];
+        const topTerms = chartData.topTerms || [];
 
-      // Get chart data from drupalSettings
-      const chartData = settings.newsmotivationmetrics || {};
-      const timelineData = chartData.timelineData || [];
-      const topTerms = chartData.topTerms || [];
+        console.log('Timeline data points:', timelineData.length);
+        console.log('Available terms:', topTerms.length);
 
-      console.log('Timeline data points:', timelineData.length);
-      console.log('Available terms:', topTerms.length);
-
-      // Initialize chart system
-      this.initializeChart(timelineData, topTerms);
+        // Initialize chart system
+        this.initializeChart(timelineData, topTerms);
+      }.bind(this));
     },
 
     /**
@@ -60,28 +61,201 @@
       // Validate data
       if (!timelineData || timelineData.length === 0) {
         self.updateStatus('No timeline data available', 'warning');
+        self.showNoDataMessage();
         return;
       }
 
       console.log('Chart initialization starting...');
-      self.updateStatus('Initializing chart system...', 'info');
-
-      // Store data globally for chart operations
-      window.newsMetricsChart = {
-        chart: null,
-        timelineData: timelineData,
-        topTerms: topTerms,
-        colors: [
-          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-          '#FF9F40', '#E7E9ED', '#71B37C', '#D86613', '#8E44AD'
-        ]
-      };
+      self.updateStatus('Initializing taxonomy timeline chart...', 'info');
 
       // Set up event listeners
       self.setupEventListeners();
 
-      // Initialize chart with default selection
-      self.initializeDefaultChart();
+      // Initialize chart with automatic term selection
+      self.initializeTimelineChart(timelineData);
+    },
+
+    /**
+     * Initialize the taxonomy timeline chart with multiple terms.
+     */
+    initializeTimelineChart: function(timelineData) {
+      const self = this;
+      const canvas = document.getElementById('taxonomy-timeline-chart');
+      
+      if (!canvas) {
+        self.updateStatus('Canvas element not found', 'error');
+        return;
+      }
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        self.updateStatus('Failed to get 2D context from canvas', 'error');
+        return;
+      }
+
+      console.log(`Processing ${timelineData.length} taxonomy term timeline datasets`);
+
+      try {
+        // Destroy existing chart if it exists
+        if (currentChart) {
+          currentChart.destroy();
+          currentChart = null;
+        }
+
+        // Define colors for different taxonomy terms
+        const colors = [
+          'rgb(255, 99, 132)',    // Red
+          'rgb(54, 162, 235)',    // Blue
+          'rgb(255, 205, 86)',    // Yellow
+          'rgb(75, 192, 192)',    // Teal
+          'rgb(153, 102, 255)',   // Purple
+          'rgb(255, 159, 64)',    // Orange
+          'rgb(199, 199, 199)',   // Gray
+          'rgb(83, 102, 255)',    // Indigo
+          'rgb(255, 99, 255)',    // Pink
+          'rgb(99, 255, 132)'     // Green
+        ];
+
+        // Process taxonomy timeline data into Chart.js datasets
+        const datasets = timelineData.map((termData, index) => {
+          const color = colors[index % colors.length];
+          const processedData = termData.data.map(dataPoint => ({
+            x: new Date(dataPoint.date),
+            y: parseInt(dataPoint.count) || 0
+          }));
+
+          // Sort by date
+          processedData.sort((a, b) => a.x - b.x);
+
+          return {
+            label: `${termData.term_name} (ID: ${termData.term_id})`,
+            data: processedData,
+            borderColor: color,
+            backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+            tension: 0.1,
+            fill: false,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5
+          };
+        });
+
+        // Calculate total data points across all terms
+        const totalDataPoints = datasets.reduce((total, dataset) => total + dataset.data.length, 0);
+
+        // Create multi-line timeline chart
+        currentChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            scales: {
+              x: {
+                type: 'time',
+                time: {
+                  unit: 'day',
+                  displayFormats: {
+                    day: 'MMM dd',
+                    week: 'MMM dd',
+                    month: 'MMM'
+                  }
+                },
+                title: {
+                  display: true,
+                  text: 'Publication Date',
+                  font: {
+                    size: 12,
+                    weight: 'bold'
+                  }
+                }
+              },
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Article Count per Term',
+                  font: {
+                    size: 12,
+                    weight: 'bold'
+                  }
+                },
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            },
+            plugins: {
+              title: {
+                display: true,
+                text: 'Taxonomy Term Occurrences Over Time (Real Data)',
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 20
+              },
+              legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                  usePointStyle: true,
+                  padding: 10,
+                  font: {
+                    size: 11
+                  }
+                }
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                  title: function(tooltipItems) {
+                    if (tooltipItems.length > 0) {
+                      const date = new Date(tooltipItems[0].parsed.x);
+                      return date.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      });
+                    }
+                    return '';
+                  },
+                  label: function(context) {
+                    const termName = context.dataset.label.split(' (ID:')[0];
+                    const count = context.parsed.y;
+                    return `${termName}: ${count} article${count !== 1 ? 's' : ''}`;
+                  }
+                }
+              }
+            },
+            elements: {
+              point: {
+                hoverBackgroundColor: 'white',
+                hoverBorderWidth: 2
+              }
+            }
+          }
+        });
+
+        self.updateStatus(`Timeline chart loaded with ${datasets.length} terms and ${totalDataPoints} data points`, 'success');
+        
+        // Update chart info area
+        self.updateChartInfo(datasets.length, totalDataPoints);
+
+        console.log(`Taxonomy timeline chart created successfully with ${datasets.length} terms and ${totalDataPoints} total data points`);
+
+      } catch (error) {
+        self.updateStatus(`Failed to create taxonomy timeline chart: ${error.message}`, 'error');
+        console.error('Taxonomy timeline chart creation error:', error);
+      }
     },
 
     /**
@@ -90,19 +264,11 @@
     setupEventListeners: function() {
       const self = this;
 
-      // Update chart button
-      const updateBtn = document.getElementById('update-chart');
-      if (updateBtn) {
-        updateBtn.addEventListener('click', function() {
-          self.updateChart();
-        });
-      }
-
       // Reset chart button
       const resetBtn = document.getElementById('reset-chart');
       if (resetBtn) {
         resetBtn.addEventListener('click', function() {
-          self.resetToDefault();
+          self.resetChart();
         });
       }
 
@@ -114,242 +280,94 @@
         });
       }
 
-      // Term selector change
+      // Term selector change (if present)
       const selector = document.getElementById('term-selector');
       if (selector) {
         selector.addEventListener('change', function() {
-          // Auto-update chart when selection changes
-          self.updateChart();
+          self.updateFromSelector();
         });
       }
+
+      console.log('Event listeners attached for chart controls');
     },
 
     /**
-     * Initialize chart with default term selection.
+     * Reset chart to show all available terms.
      */
-    initializeDefaultChart: function() {
-      const selector = document.getElementById('term-selector');
-      if (!selector) {
-        this.updateStatus('Term selector not found', 'error');
-        return;
-      }
-
-      // Select top 5 terms by default
-      for (let i = 0; i < Math.min(5, selector.options.length); i++) {
-        selector.options[i].selected = true;
-      }
-
-      // Create initial chart
-      this.updateChart();
-    },
-
-    /**
-     * Update chart based on current term selection.
-     */
-    updateChart: function() {
+    resetChart: function() {
       const self = this;
-      const selector = document.getElementById('term-selector');
+      const timelineData = chartData.timelineData || [];
       
-      if (!selector) {
-        self.updateStatus('Term selector not found', 'error');
-        return;
+      if (timelineData.length > 0) {
+        self.initializeTimelineChart(timelineData);
+        self.updateStatus('Chart reset to show all terms', 'info');
+      } else {
+        self.updateStatus('No data available for reset', 'warning');
       }
+    },
 
-      const selectedTermIds = Array.from(selector.selectedOptions).map(option => option.value);
+    /**
+     * Clear chart and show placeholder.
+     */
+    clearChart: function() {
+      const self = this;
       
-      if (selectedTermIds.length === 0) {
-        self.updateStatus('No terms selected - select terms to display chart', 'warning');
-        return;
+      if (currentChart) {
+        currentChart.destroy();
+        currentChart = null;
       }
 
-      console.log('Updating chart with terms:', selectedTermIds);
-      self.updateStatus('Updating chart with ' + selectedTermIds.length + ' terms...', 'info');
-
-      try {
-        const chartData = self.filterTimelineData(selectedTermIds);
-        self.createChart(chartData);
-        self.updateStatus('Chart updated successfully with ' + selectedTermIds.length + ' terms', 'success');
-      } catch (error) {
-        console.error('Chart update error:', error);
-        self.updateStatus('Chart update failed: ' + error.message, 'error');
-      }
-    },
-
-    /**
-     * Filter timeline data for selected terms.
-     */
-    filterTimelineData: function(selectedTermIds) {
-      const datasets = [];
-      const chartInstance = window.newsMetricsChart;
-
-      selectedTermIds.forEach((termId, index) => {
-        const termData = chartInstance.timelineData.find(item => item.term_id == termId);
-        if (termData && termData.data) {
-          datasets.push({
-            label: termData.term_name,
-            data: termData.data.map(point => ({
-              x: point.date,
-              y: point.count
-            })),
-            borderColor: chartInstance.colors[index % chartInstance.colors.length],
-            backgroundColor: chartInstance.colors[index % chartInstance.colors.length] + '20',
-            tension: 0.1,
-            fill: false,
-            pointRadius: 3,
-            pointHoverRadius: 6
-          });
+      // Reset canvas container
+      const container = document.querySelector('.chart-container');
+      if (container) {
+        const canvas = container.querySelector('#taxonomy-timeline-chart');
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
-      });
-
-      return { datasets: datasets };
-    },
-
-    /**
-     * Create or update the Chart.js instance.
-     */
-    createChart: function(chartData) {
-      const canvas = document.getElementById('taxonomy-timeline-chart');
-      const ctx = canvas.getContext('2d');
-      const chartInstance = window.newsMetricsChart;
-
-      // Destroy existing chart
-      if (chartInstance.chart) {
-        chartInstance.chart.destroy();
       }
 
-      // Create new chart
-      chartInstance.chart = new Chart(ctx, {
-        type: 'line',
-        data: chartData,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              type: 'time',
-              time: {
-                parser: 'YYYY-MM-DD',
-                tooltipFormat: 'MMM DD, YYYY',
-                displayFormats: {
-                  day: 'MMM DD',
-                  week: 'MMM DD',
-                  month: 'MMM YYYY'
-                }
-              },
-              title: {
-                display: true,
-                text: 'Date',
-                font: {
-                  size: 14,
-                  weight: 'bold'
-                }
-              },
-              grid: {
-                color: 'rgba(0, 0, 0, 0.1)'
-              }
-            },
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Article Count',
-                font: {
-                  size: 14,
-                  weight: 'bold'
-                }
-              },
-              grid: {
-                color: 'rgba(0, 0, 0, 0.1)'
-              },
-              ticks: {
-                precision: 0
-              }
-            }
-          },
-          plugins: {
-            title: {
-              display: true,
-              text: 'Topic Trends Over Time (Last 90 Days)',
-              font: {
-                size: 16,
-                weight: 'bold'
-              },
-              padding: 20
-            },
-            legend: {
-              display: true,
-              position: 'top',
-              labels: {
-                padding: 20,
-                usePointStyle: true,
-                pointStyle: 'circle'
-              }
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: 'white',
-              bodyColor: 'white',
-              borderColor: 'rgba(255, 255, 255, 0.3)',
-              borderWidth: 1,
-              cornerRadius: 6
-            }
-          },
-          interaction: {
-            mode: 'index',
-            intersect: false
-          },
-          elements: {
-            line: {
-              borderWidth: 2
-            },
-            point: {
-              hoverBorderWidth: 2
-            }
-          }
-        }
-      });
+      self.updateStatus('Chart cleared', 'info');
+      self.updateChartInfo(0, 0);
     },
 
     /**
-     * Reset chart to default term selection.
+     * Update chart based on term selector (if available).
      */
-    resetToDefault: function() {
+    updateFromSelector: function() {
       const selector = document.getElementById('term-selector');
       if (!selector) return;
 
-      // Clear all selections
-      for (let option of selector.options) {
-        option.selected = false;
+      const selectedTermIds = Array.from(selector.selectedOptions).map(option => option.value);
+      const timelineData = chartData.timelineData || [];
+      
+      if (selectedTermIds.length === 0) {
+        this.clearChart();
+        return;
       }
 
-      // Select top 5 terms
-      for (let i = 0; i < Math.min(5, selector.options.length); i++) {
-        selector.options[i].selected = true;
-      }
+      // Filter timeline data for selected terms
+      const filteredData = timelineData.filter(termData => 
+        selectedTermIds.includes(termData.term_id.toString())
+      );
 
-      this.updateChart();
+      if (filteredData.length > 0) {
+        this.initializeTimelineChart(filteredData);
+      }
     },
 
     /**
-     * Clear chart and all selections.
+     * Update chart information display.
      */
-    clearChart: function() {
-      const selector = document.getElementById('term-selector');
-      if (selector) {
-        for (let option of selector.options) {
-          option.selected = false;
+    updateChartInfo: function(termCount, dataPoints) {
+      const infoElement = document.querySelector('.chart-info .info-text');
+      if (infoElement) {
+        if (termCount > 0) {
+          infoElement.textContent = `📊 Showing ${termCount} taxonomy terms with ${dataPoints} total data points over the last 30 days`;
+        } else {
+          infoElement.textContent = '📊 No chart data currently displayed - use controls above to generate charts';
         }
       }
-
-      const chartInstance = window.newsMetricsChart;
-      if (chartInstance && chartInstance.chart) {
-        chartInstance.chart.destroy();
-        chartInstance.chart = null;
-      }
-
-      this.updateStatus('Chart cleared', 'info');
     },
 
     /**
@@ -363,12 +381,6 @@
       if (statusEl) {
         statusEl.className = 'chart-status ' + type;
         statusEl.textContent = 'Chart Status: ' + message;
-      }
-
-      // Update debug status
-      const debugEl = document.getElementById('chart-data-status');
-      if (debugEl) {
-        debugEl.textContent = 'Data status: ' + message + ' (' + new Date().toLocaleTimeString() + ')';
       }
 
       // Console logging
@@ -389,7 +401,28 @@
           </div>
         `;
       }
+    },
+
+    /**
+     * Show message when no data is available.
+     */
+    showNoDataMessage: function() {
+      const container = document.querySelector('.chart-container');
+      if (container) {
+        container.innerHTML = `
+          <div class="chart-status warning">
+            <h3>📊 No Chart Data Available</h3>
+            <p>No taxonomy timeline data is currently available for visualization. This may be because:</p>
+            <ul>
+              <li>Articles haven't been processed with publication dates yet</li>
+              <li>No articles have been tagged with taxonomy terms</li>
+              <li>The data is still being generated in the background</li>
+            </ul>
+            <p>Check back later or contact an administrator if this issue persists.</p>
+          </div>
+        `;
+      }
     }
   };
 
-})(jQuery, Drupal, drupalSettings);
+})(jQuery, Drupal, drupalSettings, once);

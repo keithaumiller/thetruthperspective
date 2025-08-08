@@ -72,7 +72,7 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
    * {@inheritdoc}
    */
   public function buildPublicDashboard(): array {
-    $chart_data = $this->chartDataService->getTimelineChartData();
+    $chart_data = $this->chartDataService->getTimelineChartData(['limit' => 10, 'days_back' => 30]);
     $metrics_data = $this->metricsDataService->getAllMetricsData();
     
     $build = [];
@@ -210,7 +210,7 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
     $section['controls']['info']['text'] = [
       '#type' => 'html_tag',
       '#tag' => 'span',
-      '#value' => '📊 Showing frequency of topic mentions over the last 90 days',
+      '#value' => '📊 Showing frequency of topic mentions over the last 30 days',
       '#attributes' => ['class' => ['info-text']],
     ];
     
