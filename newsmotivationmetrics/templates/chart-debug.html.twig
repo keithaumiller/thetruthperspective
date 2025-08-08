@@ -264,6 +264,47 @@
         </div>
       </div>
 
+      <!-- Publication Date & Data Statistics -->
+      <div class="debug-section">
+        <h2>Data Coverage Statistics</h2>
+        <div class="environment-grid">
+          {% if publication_date_stats %}
+          <div class="environment-item">
+            <div class="environment-label">Total Articles:</div>
+            <div class="environment-value">{{ publication_date_stats.total_articles }}</div>
+          </div>
+          <div class="environment-item">
+            <div class="environment-label">With Publication Dates:</div>
+            <div class="environment-value {% if publication_date_stats.publication_date_coverage > 80 %}status-success{% elseif publication_date_stats.publication_date_coverage > 50 %}status-loading{% else %}status-error{% endif %}">
+              {{ publication_date_stats.with_publication_dates }} ({{ publication_date_stats.publication_date_coverage }}%)
+            </div>
+          </div>
+          <div class="environment-item">
+            <div class="environment-label">With Tags:</div>
+            <div class="environment-value {% if publication_date_stats.tag_coverage > 80 %}status-success{% elseif publication_date_stats.tag_coverage > 50 %}status-loading{% else %}status-error{% endif %}">
+              {{ publication_date_stats.with_tags }} ({{ publication_date_stats.tag_coverage }}%)
+            </div>
+          </div>
+          <div class="environment-item">
+            <div class="environment-label">Timeline Ready:</div>
+            <div class="environment-value {% if publication_date_stats.complete_coverage > 80 %}status-success{% elseif publication_date_stats.complete_coverage > 50 %}status-loading{% else %}status-error{% endif %}">
+              {{ publication_date_stats.with_both_dates_and_tags }} ({{ publication_date_stats.complete_coverage }}%)
+            </div>
+          </div>
+          {% else %}
+          <div class="environment-item">
+            <div class="environment-label">Data Status:</div>
+            <div class="environment-value status-loading">Loading statistics...</div>
+          </div>
+          {% endif %}
+        </div>
+        {% if publication_date_stats and publication_date_stats.complete_coverage < 50 %}
+        <div class="debug-status warning">
+          ⚠️ Low timeline data coverage ({{ publication_date_stats.complete_coverage }}%). Consider running publication date population for better timeline charts.
+        </div>
+        {% endif %}
+      </div>
+
       <!-- Debug Controls -->
       <div class="debug-section">
         <h2>Chart Testing Controls</h2>

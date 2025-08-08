@@ -452,36 +452,57 @@
   }
 
   /**
-   * Test timeline chart with time scale
+   * Test timeline chart with taxonomy terms over time
    */
   function testTimelineChart() {
-    debugLog('Testing timeline chart with time scale in template container...', 'info');
+    debugLog('Testing taxonomy timeline chart with time scale in template container...', 'info');
     
     try {
       destroyExistingChart();
       const canvas = prepareCanvas();
       const ctx = canvas.getContext('2d');
 
-      const timelineData = {
-        labels: [
-          '2024-01-01',
-          '2024-01-02', 
-          '2024-01-03',
-          '2024-01-04',
-          '2024-01-05',
-          '2024-01-06',
-          '2024-01-07'
-        ],
-        datasets: [{
-          label: 'Articles Processed',
-          data: [5, 8, 3, 12, 7, 15, 9],
-          borderColor: 'rgba(75, 192, 192, 1)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.4
-        }]
-      };
+      // Check if we have real taxonomy timeline data
+      const timelineData = drupalSettings?.newsmotivationmetrics?.timelineData;
+      
+      if (timelineData && timelineData.length > 0) {
+        // Use real taxonomy data if available
+        debugLog('Using real taxonomy timeline data for test chart', 'info');
+        createInitialTimelineChart();
+        return;
+      }
+      
+      // Fallback to sample timeline data if no real data available
+      debugLog('No real data available, generating sample taxonomy timeline data', 'warning');
+      
+      const sampleTerms = [
+        { name: 'Politics', color: 'rgb(255, 99, 132)' },
+        { name: 'Economy', color: 'rgb(54, 162, 235)' },
+        { name: 'Health', color: 'rgb(255, 205, 86)' },
+        { name: 'Technology', color: 'rgb(75, 192, 192)' }
+      ];
+      
+      const datasets = sampleTerms.map(term => {
+        const data = [];
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          data.push({
+            x: date,
+            y: Math.floor(Math.random() * 15) + 1
+          });
+        }
+        
+        return {
+          label: term.name,
+          data: data,
+          borderColor: term.color,
+          backgroundColor: term.color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+          tension: 0.4,
+          fill: false,
+          borderWidth: 2
+        };
+      });
 
       const timelineOptions = {
         responsive: true,
@@ -489,11 +510,15 @@
         plugins: {
           title: {
             display: true,
-            text: 'Timeline Chart Test - Processing Activity v1.3.4',
+            text: 'Sample Taxonomy Timeline Chart - Processing Activity v1.3.4',
             font: {
               size: 16,
               weight: 'bold'
             }
+          },
+          legend: {
+            display: true,
+            position: 'top'
           }
         },
         scales: {
@@ -514,7 +539,7 @@
             beginAtZero: true,
             title: {
               display: true,
-              text: 'Articles Processed'
+              text: 'Articles per Term'
             }
           }
         }
@@ -522,7 +547,7 @@
 
       currentChart = new Chart(ctx, {
         type: 'line',
-        data: timelineData,
+        data: { datasets },
         options: timelineOptions
       });
 
@@ -537,18 +562,53 @@
         const canvas = prepareCanvas();
         const ctx = canvas.getContext('2d');
         
-        const fallbackOptions = { ...timelineOptions };
-        fallbackOptions.scales.x = {
-          type: 'category',
-          title: {
-            display: true,
-            text: 'Date (Category Scale)'
+        const fallbackData = {
+          labels: ['Jan 01', 'Jan 02', 'Jan 03', 'Jan 04', 'Jan 05', 'Jan 06', 'Jan 07'],
+          datasets: [{
+            label: 'Articles Processed',
+            data: [5, 8, 3, 12, 7, 15, 9],
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4
+          }]
+        };
+        
+        const fallbackOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Fallback Timeline Chart (Category Scale)',
+              font: {
+                size: 16,
+                weight: 'bold'
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'category',
+              title: {
+                display: true,
+                text: 'Date (Category Scale)'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Articles Processed'
+              }
+            }
           }
         };
         
         currentChart = new Chart(ctx, {
           type: 'line',
-          data: timelineData,
+          data: fallbackData,
           options: fallbackOptions
         });
         
@@ -781,15 +841,15 @@
   }
 
   /**
-   * Create initial timeline chart with real data automatically
+   * Create initial timeline chart showing taxonomy term occurrences over time
    */
   function createInitialTimelineChart() {
-    debugLog('Creating initial timeline chart with real data...', 'info');
+    debugLog('Creating initial timeline chart with taxonomy term occurrences over time...', 'info');
     
     // Check if we have timeline data from Drupal
     const timelineData = drupalSettings?.newsmotivationmetrics?.timelineData;
     if (!timelineData || !Array.isArray(timelineData) || timelineData.length === 0) {
-      debugLog('No timeline data available from Drupal settings', 'warning');
+      debugLog('No taxonomy timeline data available from Drupal settings', 'warning');
       return;
     }
     
@@ -811,17 +871,7 @@
       return;
     }
     
-    // Process timeline data for Chart.js
-    const processedData = timelineData.map(item => ({
-      x: new Date(item.date),
-      y: parseInt(item.count) || 0,
-      label: item.date
-    }));
-    
-    // Sort by date
-    processedData.sort((a, b) => a.x - b.x);
-    
-    debugLog(`Processing ${processedData.length} timeline data points`, 'info');
+    debugLog(`Processing ${timelineData.length} taxonomy term timeline datasets`, 'info');
     
     try {
       // Destroy existing chart if it exists
@@ -830,68 +880,169 @@
         currentChart = null;
       }
       
-      // Create timeline chart
+      // Define colors for different taxonomy terms
+      const colors = [
+        'rgb(255, 99, 132)',    // Red
+        'rgb(54, 162, 235)',    // Blue
+        'rgb(255, 205, 86)',    // Yellow
+        'rgb(75, 192, 192)',    // Teal
+        'rgb(153, 102, 255)',   // Purple
+        'rgb(255, 159, 64)',    // Orange
+        'rgb(199, 199, 199)',   // Gray
+        'rgb(83, 102, 255)',    // Indigo
+        'rgb(255, 99, 255)',    // Pink
+        'rgb(99, 255, 132)'     // Green
+      ];
+      
+      // Process taxonomy timeline data into Chart.js datasets
+      const datasets = timelineData.map((termData, index) => {
+        const color = colors[index % colors.length];
+        const processedData = termData.data.map(dataPoint => ({
+          x: new Date(dataPoint.date),
+          y: parseInt(dataPoint.count) || 0
+        }));
+        
+        // Sort by date
+        processedData.sort((a, b) => a.x - b.x);
+        
+        return {
+          label: `${termData.term_name} (ID: ${termData.term_id})`,
+          data: processedData,
+          borderColor: color,
+          backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+          tension: 0.1,
+          fill: false,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5
+        };
+      });
+      
+      // Calculate total data points across all terms
+      const totalDataPoints = datasets.reduce((total, dataset) => total + dataset.data.length, 0);
+      
+      // Create multi-line timeline chart
       currentChart = new Chart(ctx, {
         type: 'line',
         data: {
-          datasets: [{
-            label: 'Article Count Over Time',
-            data: processedData,
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.1,
-            fill: true
-          }]
+          datasets: datasets
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
           scales: {
             x: {
               type: 'time',
               time: {
                 unit: 'day',
                 displayFormats: {
-                  day: 'MMM dd'
+                  day: 'MMM dd',
+                  week: 'MMM dd',
+                  month: 'MMM'
                 }
               },
               title: {
                 display: true,
-                text: 'Date'
+                text: 'Publication Date',
+                font: {
+                  size: 12,
+                  weight: 'bold'
+                }
               }
             },
             y: {
               beginAtZero: true,
               title: {
                 display: true,
-                text: 'Article Count'
+                text: 'Article Count per Term',
+                font: {
+                  size: 12,
+                  weight: 'bold'
+                }
+              },
+              ticks: {
+                stepSize: 1
               }
             }
           },
           plugins: {
             title: {
               display: true,
-              text: 'Timeline of Articles (Real Data)'
+              text: 'Taxonomy Term Occurrences Over Time (Real Data)',
+              font: {
+                size: 16,
+                weight: 'bold'
+              },
+              padding: 20
             },
             legend: {
-              display: true
+              display: true,
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 10,
+                font: {
+                  size: 11
+                }
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                title: function(tooltipItems) {
+                  if (tooltipItems.length > 0) {
+                    const date = new Date(tooltipItems[0].parsed.x);
+                    return date.toLocaleDateString('en-US', { 
+                      weekday: 'short', 
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric' 
+                    });
+                  }
+                  return '';
+                },
+                label: function(context) {
+                  const termName = context.dataset.label.split(' (ID:')[0];
+                  const count = context.parsed.y;
+                  return `${termName}: ${count} article${count !== 1 ? 's' : ''}`;
+                }
+              }
+            }
+          },
+          elements: {
+            point: {
+              hoverBackgroundColor: 'white',
+              hoverBorderWidth: 2
             }
           }
         }
       });
       
-      debugLog(`Initial timeline chart created successfully with ${processedData.length} data points`, 'success');
+      debugLog(`Taxonomy timeline chart created successfully with ${datasets.length} terms and ${totalDataPoints} total data points`, 'success');
       
       // Update chart status area if it exists
       const statusElement = document.querySelector('.chart-area p');
       if (statusElement) {
-        statusElement.textContent = `Timeline chart loaded with ${processedData.length} data points from ${processedData[0]?.label} to ${processedData[processedData.length - 1]?.label}`;
+        statusElement.innerHTML = `
+          <strong>Taxonomy Timeline Chart Loaded</strong><br>
+          📊 ${datasets.length} taxonomy terms tracked<br>
+          📈 ${totalDataPoints} total data points<br>
+          🏷️ Terms: ${datasets.map(d => d.label.split(' (ID:')[0]).join(', ')}
+        `;
         statusElement.style.color = '#28a745';
+        statusElement.style.textAlign = 'left';
+        statusElement.style.fontSize = '14px';
+        statusElement.style.lineHeight = '1.4';
       }
       
     } catch (error) {
-      debugLog(`Failed to create initial timeline chart: ${error.message}`, 'error');
-      console.error('Timeline chart creation error:', error);
+      debugLog(`Failed to create taxonomy timeline chart: ${error.message}`, 'error');
+      console.error('Taxonomy timeline chart creation error:', error);
     }
   }
 

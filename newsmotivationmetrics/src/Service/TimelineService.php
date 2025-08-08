@@ -139,27 +139,68 @@ class TimelineService implements TimelineServiceInterface {
    */
   public function getArticleCountForDateRange(string $start_date, string $end_date, array $term_ids = []): int {
     try {
+      // Convert input dates to proper format for comparison
+      $start_date_only = date('Y-m-d', strtotime($start_date));
+      $end_date_only = date('Y-m-d', strtotime($end_date));
       $start_timestamp = strtotime($start_date . ' 00:00:00');
       $end_timestamp = strtotime($end_date . ' 23:59:59');
       
       if (empty($term_ids)) {
-        // Count all articles in date range
+        // Count all articles in date range using publication date field
         $query = $this->database->select('node_field_data', 'n');
+        $query->leftJoin('node__field_publication_date', 'pd', 'n.nid = pd.entity_id');
         $query->condition('n.type', 'article');
         $query->condition('n.status', 1);
-        $query->condition('n.created', $start_timestamp, '>=');
-        $query->condition('n.created', $end_timestamp, '<=');
+        
+        // Use publication date if available, fallback to created date
+        $or_group = $query->orConditionGroup();
+        
+        // Primary: publication date matches range (handle both date and datetime formats)
+        $pub_date_group = $query->andConditionGroup();
+        $pub_date_group->condition('pd.field_publication_date_value', NULL, 'IS NOT NULL');
+        // For date-only fields, use LIKE for date comparison
+        $pub_date_group->condition('pd.field_publication_date_value', $start_date_only . '%', '>=');
+        $pub_date_group->condition('pd.field_publication_date_value', $end_date_only . '%', '<=');
+        $or_group->condition($pub_date_group);
+        
+        // Fallback: no publication date but created date matches
+        $fallback_group = $query->andConditionGroup();
+        $fallback_group->condition('pd.field_publication_date_value', NULL, 'IS NULL');
+        $fallback_group->condition('n.created', $start_timestamp, '>=');
+        $fallback_group->condition('n.created', $end_timestamp, '<=');
+        $or_group->condition($fallback_group);
+        
+        $query->condition($or_group);
         
         return $query->countQuery()->execute()->fetchField();
       } else {
-        // Count articles with specific taxonomy terms
+        // Count articles with specific taxonomy terms using publication date
         $query = $this->database->select('node__field_tags', 'nt');
         $query->leftJoin('node_field_data', 'n', 'nt.entity_id = n.nid');
+        $query->leftJoin('node__field_publication_date', 'pd', 'n.nid = pd.entity_id');
         $query->condition('nt.field_tags_target_id', $term_ids, 'IN');
         $query->condition('n.type', 'article');
         $query->condition('n.status', 1);
-        $query->condition('n.created', $start_timestamp, '>=');
-        $query->condition('n.created', $end_timestamp, '<=');
+        
+        // Use publication date if available, fallback to created date
+        $or_group = $query->orConditionGroup();
+        
+        // Primary: publication date matches range (handle both date and datetime formats)
+        $pub_date_group = $query->andConditionGroup();
+        $pub_date_group->condition('pd.field_publication_date_value', NULL, 'IS NOT NULL');
+        // Use DATE() function to extract date part for comparison
+        $pub_date_group->where("DATE(pd.field_publication_date_value) >= :start_date", [':start_date' => $start_date_only]);
+        $pub_date_group->where("DATE(pd.field_publication_date_value) <= :end_date", [':end_date' => $end_date_only]);
+        $or_group->condition($pub_date_group);
+        
+        // Fallback: no publication date but created date matches
+        $fallback_group = $query->andConditionGroup();
+        $fallback_group->condition('pd.field_publication_date_value', NULL, 'IS NULL');
+        $fallback_group->condition('n.created', $start_timestamp, '>=');
+        $fallback_group->condition('n.created', $end_timestamp, '<=');
+        $or_group->condition($fallback_group);
+        
+        $query->condition($or_group);
         
         return $query->countQuery()->execute()->fetchField();
       }
