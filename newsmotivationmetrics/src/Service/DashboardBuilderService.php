@@ -2,6 +2,7 @@
 
 namespace Drupal\newsmotivationmetrics\Service;
 
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\DashboardBuilderServiceInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface;
@@ -37,6 +38,13 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
   protected $renderer;
 
   /**
+   * The logger service.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
+  protected $logger;
+
+  /**
    * Constructor.
    *
    * @param \Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface $chart_data_service
@@ -45,15 +53,19 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
    *   The metrics data service.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The renderer service.
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   *   The logger factory service.
    */
   public function __construct(
     ChartDataServiceInterface $chart_data_service,
     MetricsDataServiceInterface $metrics_data_service,
-    RendererInterface $renderer
+    RendererInterface $renderer,
+    LoggerChannelFactoryInterface $logger_factory
   ) {
     $this->chartDataService = $chart_data_service;
     $this->metricsDataService = $metrics_data_service;
     $this->renderer = $renderer;
+    $this->logger = $logger_factory->get('newsmotivationmetrics');
   }
 
   /**

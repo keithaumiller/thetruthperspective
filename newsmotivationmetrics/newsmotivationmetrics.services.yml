@@ -13,4 +13,4 @@ services:
 
   newsmotivationmetrics.dashboard_builder:
     class: Drupal\newsmotivationmetrics\Service\DashboardBuilderService
-    arguments: ['@newsmotivationmetrics.chart_data_service', '@newsmotivationmetrics.metrics_data_service', '@renderer']
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@newsmotivationmetrics.metrics_data_service', '@renderer', '@logger.factory']
