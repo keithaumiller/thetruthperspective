@@ -23,60 +23,58 @@ jobs:
           
           echo "=== Starting deployment ==="
           
-          # Navigate to custom modules directory (now the git repository)
-          cd /var/www/html/drupal/modules/custom
+          # Create a temporary directory for the repository
+          TEMP_DIR="/tmp/thetruthperspective-deploy-$(date +%s)"
+          mkdir -p "$TEMP_DIR"
           
-          # Configure git safe directory
-          git config --global --add safe.directory /var/www/html/drupal/modules/custom
+          # Clone the repository to temp directory
+          cd "$TEMP_DIR"
+          git clone https://${HUBGIT_PAT}@github.com/keithaumiller/thetruthperspective.git .
           
-          # Set ownership to ubuntu for git operations
-          sudo chown -R ubuntu:ubuntu .git
-          sudo chown -R ubuntu:ubuntu .
-          
-          # Debug: Show current state
-          echo "=== Current git state ==="
-          git status
-          git log --oneline -3
-          echo "Current remote URL:"
-          git remote -v
-          
-          # Ensure we're using HTTPS URL with token authentication
-          git remote set-url origin https://${HUBGIT_PAT}@github.com/keithaumiller/thetruthperspective.git
-          echo "Updated remote URL to HTTPS with authentication"
-          
-          # Pull the latest changes with error checking
-          echo "=== Fetching latest changes ==="
-          if ! git fetch origin main; then
-            echo "ERROR: Failed to fetch from GitHub"
-            exit 1
-          fi
-          
-          echo "=== After fetch ==="
-          git log --oneline -3
-          
-          echo "=== Resetting to origin/main ==="
-          git reset --hard origin/main
-          
-          echo "=== After reset ==="
-          git log --oneline -3
+          echo "=== Repository cloned to temp directory ==="
           echo "Files in repository:"
           ls -la
           
-          # Set proper permissions for all modules
-          sudo chown -R ubuntu:ubuntu .git
-          sudo chown -R www-data:www-data news_extractor ai_conversation job_application_automation
-          sudo find news_extractor -type f -exec chmod 644 {} \;
-          sudo find news_extractor -type d -exec chmod 755 {} \;
-          sudo find ai_conversation -type f -exec chmod 644 {} \;
-          sudo find ai_conversation -type d -exec chmod 755 {} \;
-          sudo find job_application_automation -type f -exec chmod 644 {} \;
-          sudo find job_application_automation -type d -exec chmod 755 {} \;
+          # Copy only our specific modules to the custom modules directory
+          CUSTOM_MODULES_DIR="/var/www/html/drupal/modules/custom"
           
-          echo "=== All three modules deployed successfully ==="
+          # Copy each module individually, preserving other modules
+          echo "=== Copying news_extractor module ==="
+          sudo rm -rf "$CUSTOM_MODULES_DIR/news_extractor"
+          sudo cp -r news_extractor "$CUSTOM_MODULES_DIR/"
+          
+          echo "=== Copying newsmotivationmetrics module ==="
+          sudo rm -rf "$CUSTOM_MODULES_DIR/newsmotivationmetrics"
+          sudo cp -r newsmotivationmetrics "$CUSTOM_MODULES_DIR/"
+          
+          echo "=== Copying ai_conversation module ==="
+          sudo rm -rf "$CUSTOM_MODULES_DIR/ai_conversation"
+          sudo cp -r ai_conversation "$CUSTOM_MODULES_DIR/"
+          
+          echo "=== Copying job_application_automation module ==="
+          sudo rm -rf "$CUSTOM_MODULES_DIR/job_application_automation"
+          sudo cp -r job_application_automation "$CUSTOM_MODULES_DIR/"
+          
+          # Set proper permissions for all modules
+          sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/news_extractor"
+          sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/newsmotivationmetrics"
+          sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/ai_conversation"
+          sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/job_application_automation"
+          
+          sudo find "$CUSTOM_MODULES_DIR/news_extractor" -type f -exec chmod 644 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/news_extractor" -type d -exec chmod 755 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/newsmotivationmetrics" -type f -exec chmod 644 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/newsmotivationmetrics" -type d -exec chmod 755 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/ai_conversation" -type f -exec chmod 644 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/ai_conversation" -type d -exec chmod 755 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/job_application_automation" -type f -exec chmod 644 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/job_application_automation" -type d -exec chmod 755 {} \;
+          
+          echo "=== All modules deployed successfully ==="
           
           # === Copy custom node--article.html.twig to Olivero theme ===
           OLIVERO_PATH="/var/www/html/drupal/core/themes/olivero"
-          CUSTOM_TWIG_SRC="/var/www/html/drupal/modules/custom/news_extractor/templates/node--article.html.twig"
+          CUSTOM_TWIG_SRC="$TEMP_DIR/news_extractor/templates/node--article.html.twig"
           CUSTOM_TWIG_DEST="$OLIVERO_PATH/templates/node--article.html.twig"
           sudo mkdir -p "$OLIVERO_PATH/templates"
           if [ -f "$CUSTOM_TWIG_SRC" ]; then
@@ -87,6 +85,10 @@ jobs:
           else
             echo "Custom node--article.html.twig not found at $CUSTOM_TWIG_SRC"
           fi
+          
+          # Clean up temp directory
+          rm -rf "$TEMP_DIR"
+          echo "=== Cleanup completed ==="
 
     - name: Clear Drupal cache
       uses: appleboy/ssh-action@v0.1.5
