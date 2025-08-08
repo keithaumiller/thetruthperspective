@@ -23,9 +23,18 @@ newsmotivationmetrics.admin_dashboard:
   requirements:
     _permission: 'access news motivation metrics'
 
+# Configuration form
+newsmotivationmetrics.settings:
+  path: '/admin/config/development/newsmotivationmetrics'
+  defaults:
+    _form: '\Drupal\newsmotivationmetrics\Form\NewsMotivationMetricsSettingsForm'
+    _title: 'News Motivation Metrics Settings'
+  requirements:
+    _permission: 'administer newsmotivationmetrics'
+
 # Chart debug page for development and troubleshooting
 newsmotivationmetrics.chart_debug:
-  path: '/admin/metrics/chart-debug'
+  path: '/admin/config/development/newsmotivationmetrics/chart-debug'
   defaults:
     _controller: '\Drupal\newsmotivationmetrics\Controller\ChartDebugController::debugPage'
     _title: 'Chart.js Debug Console'
@@ -33,7 +42,7 @@ newsmotivationmetrics.chart_debug:
     _permission: 'administer newsmotivationmetrics'
 
 newsmotivationmetrics.chart_test:
-  path: '/admin/metrics/chart-test'
+  path: '/admin/config/development/newsmotivationmetrics/chart-test'
   defaults:
     _controller: '\Drupal\newsmotivationmetrics\Controller\ChartTestController::testPage'
     _title: 'Chart.js Hello World Test - Verified Paths'
@@ -41,14 +50,14 @@ newsmotivationmetrics.chart_test:
     _permission: 'access administration pages'
 
 newsmotivationmetrics.chart_debug_refresh:
-  path: '/admin/metrics/chart-debug/refresh'
+  path: '/admin/config/development/newsmotivationmetrics/chart-debug/refresh'
   defaults:
     _controller: '\Drupal\newsmotivationmetrics\Controller\ChartDebugController::refreshData'
   requirements:
     _permission: 'access administration pages'
 
 newsmotivationmetrics.chart_debug_test:
-  path: '/admin/metrics/chart-debug/test'
+  path: '/admin/config/development/newsmotivationmetrics/chart-debug/test'
   defaults:
     _controller: '\Drupal\newsmotivationmetrics\Controller\ChartDebugController::testLibraries'
   requirements:

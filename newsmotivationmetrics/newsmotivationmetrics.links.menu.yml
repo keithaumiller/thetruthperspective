@@ -1,0 +1,32 @@
+# Administrative menu links for News Motivation Metrics module
+
+# Main configuration section
+newsmotivationmetrics.admin_config:
+  title: 'News Motivation Metrics'
+  description: 'Configure and debug news motivation metrics and charts'
+  route_name: newsmotivationmetrics.settings
+  parent: system.admin_config_development
+  weight: 10
+
+# Chart debugging tools as sub-items
+newsmotivationmetrics.chart_debug:
+  title: 'Chart.js Debug Console'
+  description: 'Advanced debugging tools for Chart.js visualization issues'
+  route_name: newsmotivationmetrics.chart_debug
+  parent: system.admin_config_development
+  weight: 11
+
+newsmotivationmetrics.chart_test:
+  title: 'Chart.js Test Page'
+  description: 'Test Chart.js library loading and basic functionality'
+  route_name: newsmotivationmetrics.chart_test
+  parent: system.admin_config_development
+  weight: 12
+
+# Alternative placement under Reports
+newsmotivationmetrics.reports_dashboard:
+  title: 'News Motivation Analytics'
+  description: 'View detailed analytics and metrics for news motivations'
+  route_name: newsmotivationmetrics.admin_dashboard
+  parent: system.admin_reports
+  weight: 10

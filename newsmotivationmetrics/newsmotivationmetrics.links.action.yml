@@ -1,0 +1,22 @@
+# Action links for News Motivation Metrics module
+
+newsmotivationmetrics.chart_debug_action:
+  route_name: newsmotivationmetrics.chart_debug
+  title: 'Debug Charts'
+  appears_on:
+    - newsmotivationmetrics.settings
+    - newsmotivationmetrics.admin_dashboard
+
+newsmotivationmetrics.chart_test_action:
+  route_name: newsmotivationmetrics.chart_test
+  title: 'Test Chart.js'
+  appears_on:
+    - newsmotivationmetrics.settings
+    - newsmotivationmetrics.admin_dashboard
+    - newsmotivationmetrics.chart_debug
+
+newsmotivationmetrics.admin_dashboard_action:
+  route_name: newsmotivationmetrics.admin_dashboard
+  title: 'View Analytics Dashboard'
+  appears_on:
+    - newsmotivationmetrics.settings
