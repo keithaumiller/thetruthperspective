@@ -44,30 +44,23 @@
         return;
       }
 
-      // Check for date adapter - using same logic as debug console
-      if (!Chart._adapters || !Chart._adapters._date) {
-        // Try alternative detection methods
-        let dateAdapterAvailable = false;
-        
-        // Method 1: Chart.js v4.x built-in date adapter
-        if (Chart._adapters && Chart._adapters._date) {
-          dateAdapterAvailable = true;
-        }
-        // Method 2: Check for date-fns adapter
-        else if (typeof window.dfns !== 'undefined') {
-          dateAdapterAvailable = true;
-        }
-        // Method 3: Check time scale defaults
-        else if (Chart.defaults && Chart.defaults.scales && Chart.defaults.scales.time) {
-          dateAdapterAvailable = true;
-        }
-        
-        if (!dateAdapterAvailable) {
-          self.updateStatus('Date adapter not available - timeline charts disabled', 'error');
-          self.showFallbackMessage();
-          return;
-        }
+      console.log('Chart.js available:', typeof Chart);
+      console.log('Chart._adapters:', Chart._adapters);
+      console.log('Chart version:', Chart.version);
+      
+      // Log adapter availability for debugging
+      let dateAdapterStatus = 'unknown';
+      if (Chart._adapters && Chart._adapters._date) {
+        dateAdapterStatus = 'Chart._adapters._date available';
+      } else if (typeof window.dfns !== 'undefined') {
+        dateAdapterStatus = 'date-fns adapter available';  
+      } else if (Chart.defaults && Chart.defaults.scales && Chart.defaults.scales.time) {
+        dateAdapterStatus = 'Chart.defaults.scales.time available';
+      } else {
+        dateAdapterStatus = 'No date adapter detected - proceeding anyway';
       }
+      
+      console.log('Date adapter status:', dateAdapterStatus);
 
       // Validate canvas element
       const canvas = document.getElementById('taxonomy-timeline-chart');
