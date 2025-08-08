@@ -712,6 +712,9 @@
             // Attach event listeners only after Chart.js is ready
             attachEventListeners();
             
+            // Automatically create timeline chart with real data
+            createInitialTimelineChart();
+            
             debugLog(`Chart Debug Console v${CHART_DEBUG_VERSION} initialization completed successfully`, 'success');
           })
           .catch((error) => {
@@ -775,6 +778,121 @@
     }
 
     debugLog('Event listeners attachment completed v1.3.4', 'success');
+  }
+
+  /**
+   * Create initial timeline chart with real data automatically
+   */
+  function createInitialTimelineChart() {
+    debugLog('Creating initial timeline chart with real data...', 'info');
+    
+    // Check if we have timeline data from Drupal
+    const timelineData = drupalSettings?.newsmotivationmetrics?.timelineData;
+    if (!timelineData || !Array.isArray(timelineData) || timelineData.length === 0) {
+      debugLog('No timeline data available from Drupal settings', 'warning');
+      return;
+    }
+    
+    // Prepare canvas
+    if (!prepareCanvas()) {
+      debugLog('Canvas preparation failed for initial timeline chart', 'error');
+      return;
+    }
+    
+    const canvas = document.getElementById('debug-main-chart');
+    if (!canvas) {
+      debugLog('Canvas element not found after preparation', 'error');
+      return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      debugLog('Failed to get 2D context from canvas', 'error');
+      return;
+    }
+    
+    // Process timeline data for Chart.js
+    const processedData = timelineData.map(item => ({
+      x: new Date(item.date),
+      y: parseInt(item.count) || 0,
+      label: item.date
+    }));
+    
+    // Sort by date
+    processedData.sort((a, b) => a.x - b.x);
+    
+    debugLog(`Processing ${processedData.length} timeline data points`, 'info');
+    
+    try {
+      // Destroy existing chart if it exists
+      if (currentChart) {
+        currentChart.destroy();
+        currentChart = null;
+      }
+      
+      // Create timeline chart
+      currentChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: 'Article Count Over Time',
+            data: processedData,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'day',
+                displayFormats: {
+                  day: 'MMM dd'
+                }
+              },
+              title: {
+                display: true,
+                text: 'Date'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Article Count'
+              }
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Timeline of Articles (Real Data)'
+            },
+            legend: {
+              display: true
+            }
+          }
+        }
+      });
+      
+      debugLog(`Initial timeline chart created successfully with ${processedData.length} data points`, 'success');
+      
+      // Update chart status area if it exists
+      const statusElement = document.querySelector('.chart-area p');
+      if (statusElement) {
+        statusElement.textContent = `Timeline chart loaded with ${processedData.length} data points from ${processedData[0]?.label} to ${processedData[processedData.length - 1]?.label}`;
+        statusElement.style.color = '#28a745';
+      }
+      
+    } catch (error) {
+      debugLog(`Failed to create initial timeline chart: ${error.message}`, 'error');
+      console.error('Timeline chart creation error:', error);
+    }
   }
 
 })(Drupal, once);
