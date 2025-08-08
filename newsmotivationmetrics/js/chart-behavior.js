@@ -44,11 +44,29 @@
         return;
       }
 
-      // Check for date adapter
-      if (!Chart.adapters || !Chart.adapters._date) {
-        self.updateStatus('Date adapter not available - timeline charts disabled', 'error');
-        self.showFallbackMessage();
-        return;
+      // Check for date adapter - using same logic as debug console
+      if (!Chart._adapters || !Chart._adapters._date) {
+        // Try alternative detection methods
+        let dateAdapterAvailable = false;
+        
+        // Method 1: Chart.js v4.x built-in date adapter
+        if (Chart._adapters && Chart._adapters._date) {
+          dateAdapterAvailable = true;
+        }
+        // Method 2: Check for date-fns adapter
+        else if (typeof window.dfns !== 'undefined') {
+          dateAdapterAvailable = true;
+        }
+        // Method 3: Check time scale defaults
+        else if (Chart.defaults && Chart.defaults.scales && Chart.defaults.scales.time) {
+          dateAdapterAvailable = true;
+        }
+        
+        if (!dateAdapterAvailable) {
+          self.updateStatus('Date adapter not available - timeline charts disabled', 'error');
+          self.showFallbackMessage();
+          return;
+        }
       }
 
       // Validate canvas element
