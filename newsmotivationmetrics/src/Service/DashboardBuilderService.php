@@ -227,7 +227,7 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
         'id' => 'taxonomy-timeline-chart',
         'width' => 800,
         'height' => 400,
-        'style' => 'max-width: 100%; height: auto;',
+        'style' => 'max-width: 100%; height: auto; max-height: 500px;',
         'aria-label' => 'Taxonomy Timeline Chart',
       ],
     ];

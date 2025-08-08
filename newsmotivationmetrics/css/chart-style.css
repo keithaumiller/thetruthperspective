@@ -7,17 +7,22 @@
 .chart-container {
   position: relative;
   height: 400px;
+  max-height: 600px;
+  max-width: 100%;
   margin: 20px 0;
   padding: 15px;
   background: #ffffff;
   border: 1px solid #e1e5e9;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden; /* Prevent overflow issues */
 }
 
 .chart-container canvas {
-  max-width: 100%;
-  height: auto;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  height: auto !important;
+  width: auto !important;
 }
 
 /* Block-specific chart styling */
@@ -41,13 +46,23 @@
 }
 
 .chart-block-container {
-  height: auto;
-  min-height: 300px;
+  position: relative;
+  height: 400px;
+  max-height: 500px;
+  max-width: 100%;
   margin: 15px 0;
   padding: 10px;
   background: #fdfdfd;
   border: 1px solid #f0f0f0;
   border-radius: 6px;
+  overflow: hidden; /* Prevent canvas overflow */
+}
+
+.chart-block-container canvas {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  height: auto !important;
+  width: auto !important;
 }
 
 .chart-block-controls {

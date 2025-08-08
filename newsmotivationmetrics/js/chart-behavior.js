@@ -169,10 +169,16 @@
           },
           options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 2, // Width:Height ratio of 2:1
+            resizeDelay: 100, // Debounce resize events
             interaction: {
               mode: 'index',
               intersect: false,
+            },
+            animation: {
+              duration: 750, // Reduce animation time
+              easing: 'easeOutQuart',
             },
             scales: {
               x: {

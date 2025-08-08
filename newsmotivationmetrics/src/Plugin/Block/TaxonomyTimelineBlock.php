@@ -266,8 +266,8 @@ class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginI
       '#attributes' => [
         'id' => $canvas_id,
         'width' => 800,
-        'height' => $config['chart_height'],
-        'style' => 'max-width: 100%; height: auto;',
+        'height' => min($config['chart_height'], 500), // Cap height at 500px
+        'style' => 'max-width: 100%; height: auto; max-height: 500px;',
         'aria-label' => $config['chart_title'] . ' - Interactive Timeline Chart',
         'data-chart-config' => json_encode([
           'showLegend' => $config['show_legend'],
