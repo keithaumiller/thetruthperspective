@@ -1,5 +1,9 @@
 # News Motivation Metrics Module 2nd try
 
+**Version:** 2.0.0 - Drupal 11 Compatible  
+**Last Updated:** August 8, 2025  
+**Deployment Status:** Fixed non-destructive deployment process  
+
 A comprehensive Drupal 11 module for The Truth Perspective platform that provides public analytics dashboards and advanced Chart.js debugging tools for news article motivation analysis.
 
 ## Overview
