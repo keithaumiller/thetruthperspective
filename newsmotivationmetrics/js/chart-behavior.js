@@ -17,7 +17,7 @@
   Drupal.behaviors.newsMotivationMetricsChart = {
     attach: function (context, settings) {
       once('taxonomy-timeline-chart', 'body', context).forEach(function () {
-        console.log('=== News Motivation Metrics Chart Behavior (Updated) ===');
+        console.log('=== News Motivation Metrics Chart Behavior v1.0.1 (Aug 8) ===');
         console.log('Settings:', settings.newsmotivationmetrics);
 
         // Get chart data from drupalSettings
