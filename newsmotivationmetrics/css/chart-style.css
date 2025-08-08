@@ -20,6 +20,130 @@
   height: auto;
 }
 
+/* Block-specific chart styling */
+.taxonomy-timeline-block {
+  margin: 20px 0;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.taxonomy-timeline-block .chart-block-title {
+  margin: 0 0 20px 0;
+  padding: 0;
+  font-size: 1.5em;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.chart-block-container {
+  height: auto;
+  min-height: 300px;
+  margin: 15px 0;
+  padding: 10px;
+  background: #fdfdfd;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+}
+
+.chart-block-controls {
+  margin: 15px 0;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+}
+
+.chart-block-controls .control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 200px;
+}
+
+.chart-block-controls label {
+  font-weight: 600;
+  font-size: 0.9em;
+  color: #495057;
+  margin: 0;
+}
+
+.chart-block-controls select {
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9em;
+  background: white;
+}
+
+.chart-block-controls .control-buttons {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.chart-status {
+  padding: 8px 12px;
+  margin: 10px 0;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.chart-status.status-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.chart-status.status-error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.chart-status.status-warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.chart-status.status-info {
+  background: #cce7f0;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+/* Responsive design for blocks */
+@media (max-width: 768px) {
+  .taxonomy-timeline-block {
+    margin: 10px 0;
+    padding: 15px;
+  }
+  
+  .chart-block-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .chart-block-controls .control-buttons {
+    margin-left: 0;
+    justify-content: center;
+  }
+  
+  .chart-block-controls .control-group {
+    min-width: auto;
+  }
+}
+
 /* Chart Controls */
 .chart-controls {
   margin: 20px 0;

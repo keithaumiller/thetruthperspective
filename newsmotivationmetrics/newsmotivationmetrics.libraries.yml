@@ -99,3 +99,18 @@ admin-dashboard:
     - newsmotivationmetrics/chart-libraries
     - core/drupal
     - core/once
+
+chart-blocks:
+  version: 1.x
+  css:
+    theme:
+      css/chart-style.css: {}
+  js:
+    js/chart.umd.js: { weight: -10 }
+    js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
+    js/chart-blocks.js: { weight: -8 }
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/once
+    - core/drupalSettings
