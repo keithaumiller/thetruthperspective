@@ -292,6 +292,7 @@
       const resetBtn = document.getElementById('reset-chart');
       if (resetBtn) {
         resetBtn.addEventListener('click', function() {
+          console.log('Reset chart button clicked');
           self.resetChart();
         });
       }
@@ -300,6 +301,7 @@
       const clearBtn = document.getElementById('clear-chart');
       if (clearBtn) {
         clearBtn.addEventListener('click', function() {
+          console.log('Clear chart button clicked');
           self.clearChart();
         });
       }
@@ -308,11 +310,221 @@
       const selector = document.getElementById('term-selector');
       if (selector) {
         selector.addEventListener('change', function() {
+          console.log('Term selector changed, selected options:', selector.selectedOptions.length);
           self.updateFromSelector();
         });
+        console.log('Term selector event listener attached');
+      } else {
+        console.log('Term selector not found for event listener');
       }
 
+      // Add chart resize controls
+      self.addResizeControls();
+
       console.log('Event listeners attached for chart controls');
+    },
+
+    /**
+     * Add chart resize controls to the chart container.
+     */
+    addResizeControls: function() {
+      const chartContainer = document.querySelector('.taxonomy-timeline-section .chart-container');
+      if (!chartContainer) {
+        console.log('Chart container not found for resize controls');
+        return;
+      }
+
+      // Check if resize controls already exist
+      if (chartContainer.querySelector('.chart-resize-controls')) {
+        return;
+      }
+
+      // Create resize controls container
+      const resizeControls = document.createElement('div');
+      resizeControls.className = 'chart-resize-controls';
+      resizeControls.style.cssText = `
+        margin: 10px 0;
+        padding: 10px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      `;
+
+      // Size label
+      const sizeLabel = document.createElement('span');
+      sizeLabel.textContent = 'Chart Size:';
+      sizeLabel.style.fontWeight = 'bold';
+
+      // Size buttons
+      const sizes = [
+        { label: 'Small', height: 300, ratio: 2.5 },
+        { label: 'Medium', height: 400, ratio: 2 },
+        { label: 'Large', height: 500, ratio: 1.8 },
+        { label: 'X-Large', height: 600, ratio: 1.6 }
+      ];
+
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.cssText = 'display: flex; gap: 5px; flex-wrap: wrap;';
+
+      sizes.forEach((size, index) => {
+        const button = document.createElement('button');
+        button.textContent = size.label;
+        button.className = 'btn btn-outline btn-sm';
+        button.style.cssText = `
+          padding: 5px 10px;
+          border: 1px solid #007bff;
+          background: ${index === 1 ? '#007bff' : 'white'};
+          color: ${index === 1 ? 'white' : '#007bff'};
+          border-radius: 3px;
+          cursor: pointer;
+          font-size: 12px;
+        `;
+        
+        button.addEventListener('click', () => {
+          this.resizeChart(size.height, size.ratio);
+          
+          // Update button states
+          buttonContainer.querySelectorAll('button').forEach(btn => {
+            btn.style.background = 'white';
+            btn.style.color = '#007bff';
+          });
+          button.style.background = '#007bff';
+          button.style.color = 'white';
+        });
+
+        buttonContainer.appendChild(button);
+      });
+
+      // Fullscreen toggle
+      const fullscreenBtn = document.createElement('button');
+      fullscreenBtn.textContent = '⛶ Fullscreen';
+      fullscreenBtn.className = 'btn btn-secondary btn-sm';
+      fullscreenBtn.style.cssText = `
+        padding: 5px 10px;
+        border: 1px solid #6c757d;
+        background: white;
+        color: #6c757d;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 10px;
+      `;
+      
+      fullscreenBtn.addEventListener('click', () => {
+        this.toggleFullscreen();
+      });
+
+      // Assemble controls
+      resizeControls.appendChild(sizeLabel);
+      resizeControls.appendChild(buttonContainer);
+      resizeControls.appendChild(fullscreenBtn);
+
+      // Insert before canvas
+      const canvas = chartContainer.querySelector('#taxonomy-timeline-chart');
+      if (canvas) {
+        chartContainer.insertBefore(resizeControls, canvas);
+      } else {
+        chartContainer.appendChild(resizeControls);
+      }
+
+      console.log('Chart resize controls added');
+    },
+
+    /**
+     * Resize the chart with new dimensions.
+     */
+    resizeChart: function(height, aspectRatio) {
+      const canvas = document.getElementById('taxonomy-timeline-chart');
+      if (!canvas || !currentChart) {
+        console.log('Cannot resize: canvas or chart not available');
+        return;
+      }
+
+      // Update canvas height
+      canvas.height = Math.min(height, 800); // Max height limit
+      canvas.style.height = 'auto';
+      canvas.style.maxHeight = Math.min(height, 800) + 'px';
+
+      // Update chart options
+      currentChart.options.aspectRatio = aspectRatio;
+      currentChart.options.maintainAspectRatio = true;
+      
+      // Force chart resize
+      currentChart.resize();
+      
+      this.updateStatus(`Chart resized to ${Math.min(height, 800)}px height`, 'info');
+      console.log(`Chart resized to height: ${height}px, aspect ratio: ${aspectRatio}`);
+    },
+
+    /**
+     * Toggle fullscreen mode for the chart.
+     */
+    toggleFullscreen: function() {
+      const chartSection = document.querySelector('.taxonomy-timeline-section');
+      if (!chartSection) return;
+
+      const isFullscreen = chartSection.classList.contains('chart-fullscreen');
+      
+      if (!isFullscreen) {
+        // Enter fullscreen
+        chartSection.classList.add('chart-fullscreen');
+        chartSection.style.cssText = `
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          background: white !important;
+          z-index: 9999 !important;
+          padding: 20px !important;
+          overflow: auto !important;
+        `;
+
+        // Resize chart for fullscreen
+        this.resizeChart(window.innerHeight - 200, 2.5);
+        
+        // Add exit button
+        if (!chartSection.querySelector('.exit-fullscreen')) {
+          const exitBtn = document.createElement('button');
+          exitBtn.className = 'exit-fullscreen';
+          exitBtn.textContent = '✕ Exit Fullscreen';
+          exitBtn.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 10000;
+          `;
+          exitBtn.addEventListener('click', () => this.toggleFullscreen());
+          chartSection.appendChild(exitBtn);
+        }
+
+        this.updateStatus('Chart in fullscreen mode', 'info');
+      } else {
+        // Exit fullscreen
+        chartSection.classList.remove('chart-fullscreen');
+        chartSection.style.cssText = '';
+        
+        // Remove exit button
+        const exitBtn = chartSection.querySelector('.exit-fullscreen');
+        if (exitBtn) {
+          exitBtn.remove();
+        }
+
+        // Reset chart to medium size
+        this.resizeChart(400, 2);
+        
+        this.updateStatus('Exited fullscreen mode', 'info');
+      }
     },
 
     /**
@@ -322,9 +534,30 @@
       const self = this;
       const timelineData = chartData.timelineData || [];
       
+      // Reset the term selector to show top 10 terms
+      const selector = document.getElementById('term-selector');
+      if (selector) {
+        // Clear all selections first
+        Array.from(selector.options).forEach(option => {
+          option.selected = false;
+        });
+        
+        // Select first 10 options (which should be the top terms)
+        const optionsToSelect = Math.min(10, selector.options.length);
+        for (let i = 0; i < optionsToSelect; i++) {
+          if (selector.options[i]) {
+            selector.options[i].selected = true;
+          }
+        }
+        
+        console.log(`Reset selector: selected ${optionsToSelect} top terms`);
+      }
+      
       if (timelineData.length > 0) {
-        self.initializeTimelineChart(timelineData);
-        self.updateStatus('Chart reset to show all terms', 'info');
+        // Show top 10 terms (limit the data)
+        const topTermsData = timelineData.slice(0, 10);
+        self.initializeTimelineChart(topTermsData);
+        self.updateStatus(`Chart reset to show top ${topTermsData.length} terms`, 'success');
       } else {
         self.updateStatus('No data available for reset', 'warning');
       }
@@ -336,9 +569,19 @@
     clearChart: function() {
       const self = this;
       
+      // Clear the term selector
+      const selector = document.getElementById('term-selector');
+      if (selector) {
+        Array.from(selector.options).forEach(option => {
+          option.selected = false;
+        });
+        console.log('Term selector cleared');
+      }
+      
       if (currentChart) {
         currentChart.destroy();
         currentChart = null;
+        console.log('Chart destroyed');
       }
 
       // Reset canvas container
@@ -351,7 +594,7 @@
         }
       }
 
-      self.updateStatus('Chart cleared', 'info');
+      self.updateStatus('Chart cleared - select terms above to display data', 'info');
       self.updateChartInfo(0, 0);
     },
 
@@ -360,23 +603,38 @@
      */
     updateFromSelector: function() {
       const selector = document.getElementById('term-selector');
-      if (!selector) return;
+      if (!selector) {
+        console.log('Term selector not found for updating chart');
+        return;
+      }
 
       const selectedTermIds = Array.from(selector.selectedOptions).map(option => option.value);
+      console.log('Selected term IDs:', selectedTermIds);
+      
       const timelineData = chartData.timelineData || [];
+      console.log('Available timeline data terms:', timelineData.map(t => t.term_id));
       
       if (selectedTermIds.length === 0) {
         this.clearChart();
+        this.updateStatus('No terms selected - chart cleared', 'warning');
         return;
       }
 
       // Filter timeline data for selected terms
-      const filteredData = timelineData.filter(termData => 
-        selectedTermIds.includes(termData.term_id.toString())
-      );
+      const filteredData = timelineData.filter(termData => {
+        const termMatch = selectedTermIds.includes(termData.term_id.toString());
+        console.log(`Term ${termData.term_id} (${termData.term_name}): ${termMatch ? 'included' : 'excluded'}`);
+        return termMatch;
+      });
+
+      console.log(`Filtered data: ${filteredData.length} terms from ${selectedTermIds.length} selected`);
 
       if (filteredData.length > 0) {
         this.initializeTimelineChart(filteredData);
+        this.updateStatus(`Chart updated with ${filteredData.length} selected terms`, 'success');
+      } else {
+        this.clearChart();
+        this.updateStatus('No matching data found for selected terms', 'warning');
       }
     },
 

@@ -163,7 +163,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#type' => 'html_tag',
       '#tag' => 'label',
       '#value' => t('Add/Remove Terms:'),
-      '#attributes' => ['for' => 'term-selector-' . $this->getUniqueId($canvas_id)],
+      '#attributes' => ['for' => $canvas_id === 'taxonomy-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id)],
     ];
 
     $controls['selector_group']['selector'] = [
@@ -173,7 +173,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#default_value' => array_slice(array_column($top_terms, 'tid'), 0, 10),
       '#attributes' => [
         'class' => ['term-selector'],
-        'id' => 'term-selector-' . $this->getUniqueId($canvas_id),
+        'id' => $canvas_id === 'taxonomy-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id),
         'size' => 8,
         'data-canvas-id' => $canvas_id,
       ],
@@ -191,7 +191,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#tag' => 'button',
       '#value' => t('Reset to Top 10'),
       '#attributes' => [
-        'id' => 'reset-chart-' . $unique_id,
+        'id' => $canvas_id === 'taxonomy-timeline-chart' ? 'reset-chart' : 'reset-chart-' . $unique_id,
         'class' => ['btn', 'btn-secondary', 'chart-reset-btn'],
         'type' => 'button',
         'data-canvas-id' => $canvas_id,
@@ -203,7 +203,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#tag' => 'button',
       '#value' => t('Clear All'),
       '#attributes' => [
-        'id' => 'clear-chart-' . $unique_id,
+        'id' => $canvas_id === 'taxonomy-timeline-chart' ? 'clear-chart' : 'clear-chart-' . $unique_id,
         'class' => ['btn', 'btn-outline', 'chart-clear-btn'],
         'type' => 'button',
         'data-canvas-id' => $canvas_id,
