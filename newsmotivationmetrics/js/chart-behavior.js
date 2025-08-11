@@ -465,48 +465,37 @@
         flex-wrap: wrap;
       `;
 
+
       // Size label
       const sizeLabel = document.createElement('span');
       sizeLabel.textContent = 'Chart Size:';
       sizeLabel.style.fontWeight = 'bold';
 
-      // Size buttons
+      // Only one size: Standard (was X-Large)
       const sizes = [
-        { label: 'Small', height: 300, ratio: 2.5 },
-        { label: 'Medium', height: 400, ratio: 2 },
-        { label: 'Large', height: 500, ratio: 1.8 },
-        { label: 'X-Large', height: 600, ratio: 1.6 }
+        { label: 'Standard', height: 600, ratio: 1.6 }
       ];
 
       const buttonContainer = document.createElement('div');
       buttonContainer.style.cssText = 'display: flex; gap: 5px; flex-wrap: wrap;';
 
-      sizes.forEach((size, index) => {
+      sizes.forEach((size) => {
         const button = document.createElement('button');
         button.textContent = size.label;
         button.className = 'btn btn-outline btn-sm';
         button.style.cssText = `
           padding: 5px 10px;
           border: 1px solid #007bff;
-          background: ${index === 1 ? '#007bff' : 'white'};
-          color: ${index === 1 ? 'white' : '#007bff'};
+          background: #007bff;
+          color: white;
           border-radius: 3px;
           cursor: pointer;
           font-size: 12px;
         `;
-        
+        // Always selected, but allow re-click to reset size
         button.addEventListener('click', () => {
           this.resizeChart(size.height, size.ratio);
-          
-          // Update button states
-          buttonContainer.querySelectorAll('button').forEach(btn => {
-            btn.style.background = 'white';
-            btn.style.color = '#007bff';
-          });
-          button.style.background = '#007bff';
-          button.style.color = 'white';
         });
-
         buttonContainer.appendChild(button);
       });
 
