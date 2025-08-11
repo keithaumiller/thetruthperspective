@@ -184,6 +184,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
         'size' => 12, // Increased size to show more options
         'data-canvas-id' => $canvas_id,
         'data-max-selections' => 10,
+        'multiple' => 'multiple', // Force native multi-select attribute
       ],
     ];
 
