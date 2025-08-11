@@ -7,6 +7,7 @@ chart-js:
     js/chart.umd.js: { weight: -10 }
     js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
     js/chart-behavior.js: { weight: -8 }
+    # js/taxonomy-timeline-chart.js: { weight: -7 }  # Removed to prevent multi-select conflict
   dependencies:
     - core/drupal
     - core/jquery
