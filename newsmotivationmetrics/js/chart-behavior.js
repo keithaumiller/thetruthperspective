@@ -51,6 +51,59 @@
             // Log selector HTML and attributes
             console.log('[DIAG] Selector outerHTML:', selector.outerHTML);
             console.log('[DIAG] Selector attributes:', selector.getAttribute('multiple'), selector.getAttribute('size'), selector.className);
+            // Log computed styles
+            const computed = window.getComputedStyle(selector);
+            console.log('[DIAG] Computed styles:', {
+              display: computed.display,
+              visibility: computed.visibility,
+              pointerEvents: computed.pointerEvents,
+              userSelect: computed.userSelect,
+              appearance: computed.appearance,
+              webkitAppearance: computed.webkitAppearance,
+              mozAppearance: computed.mozAppearance
+            });
+            // Log parent/ancestor info
+            let parent = selector.parentNode;
+            let ancestry = [];
+            while (parent && ancestry.length < 5) {
+              ancestry.push({
+                tag: parent.tagName,
+                class: parent.className,
+                id: parent.id
+              });
+              parent = parent.parentNode;
+            }
+            console.log('[DIAG] Selector ancestry:', ancestry);
+            // Log if selector is replaced after 1s
+            setTimeout(() => {
+              const sel2 = document.getElementById('term-selector');
+              if (sel2 !== selector) {
+                console.warn('[DIAG] Selector element was replaced after load!');
+              }
+            }, 1000);
+            // Add event listeners for click, mousedown, focus
+            ['click','mousedown','focus'].forEach(evt => {
+              selector.addEventListener(evt, function(e) {
+                console.log(`[DIAG] Selector event: ${evt}`, {
+                  ctrlKey: e.ctrlKey,
+                  shiftKey: e.shiftKey,
+                  metaKey: e.metaKey,
+                  altKey: e.altKey,
+                  button: e.button,
+                  type: e.type,
+                  target: e.target,
+                  selectedOptions: Array.from(selector.selectedOptions).map(o => o.value),
+                  optionsCount: selector.options.length
+                });
+              });
+            });
+            // Log selection after change
+            selector.addEventListener('change', function(e) {
+              console.log('[DIAG] Selector change event', {
+                selectedOptions: Array.from(selector.selectedOptions).map(o => o.value),
+                optionsCount: selector.options.length
+              });
+            });
             // Check if truly multi-select
             if (!selector.multiple || selector.size <= 1) {
               // Add visible persistent warning above selector
