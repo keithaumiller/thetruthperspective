@@ -69,6 +69,12 @@ class TimelineChartService implements TimelineChartServiceInterface {
       'days_back' => $options['days_back'],
     ]);
 
+    // Get extended terms for selector (top 50 terms)
+    $extended_terms = $this->chartDataService->getTimelineChartData([
+      'limit' => 50,
+      'days_back' => $options['days_back'],
+    ]);
+
     if (empty($chart_data['timeline_data'])) {
       return $this->buildEmptyChart($options);
     }
@@ -95,7 +101,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
     // Chart controls (if enabled)
     if ($options['show_controls']) {
       $build['controls'] = $this->buildChartControls(
-        $chart_data['top_terms'], 
+        $extended_terms['top_terms'], // Use extended terms for selector
         $options['canvas_id']
       );
     }
@@ -107,7 +113,8 @@ class TimelineChartService implements TimelineChartServiceInterface {
     $build['#attached']['library'][] = $options['library'];
     $build['#attached']['drupalSettings']['newsmotivationmetrics'] = $this->buildJavaScriptSettings(
       $chart_data, 
-      $options
+      $options,
+      $extended_terms // Pass extended terms for background loading
     );
 
     return $build;
@@ -162,7 +169,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
     $controls['selector_group']['label'] = [
       '#type' => 'html_tag',
       '#tag' => 'label',
-      '#value' => t('Add/Remove Terms:'),
+      '#value' => t('Select Terms (max 10):'),
       '#attributes' => ['for' => $canvas_id === 'taxonomy-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id)],
     ];
 
@@ -174,8 +181,9 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#attributes' => [
         'class' => ['term-selector'],
         'id' => $canvas_id === 'taxonomy-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id),
-        'size' => 8,
+        'size' => 12, // Increased size to show more options
         'data-canvas-id' => $canvas_id,
+        'data-max-selections' => 10,
       ],
     ];
 
@@ -218,10 +226,19 @@ class TimelineChartService implements TimelineChartServiceInterface {
     $controls['info']['text'] = [
       '#type' => 'html_tag',
       '#tag' => 'span',
-      '#value' => t('📊 Showing frequency of topic mentions over the last @days days', [
-        '@days' => 30, // This could be dynamic based on options
-      ]),
+      '#value' => t('📊 Select up to 10 terms to display. Top 10 terms shown by default.'),
       '#attributes' => ['class' => ['info-text']],
+    ];
+
+    $controls['info']['loading'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'span',
+      '#value' => t('Loading additional terms in background...'),
+      '#attributes' => [
+        'class' => ['loading-text'],
+        'id' => 'loading-status-' . $this->getUniqueId($canvas_id),
+        'style' => 'display: none; color: #666; font-style: italic;',
+      ],
     ];
 
     return $controls;
@@ -283,16 +300,26 @@ class TimelineChartService implements TimelineChartServiceInterface {
    *   Chart data from service.
    * @param array $options
    *   Chart options.
+   * @param array $extended_terms
+   *   Extended term data for background loading.
    *
    * @return array
    *   JavaScript settings array.
    */
-  protected function buildJavaScriptSettings(array $chart_data, array $options): array {
+  protected function buildJavaScriptSettings(array $chart_data, array $options, array $extended_terms = null): array {
     $settings = [
       'timelineData' => $chart_data['timeline_data'],
       'topTerms' => $chart_data['top_terms'],
       'debugInfo' => $chart_data['debug_info'],
     ];
+
+    // Add extended terms for background loading if available
+    if ($extended_terms && !empty($extended_terms['timeline_data'])) {
+      $settings['extendedTerms'] = [
+        'timelineData' => $extended_terms['timeline_data'],
+        'topTerms' => $extended_terms['top_terms'],
+      ];
+    }
 
     // For block-based charts, organize by canvas ID
     if ($options['js_behavior'] === 'taxonomyTimelineBlocks') {

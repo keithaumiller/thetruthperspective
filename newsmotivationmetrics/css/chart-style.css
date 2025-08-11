@@ -187,12 +187,28 @@
   border-radius: 4px;
   font-size: 14px;
   background-color: #ffffff;
+  max-height: 300px; /* Limit height for better UX */
 }
 
 .term-selector:focus {
   border-color: #0066cc;
   outline: 0;
   box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+}
+
+/* Enhanced multi-select styling */
+.term-selector option {
+  padding: 4px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.term-selector option:selected {
+  background: #0066cc !important;
+  color: white !important;
+}
+
+.term-selector option:hover {
+  background: #e3f2fd !important;
 }
 
 /* Control Buttons */

@@ -10,6 +10,8 @@
 
   let currentChart = null;
   let chartData = null;
+  let extendedTermsData = null; // Store extended terms for background loading
+  let backgroundLoadingComplete = false;
 
   /**
    * Chart behavior for taxonomy timeline visualization.
@@ -24,13 +26,20 @@
         chartData = settings.newsmotivationmetrics || {};
         const timelineData = chartData.timelineData || [];
         const topTerms = chartData.topTerms || [];
+        extendedTermsData = chartData.extendedTerms || null;
 
         console.log('Timeline data points:', timelineData.length);
         console.log('Available terms:', topTerms.length);
+        console.log('Extended terms available:', extendedTermsData ? 'Yes' : 'No');
 
         // Initialize chart system with retry logic for canvas availability
         setTimeout(() => {
           this.initializeChart(timelineData, topTerms);
+          
+          // Start background loading of extended terms if available
+          if (extendedTermsData) {
+            this.startBackgroundLoading();
+          }
         }, 100);
       }.bind(this));
     },
@@ -312,9 +321,25 @@
       if (selector) {
         selector.addEventListener('change', function() {
           console.log('Term selector changed, selected options:', selector.selectedOptions.length);
-          self.updateFromSelector();
+          self.handleTermSelection(selector);
         });
-        console.log('Term selector event listener attached');
+        
+        // Add keydown listener for better UX
+        selector.addEventListener('keydown', function(e) {
+          // Allow deselection with Delete/Backspace
+          if (e.key === 'Delete' || e.key === 'Backspace') {
+            const selected = selector.selectedOptions;
+            if (selected.length > 0) {
+              Array.from(selected).forEach(option => option.selected = false);
+              self.updateFromSelector();
+            }
+          }
+        });
+        
+        console.log('Term selector event listeners attached');
+        
+        // Set initial selection to top 10 terms
+        self.selectTop10Terms(selector);
       } else {
         console.log('Term selector not found for event listener');
       }
@@ -529,38 +554,172 @@
     },
 
     /**
+     * Handle term selection with 10-term limit enforcement.
+     */
+    handleTermSelection: function(selector) {
+      const selectedOptions = Array.from(selector.selectedOptions);
+      const maxSelections = 10;
+      
+      if (selectedOptions.length > maxSelections) {
+        // Remove the last selected option if over limit
+        const lastSelected = selectedOptions[selectedOptions.length - 1];
+        lastSelected.selected = false;
+        
+        this.updateStatus(`Maximum ${maxSelections} terms allowed. Removed: ${lastSelected.textContent.split(' (')[0]}`, 'warning');
+        
+        // Update chart with the valid selection
+        setTimeout(() => this.updateFromSelector(), 100);
+      } else {
+        this.updateFromSelector();
+      }
+      
+      // Update info text
+      this.updateSelectionInfo(selectedOptions.length);
+    },
+
+    /**
+     * Select the top 10 terms by default.
+     */
+    selectTop10Terms: function(selector) {
+      // Clear all selections first
+      Array.from(selector.options).forEach(option => {
+        option.selected = false;
+      });
+      
+      // Select first 10 options (which should be the top terms)
+      const optionsToSelect = Math.min(10, selector.options.length);
+      for (let i = 0; i < optionsToSelect; i++) {
+        if (selector.options[i]) {
+          selector.options[i].selected = true;
+        }
+      }
+      
+      console.log(`Auto-selected top ${optionsToSelect} terms`);
+      this.updateSelectionInfo(optionsToSelect);
+    },
+
+    /**
+     * Update selection info display.
+     */
+    updateSelectionInfo: function(count) {
+      const infoElement = document.querySelector('.chart-info .info-text');
+      if (infoElement) {
+        if (count > 0) {
+          infoElement.textContent = `📊 Displaying ${count}/10 terms. ${backgroundLoadingComplete ? 'All terms loaded.' : 'Loading additional terms...'}`;
+        } else {
+          infoElement.textContent = '📊 Select up to 10 terms to display. Top 10 terms shown by default.';
+        }
+      }
+    },
+
+    /**
+     * Start background loading of extended terms.
+     */
+    startBackgroundLoading: function() {
+      if (!extendedTermsData || backgroundLoadingComplete) {
+        return;
+      }
+      
+      console.log('Starting background loading of extended terms...');
+      
+      // Show loading indicator
+      const loadingElement = document.getElementById('loading-status-main');
+      if (loadingElement) {
+        loadingElement.style.display = 'inline';
+      }
+      
+      // Simulate background processing time (in real implementation, this might be an AJAX call)
+      setTimeout(() => {
+        this.completeBackgroundLoading();
+      }, 2000);
+    },
+
+    /**
+     * Complete background loading and update selector options.
+     */
+    completeBackgroundLoading: function() {
+      if (!extendedTermsData) {
+        console.log('No extended terms data available');
+        return;
+      }
+      
+      console.log('Background loading complete');
+      backgroundLoadingComplete = true;
+      
+      // Hide loading indicator
+      const loadingElement = document.getElementById('loading-status-main');
+      if (loadingElement) {
+        loadingElement.style.display = 'none';
+      }
+      
+      // Update selector with extended terms
+      this.updateSelectorWithExtendedTerms();
+      
+      // Update info text
+      const selector = document.getElementById('term-selector');
+      if (selector) {
+        this.updateSelectionInfo(selector.selectedOptions.length);
+      }
+      
+      this.updateStatus('All terms loaded and available for selection', 'info');
+    },
+
+    /**
+     * Update term selector with extended terms.
+     */
+    updateSelectorWithExtendedTerms: function() {
+      const selector = document.getElementById('term-selector');
+      if (!selector || !extendedTermsData.topTerms) {
+        return;
+      }
+      
+      // Store current selections
+      const currentSelections = Array.from(selector.selectedOptions).map(option => option.value);
+      
+      // Clear existing options
+      selector.innerHTML = '';
+      
+      // Add extended terms
+      extendedTermsData.topTerms.forEach(term => {
+        const option = document.createElement('option');
+        option.value = term.tid;
+        option.textContent = `${term.name} (${term.usage_count || term.article_count || 0} articles)`;
+        
+        // Restore selection if it was previously selected
+        if (currentSelections.includes(term.tid.toString())) {
+          option.selected = true;
+        }
+        
+        selector.appendChild(option);
+      });
+      
+      console.log(`Selector updated with ${extendedTermsData.topTerms.length} extended terms`);
+    },
+
+    /**
      * Reset chart to show all available terms.
      */
     resetChart: function() {
       const self = this;
-      const timelineData = chartData.timelineData || [];
       
       // Reset the term selector to show top 10 terms
       const selector = document.getElementById('term-selector');
       if (selector) {
-        // Clear all selections first
-        Array.from(selector.options).forEach(option => {
-          option.selected = false;
-        });
-        
-        // Select first 10 options (which should be the top terms)
-        const optionsToSelect = Math.min(10, selector.options.length);
-        for (let i = 0; i < optionsToSelect; i++) {
-          if (selector.options[i]) {
-            selector.options[i].selected = true;
-          }
-        }
-        
-        console.log(`Reset selector: selected ${optionsToSelect} top terms`);
+        self.selectTop10Terms(selector);
+        console.log('Reset selector: selected top 10 terms');
       }
       
+      // Use the initial timeline data (top 10 terms)
+      const timelineData = chartData.timelineData || [];
       if (timelineData.length > 0) {
         // Show top 10 terms (limit the data)
         const topTermsData = timelineData.slice(0, 10);
         self.initializeTimelineChart(topTermsData);
-        self.updateStatus(`Chart reset to show top ${topTermsData.length} terms`, 'success');
+        self.updateStatus(`✅ Chart reset to show top ${topTermsData.length} terms`, 'success');
+        self.updateSelectionInfo(topTermsData.length);
       } else {
         self.updateStatus('No data available for reset', 'warning');
+        self.updateSelectionInfo(0);
       }
     },
 
@@ -597,6 +756,7 @@
 
       self.updateStatus('Chart cleared - select terms above to display data', 'info');
       self.updateChartInfo(0, 0);
+      self.updateSelectionInfo(0);
     },
 
     /**
@@ -612,17 +772,21 @@
       const selectedTermIds = Array.from(selector.selectedOptions).map(option => option.value);
       console.log('Selected term IDs:', selectedTermIds);
       
-      const timelineData = chartData.timelineData || [];
-      console.log('Available timeline data terms:', timelineData.map(t => t.term_id));
+      // Use extended terms data if available, otherwise fall back to original data
+      const availableTimelineData = (extendedTermsData && extendedTermsData.timelineData) ? 
+        extendedTermsData.timelineData : (chartData.timelineData || []);
+      
+      console.log('Available timeline data terms:', availableTimelineData.map(t => t.term_id));
       
       if (selectedTermIds.length === 0) {
         this.clearChart();
         this.updateStatus('No terms selected - chart cleared', 'warning');
+        this.updateSelectionInfo(0);
         return;
       }
 
       // Filter timeline data for selected terms
-      const filteredData = timelineData.filter(termData => {
+      const filteredData = availableTimelineData.filter(termData => {
         const termMatch = selectedTermIds.includes(termData.term_id.toString());
         console.log(`Term ${termData.term_id} (${termData.term_name}): ${termMatch ? 'included' : 'excluded'}`);
         return termMatch;
@@ -632,10 +796,12 @@
 
       if (filteredData.length > 0) {
         this.initializeTimelineChart(filteredData);
-        this.updateStatus(`Chart updated with ${filteredData.length} selected terms`, 'success');
+        this.updateStatus(`✅ Chart updated with ${filteredData.length} selected terms`, 'success');
+        this.updateSelectionInfo(selectedTermIds.length);
       } else {
         this.clearChart();
         this.updateStatus('No matching data found for selected terms', 'warning');
+        this.updateSelectionInfo(0);
       }
     },
 
