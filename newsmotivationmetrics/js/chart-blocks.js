@@ -40,6 +40,9 @@
         console.log(`=== Initializing Timeline Block Chart: ${canvasId} ===`);
         console.log('Block data:', blockData);
 
+        // Update status to show initialization
+        this.updateBlockStatus(canvas, 'Loading chart data...', 'info');
+
         // Initialize this chart instance
         this.initializeBlockChart(canvas, blockData);
       }.bind(this));
@@ -96,8 +99,8 @@
         // Set up event listeners for this block
         this.setupBlockEventListeners(canvas, blockData, chartInstance);
         
-        // Update status
-        this.updateBlockStatus(canvas, `Chart loaded with ${datasets.length} terms`, 'success');
+        // Update status with success message that auto-clears
+        this.updateBlockStatus(canvas, `✅ Chart loaded with ${datasets.length} terms`, 'success');
         
         console.log(`Timeline block chart created successfully: ${canvasId}`);
 
@@ -349,21 +352,31 @@
     updateBlockStatus: function(canvas, message, type = 'info') {
       const canvasId = canvas.id;
       const blockElement = canvas.closest('.taxonomy-timeline-block');
-      const statusId = 'chart-status-' + canvasId.split('-').pop();
-      const statusElement = blockElement.querySelector(`#${statusId}`);
+      
+      // Try multiple possible status element selectors
+      let statusElement = blockElement.querySelector('#chart-status');
+      if (!statusElement) {
+        statusElement = blockElement.querySelector(`#chart-status-${canvasId.split('-').pop()}`);
+      }
+      if (!statusElement) {
+        statusElement = blockElement.querySelector('.chart-status');
+      }
       
       if (statusElement) {
         statusElement.textContent = message;
-        statusElement.className = `chart-status status-${type}`;
+        statusElement.className = `chart-status ${type}`;
         
         // Auto-clear success/info messages after 3 seconds
         if (type === 'success' || type === 'info') {
           setTimeout(() => {
             if (statusElement.textContent === message) {
               statusElement.textContent = '';
+              statusElement.className = 'chart-status';
             }
           }, 3000);
         }
+      } else {
+        console.log(`Status element not found for ${canvasId}, message: ${message}`);
       }
     },
 

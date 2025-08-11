@@ -269,12 +269,13 @@
           }
         });
 
-        self.updateStatus(`Timeline chart loaded with ${datasets.length} terms and ${totalDataPoints} data points`, 'success');
+        console.log(`Taxonomy timeline chart created successfully with ${datasets.length} terms and ${totalDataPoints} total data points`);
+
+        // Update status with success message that auto-clears
+        self.updateStatus(`✅ Chart loaded with ${datasets.length} terms and ${totalDataPoints} data points`, 'success');
         
         // Update chart info area
         self.updateChartInfo(datasets.length, totalDataPoints);
-
-        console.log(`Taxonomy timeline chart created successfully with ${datasets.length} terms and ${totalDataPoints} total data points`);
 
       } catch (error) {
         self.updateStatus(`Failed to create taxonomy timeline chart: ${error.message}`, 'error');
@@ -662,7 +663,17 @@
       const statusEl = document.getElementById('chart-status');
       if (statusEl) {
         statusEl.className = 'chart-status ' + type;
-        statusEl.textContent = 'Chart Status: ' + message;
+        statusEl.textContent = message;
+        
+        // Auto-clear success/info messages after 3 seconds
+        if (type === 'success' || type === 'info') {
+          setTimeout(() => {
+            if (statusEl.textContent === message) {
+              statusEl.textContent = '';
+              statusEl.className = 'chart-status';
+            }
+          }, 3000);
+        }
       }
 
       // Console logging

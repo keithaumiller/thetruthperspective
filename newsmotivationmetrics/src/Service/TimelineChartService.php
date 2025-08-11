@@ -266,10 +266,10 @@ class TimelineChartService implements TimelineChartServiceInterface {
     $container['debug']['status'] = [
       '#type' => 'html_tag',
       '#tag' => 'div',
-      '#value' => 'Initializing chart...',
+      '#value' => 'Chart ready',
       '#attributes' => [
-        'id' => 'chart-status-' . $this->getUniqueId($options['canvas_id']),
-        'class' => ['chart-status'],
+        'id' => $options['canvas_id'] === 'taxonomy-timeline-chart' ? 'chart-status' : 'chart-status-' . $this->getUniqueId($options['canvas_id']),
+        'class' => ['chart-status', 'info'],
       ],
     ];
 
