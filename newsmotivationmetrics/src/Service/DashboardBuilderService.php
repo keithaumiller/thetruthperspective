@@ -7,6 +7,7 @@ use Drupal\Core\Render\RendererInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\DashboardBuilderServiceInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface;
+use Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface;
 
 /**
  * Service for building dashboard render arrays.
@@ -31,6 +32,13 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
   protected $metricsDataService;
 
   /**
+   * The timeline chart service.
+   *
+   * @var \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface
+   */
+  protected $timelineChartService;
+
+  /**
    * The renderer service.
    *
    * @var \Drupal\Core\Render\RendererInterface
@@ -51,6 +59,8 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
    *   The chart data service.
    * @param \Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface $metrics_data_service
    *   The metrics data service.
+   * @param \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface $timeline_chart_service
+   *   The timeline chart service.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The renderer service.
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
@@ -59,11 +69,13 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
   public function __construct(
     ChartDataServiceInterface $chart_data_service,
     MetricsDataServiceInterface $metrics_data_service,
+    TimelineChartServiceInterface $timeline_chart_service,
     RendererInterface $renderer,
     LoggerChannelFactoryInterface $logger_factory
   ) {
     $this->chartDataService = $chart_data_service;
     $this->metricsDataService = $metrics_data_service;
+    $this->timelineChartService = $timeline_chart_service;
     $this->renderer = $renderer;
     $this->logger = $logger_factory->get('newsmotivationmetrics');
   }
@@ -72,7 +84,6 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
    * {@inheritdoc}
    */
   public function buildPublicDashboard(): array {
-    $chart_data = $this->chartDataService->getTimelineChartData(['limit' => 10, 'days_back' => 30]);
     $metrics_data = $this->metricsDataService->getAllMetricsData();
     
     $build = [];
@@ -80,25 +91,26 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
     // Page header
     $build['header'] = $this->buildDashboardHeader();
     
-    // Timeline chart section
-    $build['timeline'] = $this->buildTimelineSection(
-      $chart_data['timeline_data'],
-      $chart_data['top_terms']
-    );
+    // Timeline chart section - now using shared service
+    $build['timeline'] = $this->timelineChartService->buildTimelineChart([
+      'canvas_id' => 'taxonomy-timeline-chart',
+      'title' => '📈 Topic Trends Over Time',
+      'show_controls' => TRUE,
+      'show_legend' => TRUE,
+      'show_title' => TRUE,
+      'chart_height' => 400,
+      'days_back' => 30,
+      'term_limit' => 10,
+      'container_classes' => ['taxonomy-timeline-section'],
+      'library' => 'newsmotivationmetrics/chart-js',
+      'js_behavior' => 'taxonomyTimelineChart',
+    ]);
     
     // Metrics overview
     $build['overview'] = $this->buildMetricsOverview($metrics_data);
     
     // Methodology section
     $build['methodology'] = $this->buildMethodologySection();
-    
-    // Attach libraries and JavaScript settings
-    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-js';
-    $build['#attached']['drupalSettings']['newsmotivationmetrics'] = [
-      'timelineData' => $chart_data['timeline_data'],
-      'topTerms' => $chart_data['top_terms'],
-      'debugInfo' => $chart_data['debug_info'],
-    ];
     
     return $build;
   }
@@ -127,124 +139,6 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
     ];
     
     return $build;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function buildTimelineSection(array $timeline_data, array $top_terms): array {
-    $section = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['taxonomy-timeline-section']],
-    ];
-    
-    $section['title'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'h2',
-      '#value' => '📈 Topic Trends Over Time',
-      '#attributes' => ['class' => ['chart-section-title']],
-    ];
-    
-    // Chart controls
-    $section['controls'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-controls']],
-    ];
-    
-    $section['controls']['selector_group'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['control-group']],
-    ];
-    
-    $section['controls']['selector_group']['label'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'label',
-      '#value' => 'Add/Remove Terms:',
-      '#attributes' => ['for' => 'term-selector'],
-    ];
-    
-    $section['controls']['selector_group']['selector'] = [
-      '#type' => 'select',
-      '#multiple' => TRUE,
-      '#options' => $this->chartDataService->buildTermOptionsArray($top_terms),
-      '#default_value' => array_slice(array_column($top_terms, 'tid'), 0, 10),
-      '#attributes' => [
-        'class' => ['term-selector'],
-        'id' => 'term-selector',
-        'size' => 8,
-      ],
-    ];
-    
-    $section['controls']['buttons'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['control-buttons']],
-    ];
-    
-    $section['controls']['buttons']['reset'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'button',
-      '#value' => 'Reset to Top 10',
-      '#attributes' => [
-        'id' => 'reset-chart',
-        'class' => ['btn', 'btn-secondary'],
-        'type' => 'button',
-      ],
-    ];
-    
-    $section['controls']['buttons']['clear'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'button',
-      '#value' => 'Clear All',
-      '#attributes' => [
-        'id' => 'clear-chart',
-        'class' => ['btn', 'btn-outline'],
-        'type' => 'button',
-      ],
-    ];
-    
-    $section['controls']['info'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-info']],
-    ];
-    
-    $section['controls']['info']['text'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'span',
-      '#value' => '📊 Showing frequency of topic mentions over the last 30 days',
-      '#attributes' => ['class' => ['info-text']],
-    ];
-    
-    // Chart container
-    $section['chart_wrapper'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-container']],
-    ];
-    
-    $section['chart_wrapper']['canvas'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'canvas',
-      '#attributes' => [
-        'id' => 'taxonomy-timeline-chart',
-        'width' => 800,
-        'height' => 400,
-        'style' => 'max-width: 100%; height: auto; max-height: 500px;',
-        'aria-label' => 'Taxonomy Timeline Chart',
-      ],
-    ];
-    
-    $section['chart_wrapper']['debug'] = [
-      '#type' => 'container',
-      '#attributes' => ['id' => 'chart-debug-info'],
-    ];
-    
-    $section['chart_wrapper']['debug']['status'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'div',
-      '#value' => 'Initializing chart...',
-      '#attributes' => ['id' => 'chart-status'],
-    ];
-    
-    return $section;
   }
 
   /**

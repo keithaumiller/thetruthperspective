@@ -27,19 +27,6 @@ interface DashboardBuilderServiceInterface {
   public function buildAdminDashboard(): array;
 
   /**
-   * Build taxonomy timeline chart section.
-   *
-   * @param array $timeline_data
-   *   Timeline data from TimelineService.
-   * @param array $top_terms
-   *   Top terms data for selector controls.
-   * 
-   * @return array
-   *   Render array for timeline chart section.
-   */
-  public function buildTimelineSection(array $timeline_data, array $top_terms): array;
-
-  /**
    * Build metrics overview section.
    *
    * @param array $metrics_data

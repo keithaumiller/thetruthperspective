@@ -13,4 +13,8 @@ services:
 
   newsmotivationmetrics.dashboard_builder:
     class: Drupal\newsmotivationmetrics\Service\DashboardBuilderService
-    arguments: ['@newsmotivationmetrics.chart_data_service', '@newsmotivationmetrics.metrics_data_service', '@renderer', '@logger.factory']
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@newsmotivationmetrics.metrics_data_service', '@newsmotivationmetrics.timeline_chart_service', '@renderer', '@logger.factory']
+
+  newsmotivationmetrics.timeline_chart_service:
+    class: Drupal\newsmotivationmetrics\Service\TimelineChartService
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']

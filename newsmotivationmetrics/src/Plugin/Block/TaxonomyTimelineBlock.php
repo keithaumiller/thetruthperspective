@@ -5,7 +5,7 @@ namespace Drupal\newsmotivationmetrics\Plugin\Block;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface;
+use Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -20,11 +20,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginInterface {
 
   /**
-   * The chart data service.
+   * The timeline chart service.
    *
-   * @var \Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface
+   * @var \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface
    */
-  protected $chartDataService;
+  protected $timelineChartService;
 
   /**
    * Constructs a new TaxonomyTimelineBlock.
@@ -35,17 +35,17 @@ class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginI
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
-   * @param \Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface $chart_data_service
-   *   The chart data service.
+   * @param \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface $timeline_chart_service
+   *   The timeline chart service.
    */
   public function __construct(
     array $configuration,
     $plugin_id,
     $plugin_definition,
-    ChartDataServiceInterface $chart_data_service
+    TimelineChartServiceInterface $timeline_chart_service
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->chartDataService = $chart_data_service;
+    $this->timelineChartService = $timeline_chart_service;
   }
 
   /**
@@ -56,7 +56,7 @@ class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginI
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('newsmotivationmetrics.chart_data_service')
+      $container->get('newsmotivationmetrics.timeline_chart_service')
     );
   }
 
@@ -211,175 +211,8 @@ class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginI
   public function build() {
     $config = $this->getConfiguration();
     
-    // Get chart data based on configuration
-    $chart_data = $this->chartDataService->getTimelineChartData([
-      'limit' => $config['term_limit'],
-      'days_back' => $config['days_back'],
-    ]);
-
-    if (empty($chart_data['timeline_data'])) {
-      return [
-        '#markup' => '<div class="taxonomy-timeline-block-empty">' . $this->t('No timeline data available.') . '</div>',
-        '#cache' => [
-          'max-age' => 300, // Cache for 5 minutes
-          'tags' => ['taxonomy_term_list', 'node_list'],
-        ],
-      ];
-    }
-
-    $block_id = 'taxonomy-timeline-block-' . $this->getPluginId();
-    $canvas_id = 'taxonomy-timeline-chart-' . substr(md5($block_id), 0, 8);
-
-    $build = [
-      '#type' => 'container',
-      '#attributes' => [
-        'class' => ['taxonomy-timeline-block', 'taxonomy-timeline-section'],
-        'id' => $block_id,
-      ],
-    ];
-
-    // Chart title
-    if (!empty($config['chart_title'])) {
-      $build['title'] = [
-        '#type' => 'html_tag',
-        '#tag' => 'h3',
-        '#value' => $config['chart_title'],
-        '#attributes' => ['class' => ['chart-block-title']],
-      ];
-    }
-
-    // Chart controls (if enabled)
-    if ($config['show_controls']) {
-      $build['controls'] = $this->buildChartControls($chart_data['top_terms'], $canvas_id);
-    }
-
-    // Chart container
-    $build['chart_wrapper'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-container', 'chart-block-container']],
-    ];
-
-    // Canvas element
-    $build['chart_wrapper']['canvas'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'canvas',
-      '#attributes' => [
-        'id' => $canvas_id,
-        'width' => 800,
-        'height' => min($config['chart_height'], 500), // Cap height at 500px
-        'style' => 'max-width: 100%; height: auto; max-height: 500px;',
-        'aria-label' => $config['chart_title'] . ' - Interactive Timeline Chart',
-        'data-chart-config' => json_encode([
-          'showLegend' => $config['show_legend'],
-          'autoRefresh' => $config['auto_refresh'],
-          'refreshInterval' => $config['refresh_interval'],
-        ]),
-      ],
-    ];
-
-    // Status and debug info
-    $build['chart_wrapper']['status'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'div',
-      '#value' => 'Initializing chart...',
-      '#attributes' => [
-        'id' => 'chart-status-' . substr(md5($block_id), 0, 8),
-        'class' => ['chart-status'],
-      ],
-    ];
-
-    // Attach libraries and settings
-    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-blocks';
-    $build['#attached']['drupalSettings']['newsmotivationmetrics']['blocks'][$canvas_id] = [
-      'timelineData' => $chart_data['timeline_data'],
-      'topTerms' => $chart_data['top_terms'],
-      'debugInfo' => $chart_data['debug_info'],
-      'config' => $config,
-      'canvasId' => $canvas_id,
-    ];
-
-    // Cache settings
-    $build['#cache'] = [
-      'max-age' => $config['auto_refresh'] ? $config['refresh_interval'] : 1800, // 30 minutes default
-      'tags' => ['taxonomy_term_list', 'node_list', 'newsmotivationmetrics_data'],
-      'contexts' => ['user.permissions'],
-    ];
-
-    return $build;
-  }
-
-  /**
-   * Build chart controls for the block.
-   *
-   * @param array $top_terms
-   *   Array of top terms data.
-   * @param string $canvas_id
-   *   The canvas element ID.
-   *
-   * @return array
-   *   Render array for chart controls.
-   */
-  protected function buildChartControls(array $top_terms, string $canvas_id): array {
-    $controls = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-controls', 'chart-block-controls']],
-    ];
-
-    $controls['selector_group'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['control-group']],
-    ];
-
-    $controls['selector_group']['label'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'label',
-      '#value' => $this->t('Select Terms:'),
-      '#attributes' => ['for' => 'term-selector-' . substr(md5($canvas_id), 0, 8)],
-    ];
-
-    $controls['selector_group']['selector'] = [
-      '#type' => 'select',
-      '#multiple' => TRUE,
-      '#options' => $this->chartDataService->buildTermOptionsArray($top_terms),
-      '#default_value' => array_slice(array_column($top_terms, 'tid'), 0, 10),
-      '#attributes' => [
-        'class' => ['term-selector'],
-        'id' => 'term-selector-' . substr(md5($canvas_id), 0, 8),
-        'size' => 6,
-        'data-canvas-id' => $canvas_id,
-      ],
-    ];
-
-    $controls['buttons'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['control-buttons']],
-    ];
-
-    $controls['buttons']['reset'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'button',
-      '#value' => $this->t('Reset'),
-      '#attributes' => [
-        'id' => 'reset-chart-' . substr(md5($canvas_id), 0, 8),
-        'class' => ['btn', 'btn-secondary', 'chart-reset-btn'],
-        'type' => 'button',
-        'data-canvas-id' => $canvas_id,
-      ],
-    ];
-
-    $controls['buttons']['clear'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'button',
-      '#value' => $this->t('Clear'),
-      '#attributes' => [
-        'id' => 'clear-chart-' . substr(md5($canvas_id), 0, 8),
-        'class' => ['btn', 'btn-outline', 'chart-clear-btn'],
-        'type' => 'button',
-        'data-canvas-id' => $canvas_id,
-      ],
-    ];
-
-    return $controls;
+    // Use the shared timeline chart service
+    return $this->timelineChartService->buildTimelineBlock($config);
   }
 
   /**
