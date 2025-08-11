@@ -44,19 +44,29 @@
           // === Multi-select diagnostic ===
           const selector = document.getElementById('term-selector');
           if (selector) {
+            // Force native multi-select attributes
+            selector.setAttribute('multiple', 'multiple');
+            selector.multiple = true;
+            selector.setAttribute('size', '12');
             // Log selector HTML and attributes
             console.log('[DIAG] Selector outerHTML:', selector.outerHTML);
             console.log('[DIAG] Selector attributes:', selector.getAttribute('multiple'), selector.getAttribute('size'), selector.className);
             // Check if truly multi-select
             if (!selector.multiple || selector.size <= 1) {
-              // Add visible warning above selector
-              const warning = document.createElement('div');
-              warning.className = 'chart-status status-error';
-              warning.style.margin = '10px 0';
-              warning.innerHTML = '<b>⚠️ Multi-select is not enabled!</b> The term selector is not a true multi-select. Please check for theme or module conflicts.';
-              selector.parentNode.insertBefore(warning, selector);
+              // Add visible persistent warning above selector
+              let warning = selector.parentNode.querySelector('.multi-select-warning');
+              if (!warning) {
+                warning = document.createElement('div');
+                warning.className = 'chart-status status-error multi-select-warning';
+                warning.style.margin = '10px 0';
+                warning.innerHTML = '<b>⚠️ Multi-select is not enabled!</b> The term selector is not a true multi-select. Please check for theme or module conflicts.';
+                selector.parentNode.insertBefore(warning, selector);
+              }
               console.warn('[DIAG] Multi-select is NOT enabled on the selector!');
             } else {
+              // Remove any previous warning
+              const warning = selector.parentNode.querySelector('.multi-select-warning');
+              if (warning) warning.remove();
               console.log('[DIAG] Multi-select is enabled on the selector.');
             }
           } else {
