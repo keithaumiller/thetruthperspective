@@ -637,3 +637,17 @@
   color: #004085 !important;
   border-color: #b3d7ff !important;
 }
+
+/* More Metrics Link */
+.more-metrics-link {
+  font-weight: bold;
+  color: #005fa3;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.more-metrics-link:hover,
+.more-metrics-link:focus {
+  color: #003d66;
+  text-decoration: none;
+}
