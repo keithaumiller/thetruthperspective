@@ -2,7 +2,6 @@
 // filepath: /workspaces/thetruthperspective/newsmotivationmetrics/newsmotivationmetrics.module
 
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\Core\Database\Database;
 
 /**
  * @file
@@ -15,144 +14,29 @@ use Drupal\Core\Database\Database;
 function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'help.page.newsmotivationmetrics':
-      return '<p>' . t('This module provides analytics and metrics for news article motivations, entities, and AI analysis data.') . '</p>';
+      return '<p>' . t('Provides analytics and metrics dashboard for news article motivations and AI analysis.') . '</p>';
   }
-}
-
-/**
- * Get all taxonomy tags with article counts.
- *
- * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
- *   newsmotivationmetrics.metrics_data_service service instead.
- * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getTagMetrics()
- *
- * @return array
- *   Array of tag data with counts.
- */
-function newsmotivationmetrics_get_tag_metrics() {
-  @trigger_error('newsmotivationmetrics_get_tag_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
-  
-  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getTagMetrics();
-}
-
-/**
- * Get general article metrics.
- *
- * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
- *   newsmotivationmetrics.metrics_data_service service instead.
- * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getArticleMetrics()
- *
- * @return array
- *   Array of key metrics.
- */
-function newsmotivationmetrics_get_article_metrics() {
-  @trigger_error('newsmotivationmetrics_get_article_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
-  
-  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getArticleMetrics();
-}
-
-/**
- * Get news source metrics.
- *
- * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
- *   newsmotivationmetrics.metrics_data_service service instead.
- * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getNewsSourceMetrics()
- *
- * @return array
- *   Array of news source data with counts.
- */
-function newsmotivationmetrics_get_news_source_metrics() {
-  @trigger_error('newsmotivationmetrics_get_news_source_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
-  
-  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getNewsSourceMetrics();
-}
-
-/**
- * Get motivation analysis metrics.
- *
- * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
- *   newsmotivationmetrics.metrics_data_service service instead.
- * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getMotivationInsights()
- *
- * @return array
- *   Array of motivation insights.
- */
-function newsmotivationmetrics_get_motivation_insights() {
-  @trigger_error('newsmotivationmetrics_get_motivation_insights() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
-  
-  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getMotivationInsights();
-}
-
-/**
- * Get temporal processing analytics.
- *
- * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
- *   newsmotivationmetrics.metrics_data_service service instead.
- * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getTemporalMetrics()
- *
- * @return array
- *   Array of temporal processing metrics.
- */
-function newsmotivationmetrics_get_temporal_metrics() {
-  @trigger_error('newsmotivationmetrics_get_temporal_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
-  
-  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getTemporalMetrics();
-}
-
-/**
- * Get sentiment distribution metrics.
- *
- * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
- *   newsmotivationmetrics.metrics_data_service service instead.
- * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getSentimentMetrics()
- *
- * @return array
- *   Array of sentiment analysis metrics.
- */
-function newsmotivationmetrics_get_sentiment_metrics() {
-  @trigger_error('newsmotivationmetrics_get_sentiment_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
-  
-  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getSentimentMetrics();
-}
-
-/**
- * Get entity recognition metrics.
- *
- * @deprecated in drupal:11.0 and is removed from drupal:12.0. Use the
- *   newsmotivationmetrics.metrics_data_service service instead.
- * @see \Drupal\newsmotivationmetrics\Service\MetricsDataService::getEntityMetrics()
- *
- * @return array
- *   Array of entity recognition metrics.
- */
-function newsmotivationmetrics_get_entity_metrics() {
-  @trigger_error('newsmotivationmetrics_get_entity_metrics() is deprecated in drupal:11.0 and is removed from drupal:12.0. Use the newsmotivationmetrics.metrics_data_service service instead.', E_USER_DEPRECATED);
-  
-  return \Drupal::service('newsmotivationmetrics.metrics_data_service')->getEntityMetrics();
 }
 
 /**
  * Implements hook_theme().
  */
-function newsmotivationmetrics_theme() {
+function newsmotivationmetrics_theme($existing, $type, $theme, $path) {
   return [
-    'chart_debug' => [
-      'template' => 'chart-debug',
-      'variables' => [
-        'timelineData' => [],
-        'topTerms' => [],
-        'debugInfo' => [],
-      ],
-    ],
-    'analytics_dashboard' => [
-      'template' => 'analytics-dashboard',
-      'variables' => [
-        'timeline_data' => [],
-        'top_terms' => [],
-        'total_articles' => 0,
-        'date_range' => [],
-        'most_recent_articles' => [],
-      ],
+    'page__metrics' => [
+      'template' => 'page--metrics',
+      'base hook' => 'page',
     ],
   ];
+}
+
+/**
+ * Implements hook_theme_suggestions_page_alter().
+ */
+function newsmotivationmetrics_theme_suggestions_page_alter(array &$suggestions, array $variables) {
+  // Add page template suggestion for metrics route.
+  $route_name = \Drupal::routeMatch()->getRouteName();
+  if ($route_name === 'newsmotivationmetrics.public_dashboard') {
+    $suggestions[] = 'page__metrics';
+  }
 }
