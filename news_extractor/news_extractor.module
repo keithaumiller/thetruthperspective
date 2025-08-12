@@ -855,6 +855,14 @@ function _news_extractor_extract_news_source_from_json_data(EntityInterface $ent
   
   $json_data = $entity->get('field_json_scraped_article_data')->value;
   
+  // Check for known status indicators
+  if (trim($json_data) === "Scraped data unavailable.") {
+    \Drupal::logger('news_extractor')->info('Article @id has unavailable scraped data status - setting default source', [
+      '@id' => $entity->id(),
+    ]);
+    return "Source Unavailable";
+  }
+  
   try {
     $parsed_data = json_decode($json_data, true);
     
