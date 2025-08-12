@@ -3,28 +3,47 @@
  * The Truth Perspective Analytics Dashboard
  */
 
+/* === HERO LAYOUT FOR METRICS PAGE === */
+.page--metrics-dashboard.layout--hero .layout-container {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+}
+
+.page--metrics-dashboard.layout--hero .layout-content {
+  max-width: none;
+  width: 100%;
+  padding: 0 20px;
+  margin: 0;
+}
+
+.page--metrics-dashboard .region--hero.region--full-width {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 /* === MAIN CHART SECTION === */
 .taxonomy-timeline-section {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   padding: 30px;
-  margin: 20px 0;
-  /* Utilize available content + sidebar space */
-  max-width: none;
-  width: 100%;
+  margin: 20px auto;
+  max-width: 1400px;
+  width: calc(100% - 40px);
 }
 
 /* === METRICS PAGE LAYOUT OPTIMIZATION === */
+/* Hide sidebars on metrics page to expand content area */
 body.path-metrics .layout-sidebar-first,
 body.path-metrics .layout-sidebar-second {
-  /* Hide sidebars on metrics page to give content more space */
   display: none;
 }
 
+/* Expand main content area when sidebars are hidden */
 body.path-metrics .layout-content {
-  /* Expand content area when sidebars are hidden */
-  grid-column: 1 / -1;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
@@ -38,7 +57,6 @@ body.path-metrics .region-content {
 /* === RESPONSIVE CHART LAYOUT === */
 @media (min-width: 1024px) {
   body.path-metrics .taxonomy-timeline-section {
-    /* Use wider layout on desktop */
     max-width: 1160px;
     margin-left: auto;
     margin-right: auto;
@@ -50,7 +68,7 @@ body.path-metrics .region-content {
     padding: 0 10px;
   }
   
-  body.path-metrics .taxonomy-timeline-section {
+  .taxonomy-timeline-section {
     padding: 20px;
     margin: 10px 0;
   }
@@ -149,6 +167,10 @@ body.path-metrics .region-content {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 12px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  width: calc(100% - 40px);
 }
 
 .news-metrics-header h1 {
@@ -161,7 +183,7 @@ body.path-metrics .region-content {
 .news-metrics-header p {
   font-size: 1.2em;
   opacity: 0.9;
-  max-width: 600px;
+  max-width: 800px;
   margin: 0 auto;
   line-height: 1.6;
 }
@@ -277,6 +299,10 @@ body.path-metrics .region-content {
   
   .news-metrics-header h1 {
     font-size: 2em;
+  }
+  
+  .news-metrics-header p {
+    font-size: 1.1em;
   }
   
   .metrics-subtitle {
