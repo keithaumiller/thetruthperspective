@@ -110,6 +110,7 @@ chart-blocks:
     js/chart.umd.js: { weight: -10 }
     js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
     js/chart-blocks.js: { weight: -8 }
+    js/timeline-orientation.js: { weight: -7 }
   dependencies:
     - core/drupal
     - core/jquery

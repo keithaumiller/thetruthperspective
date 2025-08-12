@@ -312,15 +312,10 @@
 }
 
 /* === MOBILE LANDSCAPE ORIENTATION FOR TIMELINE CHART === */
-/* Hide chart canvas and show landscape message on mobile portrait */
+/* Portrait mode handling with JavaScript-controlled visibility */
 @media (max-width: 768px) and (orientation: portrait) {
-  .taxonomy-timeline-section .chart-container canvas,
-  .taxonomy-timeline-section .chart-controls,
-  .taxonomy-timeline-section .chart-status {
-    display: none;
-  }
-  
-  .taxonomy-timeline-section .chart-container {
+  /* When JavaScript adds portrait-mode class, enhance the styling */
+  .taxonomy-timeline-section.portrait-mode .chart-container {
     position: relative;
     min-height: 200px;
     display: flex;
@@ -331,7 +326,7 @@
     border-radius: 8px;
   }
   
-  .taxonomy-timeline-section .chart-container::before {
+  .taxonomy-timeline-section.portrait-mode .chart-container::before {
     content: '📱↻\A\ASwitch to landscape mode to view the timeline chart\A\ARotate your device for the best chart viewing experience';
     white-space: pre-line;
     text-align: center;
@@ -342,6 +337,38 @@
     max-width: 280px;
   }
   
+  /* Fallback for when JavaScript hasn't loaded yet */
+  .taxonomy-timeline-section:not(.portrait-mode) .chart-container canvas {
+    display: none;
+  }
+  
+  .taxonomy-timeline-section:not(.portrait-mode) .chart-container {
+    position: relative;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+  }
+  
+  .taxonomy-timeline-section:not(.portrait-mode) .chart-container::before {
+    content: '📱↻\A\ASwitch to landscape mode to view the timeline chart\A\ARotate your device for the best chart viewing experience';
+    white-space: pre-line;
+    text-align: center;
+    color: #6c757d;
+    font-size: 16px;
+    line-height: 1.5;
+    padding: 20px;
+    max-width: 280px;
+  }
+  
+  /* Hide controls in portrait mode regardless */
+  .taxonomy-timeline-section .chart-controls-section {
+    display: none;
+  }
+  
   /* Keep the chart title visible */
   .taxonomy-timeline-section .chart-section-title {
     display: block;
@@ -350,15 +377,21 @@
   }
 }
 
-/* Ensure chart is visible in landscape */
+/* Ensure everything is visible in landscape */
 @media (max-width: 768px) and (orientation: landscape) {
-  .taxonomy-timeline-section .chart-container canvas,
-  .taxonomy-timeline-section .chart-controls,
-  .taxonomy-timeline-section .chart-status {
-    display: block;
+  .taxonomy-timeline-section .chart-container canvas {
+    display: block !important;
+  }
+  
+  .taxonomy-timeline-section .chart-controls-section {
+    display: block !important;
   }
   
   .taxonomy-timeline-section .chart-container::before {
-    display: none;
+    display: none !important;
+  }
+  
+  .taxonomy-timeline-section.portrait-mode .chart-container::before {
+    display: none !important;
   }
 }
