@@ -1,7 +1,7 @@
 # The Truth Perspective - Drupal Modules
 
-**Version**: 1.1.0  
-**Last Updated**: August 2025  
+**Version**: 1.1.1  
+**Last Updated**: August 12, 2025  
 **Drupal Version**: 9.x / 10.x / 11.x  
 **PHP Version**: 7.4+ / 8.1+  
 **Status**: Production Ready
@@ -48,20 +48,26 @@ Interactive conversational AI interface with persistent history and real-time re
 
 ---
 
-### 3. 🗞️ News Extractor Module ⚠️ **MAINTENANCE MODE**
-**Version**: 1.2.0 | **Location**: [`/news_extractor/`](./news_extractor/README.md)
+### 3. 🗞️ News Extractor Module ✅ **STABLE**
+**Version**: 1.2.1 | **Location**: [`/news_extractor/`](./news_extractor/README.md)
 
 Automated news content extraction and AI-powered analysis system.
 
-**⚠️ Current Status**: Undergoing class structure optimization for improved stability.
+**✅ Current Status**: Stable production version with enhanced news source data flow architecture.
 
 **Core Features**:
 - URL-based content extraction with AI analysis
 - AWS Bedrock integration for content processing
+- Multi-stage news source population from feed data, JSON scraped data, and URL extraction
 - Motivation data extraction and entity analysis
 - Custom article templates with structured data
+- Comprehensive field_news_source population system
 
-**Note**: Temporarily in maintenance while resolving form class conflicts. Core functionality operational.
+**Recent Updates**: 
+- Enhanced news source extraction with 4-stage fallback system
+- JSON scraped data processing for Diffbot siteName field
+- Improved domain mapping for standardized source names
+- Cron-based maintenance for missing news sources
 
 ---
 
@@ -193,9 +199,10 @@ Each module contains comprehensive technical documentation:
 ### ✅ Production Ready
 - **Key Metric Management**: Fully operational with live data
 - **AI Conversation**: Real-time chat system deployed
+- **News Extractor**: Stable with enhanced news source data processing
 
-### ⚠️ Maintenance Mode
-- **News Extractor**: Class structure optimization in progress
+### 🔧 Active Development
+- **News Extractor**: Enhanced news source field population from JSON scraped data
 - **Job Application**: Framework complete, integration testing
 
 ### 📊 Real Production Data
@@ -209,7 +216,16 @@ Cache Performance: 1-hour TTL with smart invalidation
 
 ## Version History
 
-### v1.1.0 (August 2025) - **CURRENT PRODUCTION**
+### v1.1.1 (August 12, 2025) - **CURRENT PRODUCTION**
+- ✅ **News Extractor**: Stable version with enhanced news source extraction system
+- ✅ **Multi-stage Data Flow**: JSON scraped data → URL extraction → Feed data processing
+- ✅ **Improved Source Mapping**: Enhanced domain-to-source name standardization
+- ✅ **Workspace Stability**: Reverted to commit 45f9cd4 for reliable operation
+- ✅ **Key Metric Management**: Continued full production deployment with 18 metrics
+- ✅ **AI Conversation**: Real-time chat system operational
+- ✅ **Block System**: Hero region deployment with professional styling
+
+### v1.1.0 (August 2025) - Previous Production
 - ✅ **Key Metric Management**: Full production deployment with 18 metrics
 - ✅ **AI Conversation**: Real-time chat system operational
 - ✅ **Block System**: Hero region deployment with professional styling
@@ -242,4 +258,4 @@ GPL-2.0+ (Drupal compatible)
 **📊 Current Data**: 18 metrics, 20 articles, real-time analytics  
 **🚀 Deployment**: Automated CI/CD with GitHub Actions  
 
-**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 4, 2025
+**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 12, 2025
