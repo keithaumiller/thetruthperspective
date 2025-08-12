@@ -466,40 +466,7 @@
       `;
 
 
-      // Size label
-      const sizeLabel = document.createElement('span');
-      sizeLabel.textContent = 'Chart Size:';
-      sizeLabel.style.fontWeight = 'bold';
-
-      // Only one size: Standard (was X-Large)
-      const sizes = [
-        { label: 'Standard', height: 600, ratio: 1.6 }
-      ];
-
-      const buttonContainer = document.createElement('div');
-      buttonContainer.style.cssText = 'display: flex; gap: 5px; flex-wrap: wrap;';
-
-      sizes.forEach((size) => {
-        const button = document.createElement('button');
-        button.textContent = size.label;
-        button.className = 'btn btn-outline btn-sm';
-        button.style.cssText = `
-          padding: 5px 10px;
-          border: 1px solid #007bff;
-          background: #007bff;
-          color: white;
-          border-radius: 3px;
-          cursor: pointer;
-          font-size: 12px;
-        `;
-        // Always selected, but allow re-click to reset size
-        button.addEventListener('click', () => {
-          this.resizeChart(size.height, size.ratio);
-        });
-        buttonContainer.appendChild(button);
-      });
-
-      // Fullscreen toggle
+      // Fullscreen toggle only
       const fullscreenBtn = document.createElement('button');
       fullscreenBtn.textContent = '⛶ Fullscreen';
       fullscreenBtn.className = 'btn btn-secondary btn-sm';
@@ -511,16 +478,13 @@
         border-radius: 3px;
         cursor: pointer;
         font-size: 12px;
-        margin-left: 10px;
+        margin-left: 0;
       `;
-      
       fullscreenBtn.addEventListener('click', () => {
         this.toggleFullscreen();
       });
 
-      // Assemble controls
-      resizeControls.appendChild(sizeLabel);
-      resizeControls.appendChild(buttonContainer);
+      // Assemble controls (fullscreen only)
       resizeControls.appendChild(fullscreenBtn);
 
       // Insert before canvas

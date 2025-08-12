@@ -338,4 +338,41 @@
     }
   };
 
+  /**
+   * Injects a search filter above the term selector and filters options in real time.
+   */
+  function addTermSelectorSearch(selector) {
+    // Create the search input
+    const filterInput = document.createElement('input');
+    filterInput.type = 'text';
+    filterInput.className = 'term-selector-filter form-text';
+    filterInput.placeholder = 'Search terms...';
+    filterInput.setAttribute('aria-label', 'Filter terms');
+
+    // Insert the filter input above the selector
+    selector.parentNode.insertBefore(filterInput, selector);
+
+    // Filtering logic
+    filterInput.addEventListener('input', function () {
+      const filter = filterInput.value.trim().toLowerCase();
+      Array.from(selector.options).forEach(option => {
+        const text = option.textContent.toLowerCase();
+        option.style.display = filter === '' || text.includes(filter) ? '' : 'none';
+      });
+    });
+  }
+
+  // Attach the filter when the behavior runs
+  (function (Drupal, once) {
+    Drupal.behaviors.newsMotivationMetricsChartFilter = {
+      attach: function (context) {
+        const selector = context.querySelector('.term-selector');
+        if (selector && !selector.hasAttribute('data-filter-enabled')) {
+          addTermSelectorSearch(selector);
+          selector.setAttribute('data-filter-enabled', 'true');
+        }
+      }
+    };
+  })(Drupal, once);
+
 })(jQuery, Drupal);
