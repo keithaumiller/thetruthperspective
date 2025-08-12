@@ -75,7 +75,7 @@ class MetricsController extends ControllerBase {
   /**
    * Display the public metrics dashboard.
    * 
-   * Block-based approach for better layout control and theme integration.
+   * Block-based approach using existing working timeline chart block.
    * 
    * @return array
    *   Drupal render array for the dashboard page.
@@ -89,7 +89,8 @@ class MetricsController extends ControllerBase {
     $header_block = $block_manager->createInstance('metrics_header_block');
     $build['header'] = $header_block->build();
     
-    $timeline_block = $block_manager->createInstance('timeline_chart_block');
+    // Use the existing working timeline chart block
+    $timeline_block = $block_manager->createInstance('taxonomy_timeline_chart');
     $build['timeline'] = $timeline_block->build();
     
     $overview_block = $block_manager->createInstance('metrics_overview_block');

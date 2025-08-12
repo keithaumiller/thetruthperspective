@@ -55,7 +55,7 @@ class MetricsOverviewBlock extends BlockBase implements ContainerFactoryPluginIn
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('newsmotivationmetrics.metrics_data')
+      $container->get('newsmotivationmetrics.metrics_data_service')
     );
   }
 
