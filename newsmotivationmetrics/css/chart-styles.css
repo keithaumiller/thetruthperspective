@@ -5,77 +5,112 @@
 
 /* === MAIN CHART SECTION === */
 .taxonomy-timeline-section {
-  background: white;
+  background: #fff;
   border-radius: 8px;
-  padding: 30px;
-  margin: 30px 0;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 30px;
+  margin: 20px 0;
+  /* Utilize available content + sidebar space */
+  max-width: none;
+  width: 100%;
 }
 
-.chart-section-title {
-  margin: 0 0 25px 0;
-  color: #2c3e50;
-  font-size: 1.8em;
-  font-weight: 300;
-  text-align: center;
+/* === METRICS PAGE LAYOUT OPTIMIZATION === */
+body.path-metrics .layout-sidebar-first,
+body.path-metrics .layout-sidebar-second {
+  /* Hide sidebars on metrics page to give content more space */
+  display: none;
+}
+
+body.path-metrics .layout-content {
+  /* Expand content area when sidebars are hidden */
+  grid-column: 1 / -1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+body.path-metrics .region-content {
+  width: 100%;
+  max-width: none;
+}
+
+/* === RESPONSIVE CHART LAYOUT === */
+@media (min-width: 1024px) {
+  body.path-metrics .taxonomy-timeline-section {
+    /* Use wider layout on desktop */
+    max-width: 1160px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  body.path-metrics .layout-content {
+    padding: 0 10px;
+  }
+  
+  body.path-metrics .taxonomy-timeline-section {
+    padding: 20px;
+    margin: 10px 0;
+  }
 }
 
 /* === CHART CONTROLS === */
 .chart-controls {
-  margin-bottom: 25px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #dee2e6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 30px;
+  align-items: flex-start;
 }
 
 .control-group {
-  margin-bottom: 15px;
+  flex: 1;
+  min-width: 300px;
 }
 
 .control-group label {
   display: block;
-  margin-bottom: 8px;
   font-weight: 600;
-  color: #495057;
-  font-size: 1.1em;
+  margin-bottom: 8px;
+  color: #333;
 }
 
 .term-selector {
   width: 100%;
-  max-width: 600px;
-  height: 120px;
-  padding: 10px;
-  border: 1px solid #ced4da;
+  min-height: 200px;
+  border: 2px solid #ddd;
   border-radius: 6px;
-  background: white;
-  font-size: 0.95em;
+  padding: 8px;
+  font-family: inherit;
+  background: #fff;
 }
 
 .term-selector option {
   padding: 4px 8px;
-  font-size: 14px;
+  border-radius: 3px;
 }
 
 .term-selector option:checked {
-  background: #007bff;
+  background: #007cba;
   color: white;
 }
 
 .control-buttons {
   display: flex;
-  gap: 12px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .btn {
-  padding: 10px 20px;
+  padding: 12px 24px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.95em;
-  font-weight: 500;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
   transition: all 0.2s ease;
 }
 
@@ -89,207 +124,66 @@
   transform: translateY(-1px);
 }
 
-.btn-outline {
-  background: transparent;
-  color: #6c757d;
-  border: 2px solid #6c757d;
-}
-
-.btn-outline:hover {
-  background: #6c757d;
-  color: white;
-  transform: translateY(-1px);
-}
-
-.chart-info {
-  color: #6c757d;
-  font-size: 0.95em;
-  font-style: italic;
-  text-align: center;
-}
-
 /* === CHART CONTAINER === */
 .chart-container {
-  background: white;
-  padding: 25px;
-  border-radius: 8px;
-  border: 1px solid #dee2e6;
-  margin-bottom: 20px;
   position: relative;
-  min-height: 450px;
+  margin: 20px 0;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 20px;
 }
 
-#taxonomy-timeline-chart {
-  max-width: 100%;
-  height: auto !important;
-}
-
-#chart-debug-info {
-  margin-top: 15px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  font-size: 0.9em;
-  color: #6c757d;
-  border: 1px solid #e9ecef;
-}
-
-/* === DASHBOARD HEADER === */
-.news-metrics-header {
-  margin-bottom: 30px;
-  padding: 30px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  color: white;
+.chart-section-title {
+  color: #333;
+  font-size: 1.8em;
+  font-weight: 300;
+  margin-bottom: 20px;
   text-align: center;
+}
+
+/* === NEWS METRICS HEADER === */
+.news-metrics-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
 }
 
 .news-metrics-header h1 {
-  margin: 0 0 15px 0;
   font-size: 2.5em;
   font-weight: 300;
+  margin-bottom: 15px;
+  color: white;
 }
 
 .news-metrics-header p {
-  margin: 0 0 20px 0;
   font-size: 1.2em;
   opacity: 0.9;
-}
-
-.metrics-subtitle {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  align-items: center;
-}
-
-.badge {
-  background: rgba(255,255,255,0.2);
-  padding: 5px 15px;
-  border-radius: 20px;
-  font-size: 0.9em;
-  font-weight: bold;
-}
-
-.updated {
-  font-size: 0.9em;
-  opacity: 0.8;
-}
-
-/* === METHODOLOGY EXPLANATION === */
-.explanation-content {
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  max-width: 600px;
+  margin: 0 auto;
   line-height: 1.6;
 }
 
-.explanation-content h3 {
-  color: #2c3e50;
-  margin-top: 25px;
-  margin-bottom: 15px;
-  font-size: 1.3em;
-}
-
-.explanation-content h3:first-child {
-  margin-top: 0;
-}
-
-.methodology-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin: 20px 0;
-}
-
-.method-card {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  border-left: 4px solid #667eea;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.method-card h4 {
-  margin: 0 0 10px 0;
-  color: #495057;
-  font-size: 1.1em;
-}
-
-.method-card p {
-  margin: 0;
-  color: #6c757d;
-  font-size: 0.95em;
-}
-
-.data-sources {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  margin: 15px 0;
-}
-
-.data-sources li {
-  margin-bottom: 8px;
-  color: #495057;
-}
-
-.update-info {
-  background: #e7f3ff;
-  padding: 15px;
-  border-radius: 6px;
-  border-left: 4px solid #007bff;
-  margin-top: 20px;
-}
-
-.update-info p {
-  margin: 5px 0;
-  color: #495057;
-  font-size: 0.9em;
-}
-
-/* === METRICS TABLES === */
-.metrics-overview,
-.temporal,
-.sentiment,
-.entities,
-.activity,
-.insights {
-  margin-bottom: 25px;
-}
-
-.metrics-table,
-.temporal-table,
-.sentiment-table,
-.entities-table,
-.activity-table,
-.insights-table {
-  width: 100%;
-  margin-top: 15px;
-}
-
-.metrics-table th,
-.temporal-table th,
-.sentiment-table th,
-.entities-table th,
-.activity-table th,
-.insights-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  padding: 12px;
-}
-
-.metrics-table td,
-.temporal-table td,
-.sentiment-table td,
-.entities-table td,
-.activity-table td,
-.insights-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #dee2e6;
-}
-
 /* === METRICS LINK BLOCK === */
+.chart-block__more-metrics {
+  text-align: center;
+  margin-top: 1em;
+}
+
+.more-metrics-link {
+  font-weight: 600;
+  color: #005fa3;
+  text-decoration: underline;
+}
+
+.more-metrics-link:hover,
+.more-metrics-link:focus {
+  color: #003d66;
+  text-decoration: none;
+}
+
 .metrics-link-block {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
@@ -364,6 +258,14 @@
   .metrics-link-button {
     padding: 12px 24px;
     font-size: 1em;
+  }
+  
+  .chart-controls {
+    flex-direction: column;
+  }
+  
+  .control-group {
+    min-width: auto;
   }
 }
 
@@ -476,75 +378,5 @@
   .news-metrics-header {
     background: #f8f9fa !important;
     color: #333 !important;
-  }
-}
-
-.chart-block__more-metrics {
-  text-align: center;
-  margin-top: 1em;
-}
-
-.more-metrics-link {
-  font-weight: 600;
-  color: #005fa3;
-  text-decoration: underline;
-}
-.more-metrics-link:hover,
-.more-metrics-link:focus {
-  color: #003d66;
-  text-decoration: none;
-}
-
-/* === FULL WIDTH METRICS PAGE === */
-body.path-metrics .layout-container,
-body.path-metrics .layout-content,
-body.path-metrics .region-content,
-body.path-metrics .grid-full {
-  max-width: none !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding-left: 20px !important;
-  padding-right: 20px !important;
-}
-
-body.path-metrics .layout--onecol {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* Override Olivero's content width constraints */
-body.path-metrics .layout--pass--content-medium,
-body.path-metrics .layout--pass--content-narrow {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* Ensure charts and content sections use full width */
-body.path-metrics .taxonomy-timeline-section {
-  max-width: none !important;
-  width: calc(100% - 40px) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-body.path-metrics .news-metrics-header {
-  max-width: none !important;
-  width: calc(100% - 40px) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-/* Responsive adjustments for full width */
-@media (max-width: 768px) {
-  body.path-metrics .layout-container,
-  body.path-metrics .layout-content,
-  body.path-metrics .region-content {
-    padding-left: 10px !important;
-    padding-right: 10px !important;
-  }
-  
-  body.path-metrics .taxonomy-timeline-section,
-  body.path-metrics .news-metrics-header {
-    width: calc(100% - 20px) !important;
   }
 }

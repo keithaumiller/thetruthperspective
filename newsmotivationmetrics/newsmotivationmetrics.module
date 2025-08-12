@@ -1,5 +1,4 @@
 <?php
-// filepath: /workspaces/thetruthperspective/newsmotivationmetrics/newsmotivationmetrics.module
 
 use Drupal\Core\Routing\RouteMatchInterface;
 
