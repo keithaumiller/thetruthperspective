@@ -41,21 +41,40 @@ A comprehensive Drupal module that automatically extracts full article content u
 
 ## 📊 Field Architecture
 
-### **Drupal Node Fields Used:**
+### **Actual Drupal Article Fields (Production Confirmed):**
 
-| Field | Machine Name | Type | Content | Purpose |
-|-------|--------------|------|---------|---------|
-| **AI Raw Response** | `field_ai_raw_response` | Text (long) | **Raw JSON from Claude** | **Debugging, audit, reprocessing** |
-| **AI Summary** | `field_ai_summary` | Text (long) | Raw JSON (backup) | Backward compatibility |
-| **Motivation Data** | `field_motivation_data` | Text (long) | Parsed JSON structure | Machine processing |
-| **Motivation Analysis** | `field_motivation_analysis` | Text (formatted) | HTML display format | User interface |
+| Field Label | Machine Name | Type | Content | Purpose |
+|-------------|--------------|------|---------|---------|
+| **Body** | `body` | Text (formatted, long, with summary) | **Extracted article content** | **Main article text from Diffbot** |
+| **Original URL** | `field_original_url` | Link | Source article URL | Content extraction trigger |
+| **News Source** | `field_news_source` | Text (plain) | **Standardized publication name** | **CNN, Fox News, Reuters, etc.** |
+| **Original Author** | `field_original_author` | Text (plain) | Article author | From Diffbot extraction |
+| **Publication Date** | `field_publication_date` | Date | Original publish date | From Diffbot metadata |
+| **AI Summary** | `field_ai_summary` | Text (plain, long) | Raw JSON (legacy) | Backward compatibility |
+| **ai_raw_response** | `field_ai_raw_response` | Text (plain, long) | **Raw Claude response** | **Debugging and reprocessing** |
+| **Motivation Analysis** | `field_motivation_analysis` | Text (formatted, long, with summary) | **HTML formatted analysis** | **User display** |
+| **motivation_data** | `field_motivation_data` | Text (plain, long) | Parsed JSON structure | Machine processing |
 | **Credibility Score** | `field_credibility_score` | Text (plain) | "0" to "100" | Information reliability |
 | **Bias Rating** | `field_bias_rating` | Text (plain) | "0" to "100" | Political lean assessment |
-| **Bias Analysis** | `field_bias_analysis` | Text (plain, LENGTH MUST BE TEXT NOT VARCHAR) | Explanation text | Bias reasoning |
-| **Sentiment Score** | `field_article_sentiment_score` | Text (plain) | "0" to "100" | Emotional tone |
-| **Tags** | `field_tags` | Entity reference | Taxonomy terms | Site navigation |
-| **Original URL** | `field_original_url` | Link | Source article URL | Content attribution |
-| **Body** | `body` | Text (formatted) | Extracted article text | Main content |
+| **Bias Analysis** | `field_bias_analysis` | Text (plain) | Explanation text | Bias reasoning |
+| **Article Sentiment Score** | `field_article_sentiment_score` | List (text) | "0" to "100" | Emotional tone |
+| **Fact Check Status** | `field_fact_check_status` | Text (plain) | Fact-checking status | Manual verification |
+| **json scraped article data** | `field_json_scraped_article_data` | Text (plain, long) | **Complete Diffbot response** | **Source for news extraction** |
+| **Article Hash** | `field_article_hash` | Text (plain, long) | Content deduplication hash | Duplicate prevention |
+| **external_image_url** | `field_external_image_url` | Link | External article image URL | Image management |
+| **Image** | `field_image` | Image | Local article image | Media storage |
+| **Tags** | `field_tags` | Entity reference (Taxonomy: Tags) | Auto-generated tags | Site navigation |
+| **Comments** | `comment` | Comments | User comments | Community engagement |
+| **Feeds item** | `feeds_item` | Feed Reference | RSS feed source | Import tracking |
+
+### **News Source Population Fields (Primary Focus):**
+
+| Field | Purpose | Data Source | Processing Priority |
+|-------|---------|-------------|-------------------|
+| **field_json_scraped_article_data** | **Complete Diffbot JSON** | **Diffbot API response** | **Priority 1: Extract objects[].siteName** |
+| **field_original_url** | **URL for domain mapping** | **RSS feeds/manual** | **Priority 2: Domain-to-source mapping** |
+| **feeds_item** | **Feed metadata** | **RSS import** | **Priority 3: Feed source extraction** |
+| **field_news_source** | **Target field** | **Generated from above** | **Final standardized source name** |
 
 ## 🎯 Enhanced AI Analysis Format
 

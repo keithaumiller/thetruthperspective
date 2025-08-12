@@ -53,21 +53,31 @@ Interactive conversational AI interface with persistent history and real-time re
 
 Automated news content extraction and AI-powered analysis system.
 
-**✅ Current Status**: Stable production version with enhanced news source data flow architecture.
+**✅ Current Status**: Stable production version with comprehensive field architecture.
 
 **Core Features**:
 - URL-based content extraction with AI analysis
 - AWS Bedrock integration for content processing
-- Multi-stage news source population from feed data, JSON scraped data, and URL extraction
+- Multi-stage news source population from JSON scraped data and URL extraction
+- Comprehensive field architecture with 20+ specialized fields
 - Motivation data extraction and entity analysis
 - Custom article templates with structured data
-- Comprehensive field_news_source population system
+- Automated cron-based maintenance for missing news sources
+
+**Field Architecture**:
+- **Core Content**: body, field_original_url, field_news_source, field_original_author
+- **AI Analysis**: field_motivation_analysis, field_ai_raw_response, field_motivation_data
+- **Media Assessment**: field_credibility_score, field_bias_rating, field_bias_analysis
+- **Technical Data**: field_json_scraped_article_data, field_article_hash, field_external_image_url
+- **Content Management**: field_tags, field_image, field_publication_date
 
 **Recent Updates**: 
-- Enhanced news source extraction with 4-stage fallback system
-- JSON scraped data processing for Diffbot siteName field
-- Improved domain mapping for standardized source names
-- Cron-based maintenance for missing news sources
+- Enhanced news source extraction from field_json_scraped_article_data
+- Multi-stage fallback system: JSON data → URL mapping → Feed metadata
+- Comprehensive Drush commands for bulk processing
+- Graceful field handling for different installation configurations
+
+📋 **Technical Details**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete field structure and data flow documentation.
 
 ---
 
@@ -193,6 +203,7 @@ Each module contains comprehensive technical documentation:
 - **[AI Conversation README](./ai_conversation/README.md)** - Conversational AI implementation  
 - **[News Extractor README](./news_extractor/README.md)** - Content extraction and analysis
 - **[Job Application README](./job_application_automation/README.md)** - Automation framework
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete field structure, data flow, and technical architecture
 
 ## 🔧 Development Status
 
