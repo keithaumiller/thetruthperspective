@@ -400,3 +400,19 @@
     color: #333 !important;
   }
 }
+
+.chart-block__more-metrics {
+  text-align: center;
+  margin-top: 1em;
+}
+
+.more-metrics-link {
+  font-weight: 600;
+  color: #005fa3;
+  text-decoration: underline;
+}
+.more-metrics-link:hover,
+.more-metrics-link:focus {
+  color: #003d66;
+  text-decoration: none;
+}

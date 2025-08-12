@@ -105,7 +105,7 @@ chart-blocks:
   version: 1.x
   css:
     theme:
-      css/chart-style.css: {}
+      css/chart-styles.css: {}
   js:
     js/chart.umd.js: { weight: -10 }
     js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
