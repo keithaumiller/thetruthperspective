@@ -3,28 +3,41 @@
  * The Truth Perspective Analytics Dashboard
  */
 
-/* === HERO REGION METRICS STYLING === */
-.page--metrics-hero .region--hero {
-  background: transparent;
-  padding: 0;
-}
-
-.page--metrics-hero .region--hero .taxonomy-timeline-section,
-.page--metrics-hero .region--hero .news-metrics-header,
-.page--metrics-hero .region--hero .metrics-overview-sections {
-  max-width: none;
-  width: 100%;
-  margin-left: 0;
-  margin-right: 0;
-}
-
-/* === MAIN CHART SECTION === */
-.taxonomy-timeline-section {
+/* === FULL-WIDTH LAYOUT SUPPORT === */
+.taxonomy-timeline-section,
+.news-metrics-header,
+.metrics-overview-sections {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   padding: 30px;
-  margin: 20px 0;
+  margin: 20px auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure content doesn't touch edges on very wide screens */
+.taxonomy-timeline-section,
+.news-metrics-header,
+.metrics-overview-sections {
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Full-width override when specifically applied */
+.metrics-fullwidth-page .taxonomy-timeline-section,
+.metrics-fullwidth-page .news-metrics-header,
+.metrics-fullwidth-page .metrics-overview-sections,
+.page--metrics-fullwidth .taxonomy-timeline-section,
+.page--metrics-fullwidth .news-metrics-header,
+.page--metrics-fullwidth .metrics-overview-sections {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  border-radius: 0;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 /* === CHART CONTROLS === */
@@ -102,6 +115,8 @@
   background: #fafafa;
   border-radius: 8px;
   padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .chart-section-title {

@@ -23,28 +23,23 @@ function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_matc
 function newsmotivationmetrics_preprocess_page(&$variables) {
   $route_name = \Drupal::routeMatch()->getRouteName();
   
-  // Move metrics content to hero region for full-width display.
+  // Apply full-width styling to metrics page.
   if ($route_name === 'newsmotivationmetrics.public_dashboard') {
-    // Move main content from content region to hero region.
-    if (isset($variables['page']['content'])) {
-      $variables['page']['hero'] = $variables['page']['content'];
-      unset($variables['page']['content']);
-    }
+    // Add metrics page class for full-width styling.
+    $variables['attributes']['class'][] = 'page--metrics-fullwidth';
     
-    // Add metrics page class for styling.
-    $variables['attributes']['class'][] = 'page--metrics-hero';
+    // Remove standard content width constraints.
+    $variables['#attached']['library'][] = 'newsmotivationmetrics/fullwidth-override';
   }
 }
 
 /**
- * Implements hook_preprocess_region().
+ * Implements hook_preprocess_html().
  */
-function newsmotivationmetrics_preprocess_region(&$variables) {
+function newsmotivationmetrics_preprocess_html(&$variables) {
   $route_name = \Drupal::routeMatch()->getRouteName();
   
-  // Apply full-width styling to content region on metrics page.
-  if ($route_name === 'newsmotivationmetrics.public_dashboard' && $variables['region'] === 'content') {
-    $variables['attributes']['class'][] = 'region--hero';
-    $variables['attributes']['class'][] = 'region--full-width';
+  if ($route_name === 'newsmotivationmetrics.public_dashboard') {
+    $variables['attributes']['class'][] = 'metrics-fullwidth-page';
   }
 }

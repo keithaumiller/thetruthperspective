@@ -1,0 +1,81 @@
+/**
+ * Full-width override styles for metrics dashboard
+ * Overrides Olivero theme width constraints
+ */
+
+/* Override Olivero theme's main content container constraints */
+.metrics-fullwidth-page .layout-container,
+.metrics-fullwidth-page .layout-content,
+.metrics-fullwidth-page .region-content,
+.page--metrics-fullwidth .layout-container,
+.page--metrics-fullwidth .layout-content,
+.page--metrics-fullwidth .region-content {
+  max-width: none !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Override any Olivero grid constraints */
+.metrics-fullwidth-page .grid-full,
+.page--metrics-fullwidth .grid-full {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Ensure metrics content spans full width */
+.metrics-fullwidth-page .taxonomy-timeline-section,
+.metrics-fullwidth-page .news-metrics-header,
+.metrics-fullwidth-page .metrics-overview-sections,
+.page--metrics-fullwidth .taxonomy-timeline-section,
+.page--metrics-fullwidth .news-metrics-header,
+.page--metrics-fullwidth .metrics-overview-sections {
+  max-width: none !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Override Olivero's content wrapper constraints */
+.metrics-fullwidth-page .layout-content > *,
+.page--metrics-fullwidth .layout-content > * {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Ensure proper padding for readability while maintaining full width */
+.metrics-fullwidth-page .taxonomy-timeline-section,
+.metrics-fullwidth-page .news-metrics-header,
+.metrics-fullwidth-page .metrics-overview-sections {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .metrics-fullwidth-page .taxonomy-timeline-section,
+  .metrics-fullwidth-page .news-metrics-header,
+  .metrics-fullwidth-page .metrics-overview-sections {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}
+
+/* Override any theme-specific width constraints that might be applied */
+.metrics-fullwidth-page .site-main,
+.metrics-fullwidth-page .main-content,
+.page--metrics-fullwidth .site-main,
+.page--metrics-fullwidth .main-content {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Ensure charts and containers use full available width */
+.metrics-fullwidth-page .chart-container,
+.page--metrics-fullwidth .chart-container {
+  width: 100% !important;
+  max-width: none !important;
+}

@@ -115,3 +115,10 @@ chart-blocks:
     - core/jquery
     - core/once
     - core/drupalSettings
+
+fullwidth-override:
+  css:
+    theme:
+      css/fullwidth-override.css: {}
+  dependencies:
+    - core/drupal
