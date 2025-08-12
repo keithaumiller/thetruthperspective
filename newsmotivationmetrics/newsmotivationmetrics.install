@@ -80,11 +80,18 @@ function _newsmotivationmetrics_configure_default_blocks() {
       'weight' => -3,
       'status' => TRUE,
     ],
+    'donation_support_block' => [
+      'id' => 'donation_support_block',
+      'plugin' => 'donation_support_block',
+      'region' => 'hero',
+      'weight' => -2,
+      'status' => TRUE,
+    ],
     'about_truth_perspective_analytics' => [
       'id' => 'about_truth_perspective_analytics',
       'plugin' => 'about_truth_perspective_analytics',
       'region' => 'hero',
-      'weight' => -2,
+      'weight' => -1,
       'status' => TRUE,
     ],
   ];
@@ -153,6 +160,7 @@ function newsmotivationmetrics_uninstall() {
     'entity_recognition_metrics',
     'recent_activity_metrics',
     'analysis_quality_metrics',
+    'donation_support_block',
     'about_truth_perspective_analytics',
   ];
 

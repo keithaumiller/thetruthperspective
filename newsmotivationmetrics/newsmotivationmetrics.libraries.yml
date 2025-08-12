@@ -117,6 +117,14 @@ chart-blocks:
     - core/once
     - core/drupalSettings
 
+donation-support:
+  version: 1.x
+  css:
+    theme:
+      css/donation-support.css: {}
+  dependencies:
+    - core/drupal
+
 fullwidth-override:
   css:
     theme:

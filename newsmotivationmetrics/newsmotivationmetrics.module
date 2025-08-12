@@ -18,6 +18,23 @@ function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_matc
 }
 
 /**
+ * Implements hook_theme().
+ */
+function newsmotivationmetrics_theme($existing, $type, $theme, $path) {
+  return [
+    'donation_support_block' => [
+      'variables' => [
+        'donation_message' => NULL,
+        'venmo_username' => NULL,
+        'show_venmo_link' => FALSE,
+        'custom_message' => NULL,
+      ],
+      'template' => 'donation-support-block',
+    ],
+  ];
+}
+
+/**
  * Implements hook_preprocess_page().
  * 
  * DEPRECATED: The standalone /metrics page has been disabled.

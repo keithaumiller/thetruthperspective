@@ -1,0 +1,61 @@
+{#
+/**
+ * @file
+ * Template for the donation support block.
+ *
+ * Available variables:
+ * - donation_message: The main donation message.
+ * - venmo_username: The Venmo username.
+ * - show_venmo_link: Whether to show the Venmo link.
+ * - custom_message: Additional custom message.
+ */
+#}
+
+<div class="donation-support-block">
+  <div class="donation-content">
+    
+    <div class="donation-header">
+      <h3 class="donation-title">
+        <span class="donation-icon">💙</span>
+        Support The Truth Perspective
+      </h3>
+    </div>
+
+    {% if donation_message %}
+      <div class="donation-message">
+        <p>{{ donation_message }}</p>
+      </div>
+    {% endif %}
+
+    {% if show_venmo_link and venmo_username %}
+      <div class="donation-action">
+        <div class="venmo-section">
+          <p class="venmo-label">Quick & easy donation via Venmo:</p>
+          <div class="venmo-link-container">
+            <a href="https://venmo.com/{{ venmo_username|replace({'@': ''}) }}" 
+               target="_blank" 
+               rel="noopener noreferrer" 
+               class="venmo-link">
+              <span class="venmo-icon">📱</span>
+              <span class="venmo-username">{{ venmo_username }}</span>
+              <span class="external-link-icon">↗</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if custom_message %}
+      <div class="donation-custom-message">
+        <p>{{ custom_message }}</p>
+      </div>
+    {% endif %}
+
+    <div class="donation-footer">
+      <p class="gratitude-message">
+        <em>Thank you for supporting independent journalism and transparency in media analysis.</em>
+      </p>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,259 @@
+/* === DONATION SUPPORT BLOCK STYLES === */
+
+.donation-support-block {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.donation-support-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #007bff, #28a745, #007bff);
+  animation: gradientShift 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background: linear-gradient(90deg, #007bff, #28a745, #007bff); }
+  50% { background: linear-gradient(90deg, #28a745, #007bff, #28a745); }
+}
+
+.donation-support-block:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* Header Section */
+.donation-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.donation-title {
+  color: #2c3e50;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.donation-icon {
+  font-size: 28px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Message Section */
+.donation-message {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.donation-message p {
+  color: #495057;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Venmo Action Section */
+.donation-action {
+  text-align: center;
+  margin: 24px 0;
+}
+
+.venmo-section {
+  display: inline-block;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.venmo-label {
+  color: #6c757d;
+  font-size: 14px;
+  margin: 0 0 12px 0;
+  font-weight: 500;
+}
+
+.venmo-link-container {
+  display: flex;
+  justify-content: center;
+}
+
+.venmo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #3D95CE, #1F7A8C);
+  color: white;
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(63, 149, 206, 0.3);
+}
+
+.venmo-link:hover {
+  background: linear-gradient(135deg, #2980b9, #16a085);
+  color: white;
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(63, 149, 206, 0.4);
+}
+
+.venmo-link:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+  color: white;
+  text-decoration: none;
+}
+
+.venmo-icon {
+  font-size: 18px;
+}
+
+.venmo-username {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+}
+
+.external-link-icon {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* Custom Message */
+.donation-custom-message {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.donation-custom-message p {
+  color: #495057;
+  font-size: 15px;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Footer Section */
+.donation-footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.gratitude-message {
+  color: #6c757d;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.gratitude-message em {
+  color: #495057;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .donation-support-block {
+    padding: 20px 16px;
+    margin: 16px 0;
+  }
+  
+  .donation-title {
+    font-size: 22px;
+  }
+  
+  .donation-message p {
+    font-size: 15px;
+  }
+  
+  .venmo-section {
+    padding: 16px;
+  }
+  
+  .venmo-link {
+    padding: 10px 16px;
+    font-size: 15px;
+  }
+}
+
+/* Small mobile optimization */
+@media (max-width: 480px) {
+  .donation-support-block {
+    padding: 16px 12px;
+  }
+  
+  .donation-title {
+    font-size: 20px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .venmo-link {
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 16px;
+  }
+  
+  .venmo-username {
+    font-size: 14px;
+  }
+}
+
+/* Accessibility improvements */
+.donation-support-block:focus-within {
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .donation-support-block::before,
+  .donation-icon,
+  .venmo-link {
+    animation: none;
+  }
+  
+  .donation-support-block:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .donation-support-block {
+    border: 2px solid #000;
+    background: #fff;
+  }
+  
+  .venmo-link {
+    background: #000;
+    color: #fff;
+    border: 2px solid #000;
+  }
+}
