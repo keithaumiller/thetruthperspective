@@ -1,10 +1,11 @@
-newsmotivationmetrics.metrics_dashboard:
-  path: '/metrics'
-  defaults:
-    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::dashboard'
-    _title: 'News Motivation Metrics'
-  requirements:
-    _access: 'TRUE'
+# Public metrics route disabled - now using blocks on front page
+# newsmotivationmetrics.metrics_dashboard:
+#   path: '/metrics'
+#   defaults:
+#     _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::dashboard'
+#     _title: 'News Motivation Metrics'
+#   requirements:
+#     _access: 'TRUE'
 
 newsmotivationmetrics.tag_details:
   path: '/metrics/tag/{tid}'

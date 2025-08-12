@@ -5,13 +5,25 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 
 ## Features
 
-### Public Analytics Dashboard
+### Public Analytics Dashboard (Block-Based)
+- **Block-based architecture** placed in hero region on front page
+- **Individual configurable blocks** for each metrics section
 - **Full-width responsive design** using Olivero theme's hero region
 - **Interactive timeline charts** showing taxonomy term frequency over time
 - **Multi-select controls** for filtering and comparing different motivations/entities
 - **Mobile-optimized interface** with professional presentation
 - **Real-time data visualization** powered by Chart.js
 - **Transparent methodology explanations** for public credibility
+
+### Dashboard Components (Blocks)
+- **Content Analysis Overview**: Article processing and AI analysis statistics
+- **Temporal Processing Analytics**: Time-based processing metrics and trends
+- **Sentiment Distribution Analysis**: Positive/negative/neutral sentiment breakdown
+- **Entity Recognition Metrics**: People, organizations, and locations tracking
+- **Timeline Chart**: Interactive visualization of taxonomy trends over time
+- **Recent Activity**: 7-day and 30-day processing activity metrics
+- **Analysis Quality**: AI response depth and classification quality metrics
+- **About Section**: Mission, methodology, and transparency information
 
 ### Data Visualization
 - Timeline charts showing term frequency trends
@@ -30,9 +42,11 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 ## Architecture
 
 ### Route Structure
-- **Public Dashboard**: `/metrics` - Main analytics interface (no authentication required)
+- **Legacy Route**: `/metrics` - DISABLED (redirects to front page)
+- **Block-Based Dashboard**: Displayed on front page (`<front>`) via hero region blocks
+- **Admin Dashboard**: `/admin/reports/news-motivation-metrics` - Administrative interface
 - **API Endpoints**: Internal data fetching for chart updates
-- **Hero Region Integration**: Full-width layout matching social media links
+- **Tag Details**: `/metrics/tag/{tid}` - Individual taxonomy term analysis
 
 ### Data Sources
 - Processed articles from `news_extractor` module
@@ -58,7 +72,8 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 1. Place module in `/modules/custom/newsmotivationmetrics`
 2. Enable the module: `drush en newsmotivationmetrics`
 3. Clear caches: `drush cr`
-4. Configure permissions if needed for admin features
+4. **Blocks are automatically placed** in hero region on front page during installation
+5. Configure individual block settings via Block Layout if needed (`/admin/structure/block`)
 
 ### Required Dependencies
 - Core Drupal modules: Views, Field, Entity API
@@ -86,7 +101,14 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 ## Usage
 
 ### Public Dashboard Access
-Navigate to `/metrics` to view the public analytics dashboard. No authentication required.
+Navigate to the **front page** to view the public analytics dashboard displayed in the hero region. No authentication required. The previous `/metrics` URL has been disabled in favor of the block-based approach.
+
+### Block Management
+- **Individual Configuration**: Each metrics section is now a separate block
+- **Block Layout Admin**: `/admin/structure/block` - Configure individual blocks
+- **Visibility Settings**: Blocks are configured to show only on front page
+- **Ordering**: Blocks maintain proper weight-based ordering
+- **Admin Interface**: Individual settings for each dashboard component
 
 ### Chart Interactions
 - **Multi-select controls**: Choose multiple terms to compare trends

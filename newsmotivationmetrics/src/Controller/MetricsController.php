@@ -74,7 +74,12 @@ class MetricsController extends ControllerBase {
 
   /**
    * Display the metrics dashboard.
+   * 
+   * DEPRECATED: This method is no longer used. Dashboard functionality 
+   * has been moved to individual blocks placed in the hero region of 
+   * the front page. Keeping for reference during transition period.
    */
+  /*
   public function dashboard() {
     $block_manager = $this->blockManager;
     
@@ -134,7 +139,10 @@ class MetricsController extends ControllerBase {
         ],
       ],
     ];
-  }  /**
+  }
+  */
+
+  /**
    * Display the admin version of the dashboard.
    * 
    * @return array
@@ -170,7 +178,7 @@ class MetricsController extends ControllerBase {
     ];
     
     $build['back'] = [
-      '#markup' => '<p>' . Link::createFromRoute('← Back to Metrics Dashboard', 'newsmotivationmetrics.metrics_dashboard')->toString() . '</p>',
+      '#markup' => '<p>' . Link::createFromRoute('← Back to Front Page', '<front>')->toString() . '</p>',
     ];
     
     return $build;

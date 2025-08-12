@@ -19,7 +19,11 @@ function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_matc
 
 /**
  * Implements hook_preprocess_page().
+ * 
+ * DEPRECATED: The standalone /metrics page has been disabled.
+ * Dashboard functionality is now provided via blocks on the front page.
  */
+/*
 function newsmotivationmetrics_preprocess_page(&$variables) {
   $route_name = \Drupal::routeMatch()->getRouteName();
   
@@ -32,10 +36,15 @@ function newsmotivationmetrics_preprocess_page(&$variables) {
     $variables['#attached']['library'][] = 'newsmotivationmetrics/fullwidth-override';
   }
 }
+*/
 
 /**
  * Implements hook_preprocess_html().
+ * 
+ * DEPRECATED: The standalone /metrics page has been disabled.
+ * Dashboard functionality is now provided via blocks on the front page.
  */
+/*
 function newsmotivationmetrics_preprocess_html(&$variables) {
   $route_name = \Drupal::routeMatch()->getRouteName();
   
@@ -43,6 +52,16 @@ function newsmotivationmetrics_preprocess_html(&$variables) {
     $variables['attributes']['class'][] = 'metrics-fullwidth-page';
   }
 }
+*/
+
+/**
+ * Simple redirect handling for legacy /metrics URL.
+ * 
+ * Since the dashboard is now implemented as blocks on the front page,
+ * we redirect any requests to the old /metrics URL to the front page.
+ * 
+ * Note: This is handled at the routing level since the route is disabled.
+ */
 
 /**
  * Helper function to restore default block configuration.
