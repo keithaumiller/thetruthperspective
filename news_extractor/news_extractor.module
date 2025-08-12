@@ -46,6 +46,16 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
     return;
   }
 
+  // --- NEWS SOURCE POPULATION - STAGE 1: FEED DATA ---
+  $news_source = _news_extractor_extract_news_source_from_feed($item);
+  if (!empty($news_source) && $entity_interface->getTarget()->hasField('field_news_source')) {
+    $entity_interface->getTarget()->set('field_news_source', $news_source);
+    \Drupal::logger('news_extractor')->info('Set news source from feed data: @source for article: @title', [
+      '@source' => $news_source,
+      '@title' => $title_to_check,
+    ]);
+  }
+
   // --- Image linking logic ---
   // Check for image URL in feed item
   $image_url = $item['image'] ?? ($item['media:content'] ?? '');
@@ -90,7 +100,52 @@ function news_extractor_node_insert(EntityInterface $entity) {
   // Extract content if body is empty or too short
   $body = $entity->get('body')->value;
   if (empty($body) || strlen($body) < 500) {
+    
+    // --- NEWS SOURCE POPULATION - ENHANCED MULTI-STAGE APPROACH ---
+    if ($entity->hasField('field_news_source') && $entity->get('field_news_source')->isEmpty()) {
+      $news_source = '';
+      
+      // Stage 1: Try JSON data first (most reliable)
+      if ($entity->hasField('field_json_scraped_article_data') && !$entity->get('field_json_scraped_article_data')->isEmpty()) {
+        $news_source = _news_extractor_extract_news_source_from_json_data($entity);
+        if (!empty($news_source)) {
+          \Drupal::logger('news_extractor')->info('Set news source from JSON data: @source for article: @title', [
+            '@source' => $news_source,
+            '@title' => $entity->getTitle(),
+          ]);
+        }
+      }
+      
+      // Stage 2: Fallback to URL extraction
+      if (empty($news_source)) {
+        $news_source = _news_extractor_extract_news_source_from_url($original_url);
+        if (!empty($news_source)) {
+          \Drupal::logger('news_extractor')->info('Set news source from URL fallback: @source for article: @title', [
+            '@source' => $news_source,
+            '@title' => $entity->getTitle(),
+          ]);
+        }
+      }
+      
+      // Set the news source if found
+      if (!empty($news_source)) {
+        $entity->set('field_news_source', $news_source);
+      }
+    }
+
     _news_extractor_extract_content($entity, $original_url);
+
+    // --- NEWS SOURCE POPULATION - STAGE 3: POST-DIFFBOT ENHANCEMENT ---
+    // After Diffbot extraction, try JSON data again if it wasn't available before
+    if ($entity->hasField('field_news_source') && $entity->get('field_news_source')->isEmpty()) {
+      $news_source = _news_extractor_extract_news_source_from_json_data($entity);
+      if (!empty($news_source)) {
+        $entity->set('field_news_source', $news_source);
+        \Drupal::logger('news_extractor')->info('Set news source from post-Diffbot JSON data: @source', [
+          '@source' => $news_source,
+        ]);
+      }
+    }
 
     // --- Tagging logic ---
     // Get the Motivation Analysis from the entity
@@ -140,6 +195,17 @@ function news_extractor_node_update(EntityInterface $entity) {
     $old_url = $original_entity->get('field_original_url')->uri;
     if ($original_url != $old_url) {
       _news_extractor_extract_content($entity, $original_url);
+      
+      // Update news source when URL changes
+      if ($entity->hasField('field_news_source')) {
+        $news_source = _news_extractor_extract_news_source_from_url($original_url);
+        if (!empty($news_source)) {
+          $entity->set('field_news_source', $news_source);
+          \Drupal::logger('news_extractor')->info('Updated news source for URL change: @source', [
+            '@source' => $news_source,
+          ]);
+        }
+      }
     }
   }
 }
@@ -168,6 +234,9 @@ function news_extractor_cron() {
       '@count' => count($nids),
     ]);
   }
+
+  // --- NEWS SOURCE POPULATION - STAGE 4: CRON MAINTENANCE ---
+  _news_extractor_fix_missing_news_sources();
 }
 
 /**
@@ -651,4 +720,355 @@ function _news_extractor_extract_structured_data($ai_response) {
  */
 function news_extractor_get_diffbot_token() {
   return \Drupal::config('news_extractor.settings')->get('diffbot_token') ?: '';
+}
+
+/**
+ * STAGE 1: Extract news source from feed item data.
+ */
+function _news_extractor_extract_news_source_from_feed($item) {
+  $news_source = '';
+  
+  // Priority 1: Check for explicit source field in feed
+  if (!empty($item['source'])) {
+    $news_source = $item['source'];
+  }
+  // Priority 2: Check for dc:source in Dublin Core metadata
+  elseif (!empty($item['dc:source'])) {
+    $news_source = $item['dc:source'];
+  }
+  // Priority 3: Check feed title/description (often contains source)
+  elseif (!empty($item['feed_title'])) {
+    $news_source = $item['feed_title'];
+  }
+  // Priority 4: Check description for source patterns (Source: CNN, Via: Reuters, etc.)
+  elseif (!empty($item['description']) && preg_match('/(?:Source|Via|From):\s*(.+?)(?:\n|$|\|)/i', $item['description'], $matches)) {
+    $news_source = trim($matches[1]);
+  }
+  // Priority 5: Extract from link URL as last resort
+  elseif (!empty($item['link'])) {
+    $news_source = _news_extractor_extract_news_source_from_url($item['link']);
+  }
+  
+  // Clean and standardize the news source
+  if (!empty($news_source)) {
+    $news_source = _news_extractor_clean_news_source($news_source);
+  }
+  
+  return !empty($news_source) ? $news_source : NULL;
+}
+
+/**
+ * STAGE 2: Extract news source from URL (fallback method).
+ */
+function _news_extractor_extract_news_source_from_url($url) {
+  if (empty($url)) {
+    return NULL;
+  }
+  
+  $parsed_url = parse_url($url);
+  if (!isset($parsed_url['host'])) {
+    return NULL;
+  }
+  
+  $host = strtolower($parsed_url['host']);
+  
+  // Remove 'www.' prefix
+  $host = preg_replace('/^www\./', '', $host);
+  
+  // Map common domains to clean source names
+  $domain_map = [
+    'cnn.com' => 'CNN',
+    'politics.cnn.com' => 'CNN Politics',
+    'foxnews.com' => 'Fox News',
+    'reuters.com' => 'Reuters',
+    'ap.org' => 'Associated Press',
+    'apnews.com' => 'Associated Press',
+    'npr.org' => 'NPR',
+    'bbc.com' => 'BBC News',
+    'bbc.co.uk' => 'BBC News',
+    'wsj.com' => 'Wall Street Journal',
+    'nytimes.com' => 'New York Times',
+    'washingtonpost.com' => 'Washington Post',
+    'politico.com' => 'Politico',
+    'thehill.com' => 'The Hill',
+    'msnbc.com' => 'MSNBC',
+    'nbcnews.com' => 'NBC News',
+    'abcnews.go.com' => 'ABC News',
+    'cbsnews.com' => 'CBS News',
+    'usatoday.com' => 'USA Today',
+    'bloomberg.com' => 'Bloomberg',
+    'theguardian.com' => 'The Guardian',
+    'time.com' => 'Time',
+    'newsweek.com' => 'Newsweek',
+    'huffpost.com' => 'HuffPost',
+    'slate.com' => 'Slate',
+    'vox.com' => 'Vox',
+    'axios.com' => 'Axios',
+    'breitbart.com' => 'Breitbart',
+    'dailywire.com' => 'The Daily Wire',
+    'nypost.com' => 'New York Post',
+    'dailymail.co.uk' => 'Daily Mail',
+    'independent.co.uk' => 'The Independent',
+    'ft.com' => 'Financial Times',
+  ];
+  
+  if (isset($domain_map[$host])) {
+    return $domain_map[$host];
+  }
+  
+  // For unknown domains, convert to title case
+  $parts = explode('.', $host);
+  if (count($parts) >= 2) {
+    $domain_name = $parts[0];
+    return ucwords(str_replace(['-', '_'], ' ', $domain_name));
+  }
+  
+  return ucwords(str_replace(['-', '_', '.'], ' ', $host));
+}
+
+/**
+ * STAGE 3: Extract news source from field_json_scraped_article_data.
+ */
+function _news_extractor_extract_news_source_from_json_data(EntityInterface $entity) {
+  if (!$entity->hasField('field_json_scraped_article_data') || $entity->get('field_json_scraped_article_data')->isEmpty()) {
+    return NULL;
+  }
+  
+  $json_data = $entity->get('field_json_scraped_article_data')->value;
+  
+  try {
+    $parsed_data = json_decode($json_data, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+      \Drupal::logger('news_extractor')->error('Invalid JSON in field_json_scraped_article_data for article @id: @error', [
+        '@id' => $entity->id(),
+        '@error' => json_last_error_msg(),
+      ]);
+      return NULL;
+    }
+    
+    // Extract siteName from Diffbot objects array
+    if (isset($parsed_data['objects']) && is_array($parsed_data['objects'])) {
+      foreach ($parsed_data['objects'] as $object) {
+        if (isset($object['siteName']) && !empty($object['siteName'])) {
+          $site_name = trim($object['siteName']);
+          
+          // Clean and standardize the site name
+          $cleaned_source = _news_extractor_clean_news_source($site_name);
+          
+          \Drupal::logger('news_extractor')->info('Extracted news source from JSON data: @source (original: @original) for article @id', [
+            '@source' => $cleaned_source,
+            '@original' => $site_name,
+            '@id' => $entity->id(),
+          ]);
+          
+          return $cleaned_source;
+        }
+      }
+    }
+    
+    \Drupal::logger('news_extractor')->warning('No siteName found in JSON data for article @id', [
+      '@id' => $entity->id(),
+    ]);
+    
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error parsing JSON data for article @id: @message', [
+      '@id' => $entity->id(),
+      '@message' => $e->getMessage(),
+    ]);
+  }
+  
+  return NULL;
+}
+
+/**
+ * Clean and standardize news source names.
+ */
+function _news_extractor_clean_news_source($source) {
+  if (empty($source)) {
+    return '';
+  }
+  
+  // Trim whitespace
+  $source = trim($source);
+  
+  // Remove common suffixes and prefixes
+  $patterns_to_remove = [
+    '/\s*-\s*RSS.*$/i',
+    '/\s*RSS.*$/i',
+    '/\s*-\s*Politics.*$/i',
+    '/\s*Breaking News.*$/i',
+    '/\s*Latest News.*$/i',
+    '/\s*News Feed.*$/i',
+    '/\s*\|.*$/i',
+    '/\s*::.*$/i',
+    '/\s*\(.*\).*$/i',
+    '/^RSS:\s*/i',
+    '/^Feed:\s*/i',
+  ];
+  
+  foreach ($patterns_to_remove as $pattern) {
+    $source = preg_replace($pattern, '', $source);
+    $source = trim($source);
+  }
+  
+  // Common source name standardizations
+  $standardizations = [
+    '/^CNN Politics$/i' => 'CNN',
+    '/^CNN\.com.*$/i' => 'CNN',
+    '/^CNN International.*$/i' => 'CNN',
+    '/^Fox News Politics.*$/i' => 'Fox News',
+    '/^FOX News.*$/i' => 'Fox News',
+    '/^The New York Times.*$/i' => 'New York Times',
+    '/^The Washington Post.*$/i' => 'Washington Post',
+    '/^The Wall Street Journal.*$/i' => 'Wall Street Journal',
+    '/^The Guardian.*$/i' => 'The Guardian',
+    '/^BBC News.*$/i' => 'BBC News',
+    '/^Reuters.*$/i' => 'Reuters',
+    '/^Associated Press.*$/i' => 'Associated Press',
+    '/^AP News.*$/i' => 'Associated Press',
+    '/^NBC News.*$/i' => 'NBC News',
+    '/^ABC News.*$/i' => 'ABC News',
+    '/^CBS News.*$/i' => 'CBS News',
+  ];
+  
+  foreach ($standardizations as $pattern => $standard) {
+    if (preg_match($pattern, $source)) {
+      return $standard;
+    }
+  }
+  
+  return trim($source);
+}
+
+/**
+ * Populate news source from existing JSON scraped data for articles.
+ */
+function _news_extractor_populate_news_source_from_json_data($batch_size = 50) {
+  // Find articles with JSON data but missing news source
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_json_scraped_article_data', '', '<>')
+    ->condition('field_news_source', '', '=')
+    ->range(0, $batch_size)
+    ->accessCheck(FALSE);
+
+  $nids = $query->execute();
+
+  if (empty($nids)) {
+    return 0;
+  }
+
+  $nodes = Node::loadMultiple($nids);
+  $updated_count = 0;
+  
+  foreach ($nodes as $node) {
+    $news_source = _news_extractor_extract_news_source_from_json_data($node);
+    
+    if (!empty($news_source)) {
+      $node->set('field_news_source', $news_source);
+      $node->save();
+      $updated_count++;
+      
+      \Drupal::logger('news_extractor')->info('Populated news source from JSON data for article @id (@title): @source', [
+        '@id' => $node->id(),
+        '@title' => $node->getTitle(),
+        '@source' => $news_source,
+      ]);
+    }
+  }
+  
+  return $updated_count;
+}
+
+/**
+ * ENHANCED STAGE 4: Fix missing news sources using multiple methods.
+ */
+function _news_extractor_fix_missing_news_sources() {
+  $total_updated = 0;
+  
+  // Priority 1: Use JSON scraped data if available
+  $json_updated = _news_extractor_populate_news_source_from_json_data(25);
+  $total_updated += $json_updated;
+  
+  if ($json_updated > 0) {
+    \Drupal::logger('news_extractor')->info('Populated @count news sources from JSON data during cron run', [
+      '@count' => $json_updated,
+    ]);
+  }
+  
+  // Priority 2: Use URL extraction for remaining articles
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_original_url.uri', '', '<>')
+    ->condition('field_news_source', '', '=')
+    ->range(0, 25)
+    ->accessCheck(FALSE);
+
+  $nids = $query->execute();
+
+  if (!empty($nids)) {
+    $nodes = Node::loadMultiple($nids);
+    $url_updated = 0;
+    
+    foreach ($nodes as $node) {
+      $original_url = $node->get('field_original_url')->uri;
+      $news_source = _news_extractor_extract_news_source_from_url($original_url);
+      
+      if (!empty($news_source)) {
+        $node->set('field_news_source', $news_source);
+        $node->save();
+        $url_updated++;
+        $total_updated++;
+        
+        \Drupal::logger('news_extractor')->info('Fixed missing news source for article @id (@title): @source', [
+          '@id' => $node->id(),
+          '@title' => $node->getTitle(),
+          '@source' => $news_source,
+        ]);
+      }
+    }
+    
+    if ($url_updated > 0) {
+      \Drupal::logger('news_extractor')->info('Fixed @count missing news sources from URL during cron run', [
+        '@count' => $url_updated,
+      ]);
+    }
+  }
+  
+  if ($total_updated > 0) {
+    \Drupal::logger('news_extractor')->info('Total @count news sources updated during cron run', [
+      '@count' => $total_updated,
+    ]);
+  }
+}
+
+/**
+ * Drush command helper functions for bulk processing.
+ */
+function _news_extractor_populate_all_news_sources_from_json() {
+  $batch_size = 100;
+  $total_updated = 0;
+  
+  \Drupal::logger('news_extractor')->info('Starting bulk population of news sources from JSON data');
+  
+  do {
+    $updated_count = _news_extractor_populate_news_source_from_json_data($batch_size);
+    $total_updated += $updated_count;
+    
+    if ($updated_count > 0) {
+      \Drupal::logger('news_extractor')->info('Processed batch: @updated updated out of @batch articles', [
+        '@updated' => $updated_count,
+        '@batch' => $batch_size,
+      ]);
+      sleep(1);
+    }
+    
+  } while ($updated_count > 0);
+  
+  \Drupal::logger('news_extractor')->info('Completed bulk population: @total articles updated', [
+    '@total' => $total_updated,
+  ]);
+  
+  return $total_updated;
 }
