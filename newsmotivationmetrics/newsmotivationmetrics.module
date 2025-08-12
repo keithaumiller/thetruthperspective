@@ -16,26 +16,3 @@ function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_matc
       return '<p>' . t('Provides analytics and metrics dashboard for news article motivations and AI analysis.') . '</p>';
   }
 }
-
-/**
- * Implements hook_theme().
- */
-function newsmotivationmetrics_theme($existing, $type, $theme, $path) {
-  return [
-    'page__metrics' => [
-      'template' => 'page--metrics',
-      'base hook' => 'page',
-    ],
-  ];
-}
-
-/**
- * Implements hook_theme_suggestions_page_alter().
- */
-function newsmotivationmetrics_theme_suggestions_page_alter(array &$suggestions, array $variables) {
-  // Add page template suggestion for metrics route.
-  $route_name = \Drupal::routeMatch()->getRouteName();
-  if ($route_name === 'newsmotivationmetrics.public_dashboard') {
-    $suggestions[] = 'page__metrics';
-  }
-}
