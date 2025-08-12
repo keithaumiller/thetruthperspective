@@ -75,14 +75,34 @@ class MetricsController extends ControllerBase {
   /**
    * Display the public metrics dashboard.
    * 
-   * Main analytics interface showing taxonomy trends, processing metrics,
-   * sentiment analysis, and entity recognition statistics.
+   * Block-based approach for better layout control and theme integration.
    * 
    * @return array
    *   Drupal render array for the dashboard page.
    */
   public function dashboard() {
-    return $this->dashboardBuilder->buildPublicDashboard();
+    $block_manager = \Drupal::service('plugin.manager.block');
+    
+    $build = [];
+    
+    // Create and render each metrics block
+    $header_block = $block_manager->createInstance('metrics_header_block');
+    $build['header'] = $header_block->build();
+    
+    $timeline_block = $block_manager->createInstance('timeline_chart_block');
+    $build['timeline'] = $timeline_block->build();
+    
+    $overview_block = $block_manager->createInstance('metrics_overview_block');
+    $build['overview'] = $overview_block->build();
+    
+    $methodology_block = $block_manager->createInstance('methodology_block');
+    $build['methodology'] = $methodology_block->build();
+    
+    // Add wrapper for styling
+    $build['#type'] = 'container';
+    $build['#attributes'] = ['class' => ['metrics-dashboard-content']];
+    
+    return $build;
   }
 
   /**

@@ -1,81 +1,76 @@
 /**
- * Full-width override styles for metrics dashboard
- * Surgical approach: Target specific Olivero constraints without breaking layout
+ * Block-based metrics dashboard styling
+ * Clean approach using proper Drupal blocks within theme layout
  */
 
-/* Target the specific container that constrains width from HTML structure */
-body.metrics-fullwidth-page .main-content__container.container {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* Target the layout system without breaking positioning */
-body.metrics-fullwidth-page .layout-main-wrapper,
-body.metrics-fullwidth-page .layout-main {
-  max-width: none !important;
-}
-
-/* Override Olivero's content region constraints */
-body.metrics-fullwidth-page .region--content {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* Target the specific layout constraint from HTML */
-body.metrics-fullwidth-page .layout--pass--content-medium {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* Ensure the main content block uses available space */
-body.metrics-fullwidth-page #block-olivero-content {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* Let metrics content use full container width */
-body.metrics-fullwidth-page .taxonomy-timeline-section,
-body.metrics-fullwidth-page .news-metrics-header,
-body.metrics-fullwidth-page .metrics-overview-sections {
+/* Ensure metrics blocks use available width within theme constraints */
+.metrics-fullwidth-page .metrics-dashboard-content {
   width: 100%;
-  max-width: none !important;
-  box-sizing: border-box;
-  padding-left: 20px;
-  padding-right: 20px;
+  max-width: none;
 }
 
-/* Ensure charts use full available width */
-body.metrics-fullwidth-page .chart-container {
+/* Individual block styling for proper spacing */
+.metrics-fullwidth-page .news-metrics-header,
+.metrics-fullwidth-page .taxonomy-timeline-section,
+.metrics-fullwidth-page .metrics-overview-sections,
+.metrics-fullwidth-page .methodology-explanation {
+  width: 100%;
+  margin-bottom: 2rem;
+  box-sizing: border-box;
+}
+
+/* Chart container should use full available width */
+.metrics-fullwidth-page .chart-container {
   width: 100% !important;
-  max-width: none !important;
+  max-width: 100% !important;
+}
+
+/* Ensure timeline chart section uses full width */
+.metrics-fullwidth-page .taxonomy-timeline-section {
+  width: 100%;
+  padding: 0;
+}
+
+/* Chart controls and content styling */
+.metrics-fullwidth-page .chart-controls,
+.metrics-fullwidth-page .chart-container {
+  width: 100%;
+}
+
+/* Overview sections grid layout */
+.metrics-fullwidth-page .metrics-overview-sections {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Responsive padding for readability */
+.metrics-fullwidth-page .news-metrics-header,
+.metrics-fullwidth-page .taxonomy-timeline-section > *:not(.chart-container),
+.metrics-fullwidth-page .metrics-overview-sections,
+.metrics-fullwidth-page .methodology-explanation {
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
-  body.metrics-fullwidth-page .taxonomy-timeline-section,
-  body.metrics-fullwidth-page .news-metrics-header,
-  body.metrics-fullwidth-page .metrics-overview-sections {
-    padding-left: 15px;
-    padding-right: 15px;
-  }
-}
-
-/* Tablet adjustments */
-@media (min-width: 769px) and (max-width: 1024px) {
-  body.metrics-fullwidth-page .taxonomy-timeline-section,
-  body.metrics-fullwidth-page .news-metrics-header,
-  body.metrics-fullwidth-page .metrics-overview-sections {
-    padding-left: 25px;
-    padding-right: 25px;
+  .metrics-fullwidth-page .news-metrics-header,
+  .metrics-fullwidth-page .taxonomy-timeline-section > *:not(.chart-container),
+  .metrics-fullwidth-page .metrics-overview-sections,
+  .metrics-fullwidth-page .methodology-explanation {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 }
 
 /* Large screen optimizations */
 @media (min-width: 1200px) {
-  body.metrics-fullwidth-page .taxonomy-timeline-section,
-  body.metrics-fullwidth-page .news-metrics-header,
-  body.metrics-fullwidth-page .metrics-overview-sections {
-    padding-left: 30px;
-    padding-right: 30px;
+  .metrics-fullwidth-page .news-metrics-header,
+  .metrics-fullwidth-page .taxonomy-timeline-section > *:not(.chart-container),
+  .metrics-fullwidth-page .metrics-overview-sections,
+  .metrics-fullwidth-page .methodology-explanation {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
