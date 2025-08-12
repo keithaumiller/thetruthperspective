@@ -21,7 +21,7 @@ class DonationBlock extends BlockBase {
    */
   public function defaultConfiguration() {
     return [
-      'donation_message' => 'Support independent journalism and transparent news analysis. Your contribution helps us continue providing AI-powered insights into media narratives.',
+      'donation_message' => 'Support independent journalism and transparent news analysis.',
       'venmo_username' => '@Keith-Aumiller',
       'show_venmo_link' => TRUE,
       'custom_message' => '',
