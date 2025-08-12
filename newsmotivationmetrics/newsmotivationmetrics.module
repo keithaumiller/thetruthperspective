@@ -43,3 +43,79 @@ function newsmotivationmetrics_preprocess_html(&$variables) {
     $variables['attributes']['class'][] = 'metrics-fullwidth-page';
   }
 }
+
+/**
+ * Helper function to restore default block configuration.
+ * 
+ * This can be called manually if block placements get lost during deployment.
+ * Usage: drush php:eval "newsmotivationmetrics_restore_block_configuration();"
+ */
+function newsmotivationmetrics_restore_block_configuration() {
+  module_load_include('install', 'newsmotivationmetrics');
+  _newsmotivationmetrics_configure_default_blocks();
+  \Drupal::messenger()->addMessage(t('News Motivation Metrics blocks have been restored to hero region on front page.'));
+}
+
+/**
+ * Helper function to check current block configuration status.
+ * 
+ * Usage: drush php:eval "newsmotivationmetrics_check_block_status();"
+ */
+function newsmotivationmetrics_check_block_status() {
+  $theme = \Drupal::config('system.theme')->get('default');
+  
+  $block_ids = [
+    'metrics_header',
+    'content_analysis_overview',
+    'temporal_processing_analytics',
+    'sentiment_distribution_analysis',
+    'taxonomy_timeline_chart',
+    'entity_recognition_metrics',
+    'recent_activity_metrics',
+    'analysis_quality_metrics',
+    'about_truth_perspective_analytics',
+  ];
+
+  $status_report = [];
+  foreach ($block_ids as $block_id) {
+    $block_machine_name = $theme . '_' . $block_id;
+    $block = \Drupal\block\Entity\Block::load($block_machine_name);
+    
+    if ($block) {
+      $visibility = $block->getVisibility();
+      $front_page_only = isset($visibility['request_path']) && 
+                        $visibility['request_path']['pages'] === '<front>';
+      
+      $status_report[] = [
+        'block' => $block_id,
+        'status' => $block->status() ? 'Enabled' : 'Disabled',
+        'region' => $block->getRegion(),
+        'weight' => $block->getWeight(),
+        'front_page_only' => $front_page_only ? 'Yes' : 'No',
+      ];
+    } else {
+      $status_report[] = [
+        'block' => $block_id,
+        'status' => 'Not Found',
+        'region' => 'N/A',
+        'weight' => 'N/A',
+        'front_page_only' => 'N/A',
+      ];
+    }
+  }
+  
+  // Output status report
+  \Drupal::logger('newsmotivationmetrics')->info('Block Status Report: @report', [
+    '@report' => print_r($status_report, TRUE),
+  ]);
+  
+  if (function_exists('drush_print_table')) {
+    drush_print_table($status_report);
+  } else {
+    foreach ($status_report as $row) {
+      \Drupal::messenger()->addMessage(
+        t('@block: @status in @region (weight: @weight, front page only: @front_page_only)', $row)
+      );
+    }
+  }
+}

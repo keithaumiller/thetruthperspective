@@ -1,0 +1,188 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the newsmotivationmetrics module.
+ */
+
+use Drupal\block\Entity\Block;
+use Drupal\Core\Config\FileStorage;
+
+/**
+ * Implements hook_install().
+ */
+function newsmotivationmetrics_install() {
+  // Configure blocks to be placed in hero region and visible only on front page
+  _newsmotivationmetrics_configure_default_blocks();
+}
+
+/**
+ * Configure default block placements for metrics dashboard.
+ */
+function _newsmotivationmetrics_configure_default_blocks() {
+  $theme = \Drupal::config('system.theme')->get('default');
+  
+  // Define our blocks with their default configuration
+  $blocks_config = [
+    'metrics_header' => [
+      'id' => 'metrics_header',
+      'plugin' => 'metrics_header',
+      'region' => 'hero',
+      'weight' => -10,
+      'status' => TRUE,
+    ],
+    'content_analysis_overview' => [
+      'id' => 'content_analysis_overview',
+      'plugin' => 'content_analysis_overview',
+      'region' => 'hero',
+      'weight' => -9,
+      'status' => TRUE,
+    ],
+    'temporal_processing_analytics' => [
+      'id' => 'temporal_processing_analytics',
+      'plugin' => 'temporal_processing_analytics',
+      'region' => 'hero',
+      'weight' => -8,
+      'status' => TRUE,
+    ],
+    'sentiment_distribution_analysis' => [
+      'id' => 'sentiment_distribution_analysis',
+      'plugin' => 'sentiment_distribution_analysis',
+      'region' => 'hero',
+      'weight' => -7,
+      'status' => TRUE,
+    ],
+    'taxonomy_timeline_chart' => [
+      'id' => 'taxonomy_timeline_chart',
+      'plugin' => 'taxonomy_timeline_chart',
+      'region' => 'hero',
+      'weight' => -6,
+      'status' => TRUE,
+    ],
+    'entity_recognition_metrics' => [
+      'id' => 'entity_recognition_metrics',
+      'plugin' => 'entity_recognition_metrics',
+      'region' => 'hero',
+      'weight' => -5,
+      'status' => TRUE,
+    ],
+    'recent_activity_metrics' => [
+      'id' => 'recent_activity_metrics',
+      'plugin' => 'recent_activity_metrics',
+      'region' => 'hero',
+      'weight' => -4,
+      'status' => TRUE,
+    ],
+    'analysis_quality_metrics' => [
+      'id' => 'analysis_quality_metrics',
+      'plugin' => 'analysis_quality_metrics',
+      'region' => 'hero',
+      'weight' => -3,
+      'status' => TRUE,
+    ],
+    'about_truth_perspective_analytics' => [
+      'id' => 'about_truth_perspective_analytics',
+      'plugin' => 'about_truth_perspective_analytics',
+      'region' => 'hero',
+      'weight' => -2,
+      'status' => TRUE,
+    ],
+  ];
+
+  foreach ($blocks_config as $block_id => $config) {
+    $block_machine_name = $theme . '_' . $block_id;
+    
+    // Check if block already exists
+    $existing_block = Block::load($block_machine_name);
+    if (!$existing_block) {
+      // Create the block
+      $block = Block::create([
+        'id' => $block_machine_name,
+        'theme' => $theme,
+        'region' => $config['region'],
+        'weight' => $config['weight'],
+        'plugin' => $config['plugin'],
+        'status' => $config['status'],
+        'visibility' => [
+          'request_path' => [
+            'id' => 'request_path',
+            'pages' => '<front>',
+            'negate' => FALSE,
+            'context_mapping' => [],
+          ],
+        ],
+        'settings' => [
+          'label' => '',
+          'label_display' => '0',
+        ],
+      ]);
+      
+      try {
+        $block->save();
+        \Drupal::logger('newsmotivationmetrics')->info('Created block @block_id in @region region for front page only.', [
+          '@block_id' => $block_machine_name,
+          '@region' => $config['region'],
+        ]);
+      } catch (Exception $e) {
+        \Drupal::logger('newsmotivationmetrics')->error('Failed to create block @block_id: @error', [
+          '@block_id' => $block_machine_name,
+          '@error' => $e->getMessage(),
+        ]);
+      }
+    } else {
+      \Drupal::logger('newsmotivationmetrics')->info('Block @block_id already exists, skipping creation.', [
+        '@block_id' => $block_machine_name,
+      ]);
+    }
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function newsmotivationmetrics_uninstall() {
+  // Remove all blocks created by this module
+  $theme = \Drupal::config('system.theme')->get('default');
+  
+  $block_ids = [
+    'metrics_header',
+    'content_analysis_overview',
+    'temporal_processing_analytics',
+    'sentiment_distribution_analysis',
+    'taxonomy_timeline_chart',
+    'entity_recognition_metrics',
+    'recent_activity_metrics',
+    'analysis_quality_metrics',
+    'about_truth_perspective_analytics',
+  ];
+
+  foreach ($block_ids as $block_id) {
+    $block_machine_name = $theme . '_' . $block_id;
+    $block = Block::load($block_machine_name);
+    if ($block) {
+      try {
+        $block->delete();
+        \Drupal::logger('newsmotivationmetrics')->info('Removed block @block_id during module uninstall.', [
+          '@block_id' => $block_machine_name,
+        ]);
+      } catch (Exception $e) {
+        \Drupal::logger('newsmotivationmetrics')->error('Failed to remove block @block_id during uninstall: @error', [
+          '@block_id' => $block_machine_name,
+          '@error' => $e->getMessage(),
+        ]);
+      }
+    }
+  }
+}
+
+/**
+ * Update function to ensure blocks are properly configured.
+ * 
+ * This can be run manually or during updates to restore block configuration.
+ */
+function newsmotivationmetrics_update_9001() {
+  // Re-configure blocks to ensure they're in the right place
+  _newsmotivationmetrics_configure_default_blocks();
+  
+  return t('Metrics dashboard blocks have been configured for hero region on front page.');
+}

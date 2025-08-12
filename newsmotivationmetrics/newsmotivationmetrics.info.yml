@@ -7,5 +7,7 @@ dependencies:
   - drupal:taxonomy
   - drupal:views
   - drupal:node
+  - drupal:block
 
-# Existing libraries and configurations...
+# Configure blocks automatically during installation
+# Blocks are placed in hero region and visible on front page only
