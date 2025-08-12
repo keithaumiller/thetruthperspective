@@ -931,6 +931,10 @@ function _news_extractor_clean_news_source($source) {
     $source = trim($source);
   }
   
+  // Remove trailing dashes and other punctuation
+  $source = preg_replace('/[\s\-\|:]+$/', '', $source);
+  $source = trim($source);
+  
   // Common source name standardizations
   $standardizations = [
     '/^CNN Politics$/i' => 'CNN',
