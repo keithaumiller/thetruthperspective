@@ -3,25 +3,19 @@
  * The Truth Perspective Analytics Dashboard
  */
 
-/* === HERO LAYOUT FOR METRICS PAGE === */
-.page--metrics-dashboard.layout--hero .layout-container {
-  max-width: none;
-  width: 100%;
+/* === HERO REGION METRICS STYLING === */
+.page--metrics-hero .region--hero {
+  background: transparent;
   padding: 0;
 }
 
-.page--metrics-dashboard.layout--hero .layout-content {
+.page--metrics-hero .region--hero .taxonomy-timeline-section,
+.page--metrics-hero .region--hero .news-metrics-header,
+.page--metrics-hero .region--hero .metrics-overview-sections {
   max-width: none;
   width: 100%;
-  padding: 0 20px;
-  margin: 0;
-}
-
-.page--metrics-dashboard .region--hero.region--full-width {
-  max-width: none;
-  width: 100%;
-  margin: 0;
-  padding: 0;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 /* === MAIN CHART SECTION === */
@@ -30,48 +24,7 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   padding: 30px;
-  margin: 20px auto;
-  max-width: 1400px;
-  width: calc(100% - 40px);
-}
-
-/* === METRICS PAGE LAYOUT OPTIMIZATION === */
-/* Hide sidebars on metrics page to expand content area */
-body.path-metrics .layout-sidebar-first,
-body.path-metrics .layout-sidebar-second {
-  display: none;
-}
-
-/* Expand main content area when sidebars are hidden */
-body.path-metrics .layout-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-body.path-metrics .region-content {
-  width: 100%;
-  max-width: none;
-}
-
-/* === RESPONSIVE CHART LAYOUT === */
-@media (min-width: 1024px) {
-  body.path-metrics .taxonomy-timeline-section {
-    max-width: 1160px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
-
-@media (max-width: 768px) {
-  body.path-metrics .layout-content {
-    padding: 0 10px;
-  }
-  
-  .taxonomy-timeline-section {
-    padding: 20px;
-    margin: 10px 0;
-  }
+  margin: 20px 0;
 }
 
 /* === CHART CONTROLS === */
@@ -167,10 +120,6 @@ body.path-metrics .region-content {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 12px;
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
-  width: calc(100% - 40px);
 }
 
 .news-metrics-header h1 {
@@ -188,98 +137,76 @@ body.path-metrics .region-content {
   line-height: 1.6;
 }
 
-/* === METRICS LINK BLOCK === */
-.chart-block__more-metrics {
-  text-align: center;
-  margin-top: 1em;
+/* === METRICS OVERVIEW SECTIONS === */
+.metrics-overview-sections {
+  margin: 40px 0;
 }
 
-.more-metrics-link {
-  font-weight: 600;
-  color: #005fa3;
-  text-decoration: underline;
-}
-
-.more-metrics-link:hover,
-.more-metrics-link:focus {
-  color: #003d66;
-  text-decoration: none;
-}
-
-.metrics-link-block {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  padding: 30px;
-  margin: 30px 0;
-  text-align: center;
-  color: white;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.metrics-link-container {
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.metrics-link-title {
-  margin: 0 0 15px 0;
-  font-size: 1.8em;
-  font-weight: 300;
-  color: white;
-}
-
-.metrics-link-description {
-  margin: 0 0 25px 0;
-  font-size: 1.1em;
-  opacity: 0.9;
-  line-height: 1.5;
-}
-
-.metrics-link-button-wrapper {
-  margin-top: 20px;
-}
-
-.metrics-link-button {
-  background: rgba(255,255,255,0.2);
-  color: white;
-  padding: 15px 30px;
-  border: 2px solid rgba(255,255,255,0.3);
+.metrics-overview-sections details {
+  margin-bottom: 20px;
+  background: #fff;
   border-radius: 8px;
-  text-decoration: none;
-  font-size: 1.1em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.metrics-overview-sections summary {
+  padding: 20px;
+  background: #f8f9fa;
   font-weight: 600;
-  transition: all 0.3s ease;
-  display: inline-block;
+  cursor: pointer;
+  border-bottom: 1px solid #dee2e6;
 }
 
-.metrics-link-button:hover,
-.metrics-link-button:focus {
-  background: rgba(255,255,255,0.3);
-  border-color: rgba(255,255,255,0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-  text-decoration: none;
-  color: white;
+.metrics-overview-sections .details-wrapper {
+  padding: 20px;
 }
 
-/* Responsive adjustments */
+/* === METHODOLOGY EXPLANATION === */
+.methodology-explanation {
+  margin: 40px 0;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.methodology-explanation summary {
+  padding: 20px;
+  background: #f8f9fa;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.explanation-content {
+  padding: 30px;
+}
+
+.methodology-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.method-card {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.method-card h4 {
+  margin-top: 0;
+  color: #333;
+}
+
+/* === RESPONSIVE DESIGN === */
 @media (max-width: 768px) {
-  .metrics-link-block {
+  .taxonomy-timeline-section,
+  .news-metrics-header,
+  .metrics-overview-sections {
+    margin: 10px 0;
     padding: 20px;
-    margin: 20px 0;
-  }
-  
-  .metrics-link-title {
-    font-size: 1.5em;
-  }
-  
-  .metrics-link-description {
-    font-size: 1em;
-  }
-  
-  .metrics-link-button {
-    padding: 12px 24px;
-    font-size: 1em;
   }
   
   .chart-controls {
@@ -288,13 +215,6 @@ body.path-metrics .region-content {
   
   .control-group {
     min-width: auto;
-  }
-}
-
-/* === RESPONSIVE DESIGN === */
-@media (max-width: 768px) {
-  .methodology-grid {
-    grid-template-columns: 1fr;
   }
   
   .news-metrics-header h1 {
@@ -305,45 +225,19 @@ body.path-metrics .region-content {
     font-size: 1.1em;
   }
   
-  .metrics-subtitle {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .control-buttons {
-    flex-direction: column;
-  }
-  
-  .term-selector {
-    max-width: 100%;
-  }
-  
-  .chart-container {
-    padding: 15px;
+  .methodology-grid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 480px) {
-  .taxonomy-timeline-section {
-    padding: 15px;
-    margin: 15px 0;
-  }
-  
-  .chart-controls {
-    padding: 15px;
-  }
-  
-  .news-metrics-header {
-    padding: 20px;
-  }
-  
-  .news-metrics-header h1 {
-    font-size: 1.8em;
-  }
-  
   .btn {
     padding: 8px 16px;
     font-size: 0.9em;
+  }
+  
+  .control-buttons {
+    flex-direction: column;
   }
 }
 
@@ -358,10 +252,6 @@ body.path-metrics .region-content {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-}
-
-.chart-container:focus-within {
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
 /* === LOADING STATES === */
@@ -391,8 +281,7 @@ body.path-metrics .region-content {
 /* === PRINT STYLES === */
 @media print {
   .chart-controls,
-  .control-buttons,
-  #chart-debug-info {
+  .control-buttons {
     display: none;
   }
   

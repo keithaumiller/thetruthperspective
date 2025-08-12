@@ -23,18 +23,16 @@ function newsmotivationmetrics_help($route_name, RouteMatchInterface $route_matc
 function newsmotivationmetrics_preprocess_page(&$variables) {
   $route_name = \Drupal::routeMatch()->getRouteName();
   
-  // Apply hero layout to metrics page.
+  // Move metrics content to hero region for full-width display.
   if ($route_name === 'newsmotivationmetrics.public_dashboard') {
-    // Add hero layout classes to make content full-width.
-    $variables['attributes']['class'][] = 'layout--hero';
-    $variables['attributes']['class'][] = 'layout--full-width';
+    // Move main content from content region to hero region.
+    if (isset($variables['page']['content'])) {
+      $variables['page']['hero'] = $variables['page']['content'];
+      unset($variables['page']['content']);
+    }
     
-    // Remove sidebar regions for full-width display.
-    unset($variables['page']['sidebar_first']);
-    unset($variables['page']['sidebar_second']);
-    
-    // Add custom page class for specific styling.
-    $variables['attributes']['class'][] = 'page--metrics-dashboard';
+    // Add metrics page class for styling.
+    $variables['attributes']['class'][] = 'page--metrics-hero';
   }
 }
 
