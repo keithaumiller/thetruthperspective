@@ -1,0 +1,5 @@
+services:
+  news_extractor.commands:
+    class: \Drupal\news_extractor\Commands\NewsExtractorCommands
+    tags:
+      - { name: drush.command }
