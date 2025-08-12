@@ -1,14 +1,337 @@
 # The Truth Perspective - Drupal Modules
 
-**Version**: 1.1.1  
+**Version**: 1.2.0  
 **Last Updated**: August 12, 2025  
-**Drupal Version**: 9.x / 10.x / 11.x  
-**PHP Version**: 7.4+ / 8.1+  
+**Drupal Version**: 11.x  
+**PHP Version**: 8.3.6+  
 **Status**: Production Ready
 
 ## Overview
 
-This repository contains custom Drupal modules for The Truth Perspective website, providing AI-powered content processing, conversational interfaces, automated workflows, and comprehensive key metric analysis. All modules are production-tested and actively deployed.
+This repository contains custom Drupal modules for The Truth Perspective website, providing AI-powered content processing, news analysis, conversational interfaces, and comprehensive analytics. All modules are production-tested and actively deployed on the live platform.
+
+## 🚀 Live Production Modules
+
+### 1. 🗞️ News Extractor Module ✅ **FULLY OPERATIONAL**
+**Version**: 1.2.0 | **Location**: [`/news_extractor/`](./news_extractor/README.md)
+
+Comprehensive news content extraction, AI analysis, and automated source population system.
+
+**✅ Production Features**:
+- ✅ **Multi-Stage Source Population**: JSON data → URL mapping → Feed metadata
+- ✅ **Comprehensive Field Architecture**: 20+ specialized fields for complete article analysis
+- ✅ **AI Integration**: AWS Bedrock Claude 3.5 Sonnet for content analysis
+- ✅ **Automated Processing**: Cron-based background processing (50 articles/hour)
+- ✅ **Drush Commands**: Complete command suite for bulk operations and statistics
+- ✅ **Database Optimization**: Proper NULL handling and efficient queries
+
+**Core Capabilities**:
+- **Content Extraction**: Diffbot API integration for clean article parsing
+- **News Source Detection**: Multi-stage extraction from JSON, URLs, and feeds
+- **AI Analysis**: Motivation detection, bias analysis, sentiment scoring
+- **Field Management**: 135+ articles with comprehensive metadata
+- **Automation**: Real-time processing via Drupal hooks and cron
+
+**Technical Architecture**:
+- Service injection with dependency management
+- Batch processing for performance optimization
+- Comprehensive error handling and logging
+- Multi-source fallback mechanisms
+
+---
+
+### 2. 📊 News Motivation Metrics ✅ **DEPLOYED**
+**Version**: 1.1.0 | **Location**: [`/newsmotivationmetrics/`](./newsmotivationmetrics/README.md)
+
+Public analytics dashboard for news analysis metrics and visualizations.
+
+**✅ Production Features**:
+- Public analytics dashboard with Chart.js visualizations
+- Real-time metrics from processed article data
+- Mobile-responsive design for public accessibility
+- Professional data presentation for media and academic use
+
+---
+
+### 3. 💬 AI Conversation Module ✅ **DEPLOYED**
+**Version**: 1.0.0 | **Location**: [`/ai_conversation/`](./ai_conversation/README.md)
+
+Interactive conversational AI interface with persistent history and real-time responses.
+
+**✅ Production Features**:
+- Real-time chat at [/ai-conversation](https://thetruthperspective.org/ai-conversation)
+- AWS Bedrock integration with Claude 3.5 Sonnet
+- Persistent conversation history per authenticated user
+- Professional UI with typing indicators and AJAX communication
+
+---
+
+### 4. 🤖 Job Application Automation ⚠️ **DEVELOPMENT**
+**Version**: 1.0.0 | **Location**: [`/job_application_automation/`](./job_application_automation/README.md)
+
+Automated job search and application processing system (development framework).
+
+## 📈 Current Production Data
+
+### **Article Processing Statistics**
+- ✅ **Total Articles**: 135 articles in production database
+- ✅ **JSON Data Available**: 132 articles with Diffbot extraction data
+- ✅ **News Sources**: Multi-stage population system operational
+- ✅ **Field Coverage**: 20+ specialized fields per article
+- ✅ **Processing Rate**: 50 articles per hour via automated cron
+
+### **System Performance**
+- ✅ **Database Queries**: Optimized with proper NULL handling
+- ✅ **Batch Processing**: Memory-efficient processing in configurable batches
+- ✅ **Error Handling**: Comprehensive logging and graceful degradation
+- ✅ **API Integration**: Stable Diffbot and AWS Bedrock connectivity
+
+## 🔧 Drush Command Suite
+
+### News Extractor Commands
+
+#### Statistics and Monitoring
+```bash
+drush ne:stats                    # Comprehensive field statistics
+drush news-extractor:source-stats # Full alias
+```
+**Output**: Field existence, data availability, processing opportunities
+
+#### Bulk Processing
+```bash
+drush ne:pop-sources             # Process articles from JSON data (primary)
+drush ne:pop-url                 # Process articles from URLs (fallback)
+```
+**Options**: 
+- `--batch_size=N`: Custom batch size (default: 50/25)
+- `--all`: Process all articles in one run
+
+#### Testing and Debugging
+```bash
+drush ne:test https://example.com  # Test extraction for specific URL
+```
+**Output**: Detailed extraction results and source mapping
+
+## Technical Architecture
+
+### Field Architecture (Article Content Type)
+
+#### Core Content Fields
+- **field_json_scraped_article_data**: Raw Diffbot API responses (JSON)
+- **field_news_source**: Standardized news source names
+- **field_original_url**: Source URLs for content extraction
+- **field_publication_date**: Article timestamps with ISO 8601 format
+
+#### AI Analysis Fields
+- **field_ai_raw_response**: Complete Claude API responses
+- **field_motivation_analysis**: Political/economic motivation breakdown
+- **field_bias_analysis**: Comprehensive bias detection
+- **field_credibility_score**: Article quality assessments
+
+#### Processing Metrics
+- **field_article_sentiment_score**: Numerical sentiment analysis
+- **field_bias_rating**: Standardized bias classifications
+- **field_tags**: AI-generated content categorization
+
+📋 **Complete Technical Documentation**: [ARCHITECTURE.md](./ARCHITECTURE.md)
+
+### Data Processing Pipeline
+
+#### Stage 1: Content Import
+```
+RSS Feed → Feeds Module → Article Creation → Initial Population
+```
+
+#### Stage 2: Content Enhancement
+```
+Article URL → Diffbot API → JSON Response → field_json_scraped_article_data
+```
+
+#### Stage 3: News Source Population (Multi-Stage)
+```
+Priority 1: JSON Data → siteName Extraction → Cleaned Source Name
+Priority 2: URL Domain → Domain Mapping → Standardized Name  
+Priority 3: Feed Metadata → RSS Source → Cleaned Name
+```
+
+#### Stage 4: AI Analysis
+```
+Clean Content → AWS Bedrock Claude → Multiple Analysis Fields
+```
+
+### Production Infrastructure
+
+- **Platform**: Drupal 11 on Ubuntu 22.04 LTS
+- **PHP**: 8.3.6 with Zend OPcache
+- **Database**: MySQL with optimized indexing for large datasets
+- **AI Integration**: AWS Bedrock Claude 3.5 Sonnet
+- **Content Extraction**: Diffbot API for article parsing
+- **Production URL**: https://thetruthperspective.org
+
+## Quick Start
+
+### Installation
+```bash
+# Clone repository
+git clone https://github.com/keithaumiller/thetruthperspective.git
+
+# Navigate to Drupal modules directory
+cd /path/to/drupal/modules/custom/
+
+# Copy modules
+cp -r thetruthperspective/* .
+
+# Enable production modules
+drush en news_extractor newsmotivationmetrics ai_conversation
+```
+
+### Configuration
+
+#### AWS Bedrock Setup (Required)
+```bash
+# Required AWS services
+- AWS Bedrock with Anthropic Claude model access
+- IAM permissions for bedrock:InvokeModel
+- Supported regions: us-east-1, us-west-2, eu-west-1
+```
+
+#### Production Commands
+```bash
+# Check system status
+drush ne:stats
+
+# Process articles from JSON data
+drush ne:pop-sources
+
+# Process articles from URLs (fallback)
+drush ne:pop-url
+
+# Test specific URL extraction
+drush ne:test https://cnn.com/article
+```
+
+## News Source Population System
+
+### Processing Logic
+
+#### Primary Method: JSON Data Extraction
+- **Source**: Diffbot API responses in `field_json_scraped_article_data`
+- **Target**: Extract `objects[].siteName` values
+- **Processing**: Clean and standardize source names
+- **Coverage**: 132 articles with available JSON data
+
+#### Fallback Method: URL Domain Mapping
+- **Source**: URLs in `field_original_url`
+- **Mapping**: 15+ major news sources (CNN, Fox News, Reuters, etc.)
+- **Unknown Domains**: Convert to readable names (e.g., `news-site.com` → `News Site`)
+
+#### Source Name Standardization
+- **Cleaning**: Remove RSS suffixes, breaking news tags, pipe separators
+- **Standardization**: CNN Politics → CNN, FOX News → Fox News
+- **Validation**: Ensure consistent naming across sources
+
+### Database Query Optimization
+
+#### NULL vs Empty String Handling
+```php
+// Proper Drupal query pattern for empty fields
+->group()
+  ->condition('field_news_source', NULL, 'IS NULL')
+  ->condition('field_news_source', '', '=')
+->groupOperator('OR')
+```
+
+#### Batch Processing
+- **JSON Processing**: 50 articles per batch
+- **URL Processing**: 25 articles per batch
+- **Memory Management**: Prevent exhaustion with large datasets
+- **Progress Tracking**: Real-time updates during processing
+
+## Automated Processing
+
+### Drupal Hook Implementation
+- **feeds_process_alter**: Extract source during RSS import
+- **node_insert**: Process new articles immediately
+- **node_update**: Re-process when URLs change
+- **cron**: Background processing (50 articles/hour)
+
+### Performance Optimization
+- **Indexing**: Optimized database indexes for frequent queries
+- **Caching**: Strategic caching of expensive operations
+- **API Rate Limiting**: Respectful API usage patterns
+- **Error Recovery**: Graceful handling of failures
+
+## 📁 Module Documentation
+
+Each module contains detailed technical documentation:
+
+- **[News Extractor README](./news_extractor/README.md)** - Content extraction and AI analysis
+- **[News Motivation Metrics README](./newsmotivationmetrics/README.md)** - Analytics dashboard
+- **[AI Conversation README](./ai_conversation/README.md)** - Conversational AI interface
+- **[Job Application README](./job_application_automation/README.md)** - Automation framework
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete technical architecture
+
+## Version History
+
+### v1.2.0 (August 12, 2025) - **CURRENT PRODUCTION**
+- ✅ **News Source Population**: Complete multi-stage extraction system
+- ✅ **Database Optimization**: Proper NULL handling in all queries
+- ✅ **Drush Commands**: Comprehensive command suite with debugging
+- ✅ **Field Architecture**: 20+ specialized fields fully documented
+- ✅ **Processing Pipeline**: Multi-stage automation with cron integration
+- ✅ **Error Handling**: Robust error recovery and logging
+- ✅ **Performance**: Batch processing and memory optimization
+
+### v1.1.1 (August 2025)
+- ✅ Enhanced news source extraction from JSON scraped data
+- ✅ Multi-stage fallback system implementation
+- ✅ Comprehensive field documentation and architecture
+- ✅ Workspace stability improvements
+
+### v1.1.0 (August 2025)
+- ✅ Key Metric Management production deployment
+- ✅ AI Conversation system operational
+- ✅ Public dashboard and analytics features
+
+### v1.0.0 (July 2025)
+- Initial production release with core module architecture
+- AWS Bedrock integration and service injection
+- Template system and responsive design
+
+## Security and Performance
+
+### Security Measures
+- **Input Sanitization**: All user inputs properly validated
+- **XSS Prevention**: Output properly escaped in templates
+- **SQL Injection**: Entity queries prevent injection attacks
+- **Access Control**: Proper permissions for admin functions
+
+### Performance Features
+- **Batch Processing**: Memory-efficient bulk operations
+- **Database Optimization**: Indexed fields and efficient queries
+- **Caching Strategy**: Multi-layer caching with TTL management
+- **API Rate Limiting**: Respectful external API usage
+
+## Support & Maintenance
+
+- **Repository**: https://github.com/keithaumiller/thetruthperspective
+- **Live Site**: https://thetruthperspective.org
+- **Issues**: GitHub Issues for bug reports and feature requests
+- **Documentation**: Individual module READMEs with detailed setup
+- **Monitoring**: Comprehensive logging and error tracking
+
+## License
+
+GPL-2.0+ (Drupal compatible)
+
+---
+
+**✅ Production Status**: All core systems operational with 135+ articles processed  
+**🔧 Processing**: 50 articles/hour automated with multi-stage source population  
+**📊 Coverage**: 132 articles with JSON data, 20+ specialized fields per article  
+**🚀 Commands**: Complete Drush suite for statistics, processing, and testing  
+
+**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 12, 2025
 
 ## 🚀 Live Production Modules
 

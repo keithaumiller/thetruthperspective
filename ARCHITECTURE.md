@@ -1,229 +1,446 @@
-# The Truth Perspective - Technical Architecture Documentation
+# The Truth Perspective - Technical Architecture
 
-## Article Content Type Field Structure
+## System Overview
 
-### Core Content Fields
-| Field Label | Machine Name | Type | Purpose |
-|-------------|--------------|------|---------|
-| **Body** | `body` | Text (formatted, long, with summary) | Main article content extracted via Diffbot |
-| **Original URL** | `field_original_url` | Link | Source URL for content extraction |
-| **News Source** | `field_news_source` | Text (plain) | Standardized news publication name |
-| **Original Author** | `field_original_author` | Text (plain) | Article author from source |
-| **Publication Date** | `field_publication_date` | Date | When article was originally published |
+The Truth Perspective is an AI-powered news analysis platform built on Drupal 11, designed to analyze news articles for bias, motivation, and credibility. The system integrates multiple data sources and AI services to provide comprehensive analytics.
 
-### AI Analysis Fields  
-| Field Label | Machine Name | Type | Purpose |
-|-------------|--------------|------|---------|
-| **AI Summary** | `field_ai_summary` | Text (plain, long) | Legacy AI response field |
-| **ai_raw_response** | `field_ai_raw_response` | Text (plain, long) | Raw Claude API response |
-| **Motivation Analysis** | `field_motivation_analysis` | Text (formatted, long, with summary) | Structured motivation analysis |
-| **motivation_data** | `field_motivation_data` | Text (plain, long) | JSON structured motivation data |
+## Core Infrastructure
 
-### Media Assessment Fields
-| Field Label | Machine Name | Type | Purpose |
-|-------------|--------------|------|---------|
-| **Credibility Score** | `field_credibility_score` | Text (plain) | 0-100 credibility rating |
-| **Bias Rating** | `field_bias_rating` | Text (plain) | 0-100 bias rating (50=center) |
-| **Bias Analysis** | `field_bias_analysis` | Text (plain) | Explanation of bias assessment |
-| **Article Sentiment Score** | `field_article_sentiment_score` | List (text) | Sentiment analysis score |
-| **Fact Check Status** | `field_fact_check_status` | Text (plain) | Fact-checking status |
+- **Platform**: Drupal 11 on Ubuntu 22.04 LTS
+- **PHP**: 8.3.6 (CLI)
+- **Database**: MySQL with optimized indexing for large datasets
+- **AI Integration**: AWS Bedrock Claude 3.5 Sonnet
+- **Content Extraction**: Diffbot API for article parsing
+- **Production URL**: https://thetruthperspective.org
 
-### Technical Data Fields
-| Field Label | Machine Name | Type | Purpose |
-|-------------|--------------|------|---------|
-| **json scraped article data** | `field_json_scraped_article_data` | Text (plain, long) | Complete Diffbot API response |
-| **Article Hash** | `field_article_hash` | Text (plain, long) | Content deduplication hash |
-| **external_image_url** | `field_external_image_url` | Link | External article image URL |
+## Module Architecture
 
-### Content Management Fields
-| Field Label | Machine Name | Type | Purpose |
-|-------------|--------------|------|---------|
-| **Image** | `field_image` | Image | Local article image |
-| **Tags** | `field_tags` | Entity reference (Taxonomy: Tags) | Auto-generated content tags |
-| **Comments** | `comment` | Comments | User comments system |
-| **Feeds item** | `feeds_item` | Feed Reference | RSS feed source tracking |
+### Primary Modules
 
-## Data Flow Architecture
+#### 1. **news_extractor** (Core Content Processing)
+- **Purpose**: Content scraping, AI analysis, and data processing pipeline
+- **Key Features**:
+  - RSS feed import and processing
+  - Diffbot API integration for content extraction
+  - Multi-stage news source population system
+  - AWS Bedrock Claude integration for AI analysis
+  - Comprehensive Drush command suite for maintenance
+
+#### 2. **newsmotivationmetrics** (Public Analytics Dashboard)
+- **Purpose**: Public-facing analytics and metrics visualization
+- **Key Features**:
+  - Real-time analytics dashboard
+  - Chart.js visualizations
+  - Mobile-responsive design
+  - Public accessibility without authentication
+
+#### 3. **ai_conversation** (AI Chat Interface)
+- **Purpose**: Interactive AI conversation system
+- **Key Features**:
+  - Real-time chat interface
+  - Claude API integration
+  - Conversation history management
+
+## Field Architecture
+
+### Article Content Type Fields
+
+#### Core Content Fields
+- **field_json_scraped_article_data** (Long text)
+  - **Purpose**: Raw Diffbot API responses in JSON format
+  - **Structure**: Complete article extraction data including metadata
+  - **Usage**: Primary source for news source extraction and content analysis
+
+- **field_news_source** (Text - plain)
+  - **Purpose**: Standardized news source name
+  - **Population**: Multi-stage extraction (JSON → URL → Feed)
+  - **Examples**: "CNN", "Fox News", "Reuters", "BBC News"
+
+- **field_original_url** (Link)
+  - **Purpose**: Original article URL
+  - **Structure**: Drupal link field with .uri property
+  - **Usage**: Fallback source extraction and content verification
+
+#### AI Analysis Fields
+- **field_ai_raw_response** (Long text)
+  - **Purpose**: Complete raw AI responses from Claude
+  - **Format**: JSON structure with full analysis data
+
+- **field_ai_summary** (Long text)
+  - **Purpose**: AI-generated article summaries
+  - **Processing**: Extracted from Claude responses
+
+- **field_motivation_analysis** (Long text)
+  - **Purpose**: Detailed motivation analysis from AI
+  - **Content**: Political, economic, social motivation breakdown
+
+- **field_motivation_data** (Long text)
+  - **Purpose**: Structured motivation data for analytics
+  - **Format**: JSON data for dashboard consumption
+
+- **field_bias_analysis** (Long text)
+  - **Purpose**: Comprehensive bias analysis
+  - **Content**: Political bias detection and scoring
+
+- **field_bias_rating** (Text - plain)
+  - **Purpose**: Simplified bias rating
+  - **Values**: Standardized bias classifications
+
+#### Scoring and Metrics Fields
+- **field_article_sentiment_score** (Number - decimal)
+  - **Purpose**: Numerical sentiment analysis score
+  - **Range**: Typically -1.0 to 1.0
+
+- **field_credibility_score** (Number - decimal)
+  - **Purpose**: Article credibility assessment
+  - **Usage**: Quality and reliability metrics
+
+#### Metadata Fields
+- **field_publication_date** (Date)
+  - **Purpose**: Article publication timestamp
+  - **Format**: Y-m-d\TH:i:s (ISO 8601)
+  - **Priority**: Uses estimatedDate from Diffbot when available
+
+- **field_article_hash** (Text - plain)
+  - **Purpose**: Unique content identifier
+  - **Usage**: Duplicate detection and content tracking
+
+- **field_tags** (Entity reference - taxonomy)
+  - **Purpose**: Categorization and tagging
+  - **Population**: AI-generated and manual assignment
+
+- **field_original_author** (Text - plain)
+  - **Purpose**: Original article author
+  - **Source**: Extracted from Diffbot data
+
+#### Extended Analysis Fields
+- **field_external_image_url** (Link)
+  - **Purpose**: External image references
+  - **Usage**: Media asset management
+
+- **field_image** (Image)
+  - **Purpose**: Local image storage
+  - **Processing**: Downloaded and stored locally
+
+- **field_fact_check_status** (Text - plain)
+  - **Purpose**: Fact-checking status tracking
+  - **Values**: Standardized fact-check classifications
+
+## Data Processing Pipeline
 
 ### Stage 1: Content Import
 ```
-RSS Feed → feeds_item → field_original_url
+RSS Feed → Feeds Module → Article Creation → Initial Field Population
+```
+- **Process**: RSS feeds processed via Drupal Feeds module
+- **Hook**: `news_extractor_feeds_process_alter()`
+- **Actions**: Extract source from feed metadata, set initial field values
+
+### Stage 2: Content Enhancement (Diffbot)
+```
+Article URL → Diffbot API → JSON Response → field_json_scraped_article_data
+```
+- **Process**: Diffbot extracts clean article content and metadata
+- **Storage**: Complete response stored in `field_json_scraped_article_data`
+- **Format**: JSON with objects[], request[], and metadata
+
+### Stage 3: News Source Population (Multi-Stage)
+```
+Priority 1: JSON Data → siteName Extraction → Cleaned Source Name
+Priority 2: URL Domain → Domain Mapping → Standardized Name
+Priority 3: Feed Metadata → RSS Source → Cleaned Name
 ```
 
-### Stage 2: Content Extraction  
+#### Implementation Details:
+- **Primary Method**: Extract from Diffbot JSON `objects[].siteName`
+- **Fallback Method**: Extract from URL domain mapping
+- **Feed Method**: Extract from RSS feed metadata
+- **Cleaning**: Remove suffixes, standardize common sources
+
+### Stage 4: AI Analysis (Claude)
 ```
-field_original_url → Diffbot API → field_json_scraped_article_data
-                                → body (extracted content)
-                                → field_original_author
-                                → field_publication_date
+Clean Content → AWS Bedrock Claude → AI Analysis → Multiple Analysis Fields
 ```
+- **Service**: AWS Bedrock Claude 3.5 Sonnet
+- **Analysis Types**: Bias detection, motivation analysis, sentiment scoring
+- **Storage**: Raw responses in `field_ai_raw_response`, parsed data in specific fields
 
-### Stage 3: News Source Population
+### Stage 5: Analytics Aggregation
 ```
-Priority 1: field_json_scraped_article_data → objects[].siteName → field_news_source
-Priority 2: field_original_url → domain mapping → field_news_source  
-Priority 3: feeds_item metadata → field_news_source
+Individual Article Data → Batch Processing → Aggregated Statistics → Dashboard
 ```
+- **Frequency**: Real-time for new articles, batch for historical analysis
+- **Output**: Public analytics dashboard with comprehensive metrics
 
-### Stage 4: AI Analysis
-```
-body + title → Claude 3.5 Sonnet → field_ai_raw_response
-                                 → field_motivation_analysis (formatted)
-                                 → field_motivation_data (JSON)
-                                 → field_credibility_score
-                                 → field_bias_rating  
-                                 → field_bias_analysis
-                                 → field_article_sentiment_score
-```
+## News Source Population System
 
-### Stage 5: Content Tagging
-```
-field_motivation_data → entities/motivations extraction → field_tags (taxonomy terms)
-```
+### Query Logic and Database Handling
 
-## News Source Extraction Logic
+#### NULL vs Empty String Handling
+Drupal stores empty fields as `NULL` in the database, not empty strings. All queries use proper NULL handling:
 
-### Multi-Stage Fallback System:
-
-#### Stage 1: JSON Data Extraction (Primary)
-- **Source**: `field_json_scraped_article_data`
-- **Method**: Parse JSON → extract `objects[].siteName`
-- **Reliability**: Highest (direct from Diffbot)
-- **Processing**: Clean and standardize site name
-
-#### Stage 2: URL Domain Mapping (Fallback)
-- **Source**: `field_original_url`  
-- **Method**: Parse domain → map to standard names
-- **Coverage**: 30+ major news outlets
-- **Examples**: `cnn.com` → `CNN`, `foxnews.com` → `Fox News`
-
-#### Stage 3: Feed Metadata (During Import)
-- **Source**: `feeds_item` metadata
-- **Method**: Extract from RSS source/description fields
-- **Timing**: During feed processing via `hook_feeds_process_alter`
-
-#### Stage 4: Cron Maintenance
-- **Frequency**: Every cron run
-- **Batch Size**: 25 articles from JSON + 25 from URL
-- **Purpose**: Continuous background population
-
-## AI Analysis Architecture
-
-### Claude 3.5 Sonnet Integration
 ```php
-Input: article title + extracted body text
-Prompt: Social scientist perspective analysis
-Output: JSON structure with:
-  - entities: [{"name": "Entity", "motivations": ["Motivation1", "Motivation2"]}]
-  - key_metric: "Specific US Performance Metric"  
-  - analysis: "Detailed social scientist analysis"
-  - credibility_score: 0-100
-  - bias_rating: 0-100 (50=center)
-  - bias_analysis: "Explanation of bias assessment"
-  - sentiment_score: 0-100
+// Correct query pattern for finding empty news sources
+->group()
+  ->condition('field_news_source', NULL, 'IS NULL')
+  ->condition('field_news_source', '', '=')
+->groupOperator('OR')
 ```
 
-### Field Population Logic
+#### Processing Functions
+
+**Primary Function: JSON Data Extraction**
 ```php
-field_ai_raw_response → store complete Claude response
-field_motivation_analysis → formatted analysis for display  
-field_motivation_data → JSON structure for programmatic use
-field_credibility_score → extracted credibility rating
-field_bias_rating → extracted bias score
-field_bias_analysis → bias explanation
-field_article_sentiment_score → sentiment score
+_news_extractor_populate_news_source_from_json_data($batch_size = 50)
+```
+- **Query**: Articles with JSON data but NULL/empty news source
+- **Processing**: Extract siteName from Diffbot JSON, clean and standardize
+- **Batch Size**: 50 articles per run for performance
+
+**Fallback Function: URL Domain Extraction**
+```php
+_news_extractor_fix_missing_news_sources($batch_size = 25)
+```
+- **Query**: Articles with URLs but NULL/empty news source
+- **Processing**: Extract domain, map to known sources, generate names
+- **Batch Size**: 25 articles per run (lighter processing)
+
+### Domain Mapping System
+
+#### Known Domain Mappings
+```php
+$domain_map = [
+  'cnn.com' => 'CNN',
+  'foxnews.com' => 'Fox News',
+  'reuters.com' => 'Reuters',
+  'ap.org' => 'Associated Press',
+  'npr.org' => 'NPR',
+  'bbc.com' => 'BBC News',
+  // ... 15+ major news sources
+];
 ```
 
-## Processing Hooks
+#### Unknown Domain Processing
+- **Pattern**: Extract primary domain component
+- **Transform**: Convert hyphens/underscores to spaces, title case
+- **Example**: `unknown-news-site.com` → `Unknown News Site`
 
-### Content Import Hooks
-- `hook_feeds_process_alter()` - News source extraction during feed import
-- `hook_node_insert()` - Trigger Diffbot extraction and AI analysis
-- `hook_node_update()` - Re-process when URL changes
+### Source Name Standardization
 
-### Maintenance Hooks  
-- `hook_cron()` - Background news source population and content extraction
+#### Cleaning Patterns
+```php
+$patterns_to_remove = [
+  '/\s*-\s*RSS.*$/i',        // Remove RSS suffixes
+  '/\s*Breaking News.*$/i',   // Remove breaking news
+  '/\s*\|.*$/i',             // Remove pipe separators
+  '/\s*::.*$/i',             // Remove double colons
+];
+```
 
-## Drush Commands
+#### Standardization Rules
+```php
+$standardizations = [
+  '/^CNN Politics$/i' => 'CNN',
+  '/^FOX News.*$/i' => 'Fox News',
+  '/^The New York Times.*$/i' => 'New York Times',
+  // ... comprehensive standardization rules
+];
+```
 
-### News Source Population
+## Drush Command System
+
+### Available Commands
+
+#### Statistics and Monitoring
 ```bash
-drush ne:stats                    # Field population statistics
-drush ne:pop-sources             # Process JSON data (batch 100)  
-drush ne:pop-sources 50          # Custom batch size
-drush ne:pop-sources --all       # Process all articles
-drush ne:pop-url                 # URL extraction fallback
-drush ne:test https://cnn.com    # Test URL extraction
+drush ne:stats                    # Comprehensive field statistics
+drush news-extractor:source-stats # Alias for ne:stats
+```
+**Output**: Field existence, data availability, processing opportunities
+
+#### Bulk Processing Commands
+```bash
+drush ne:pop-sources             # Process from JSON data (primary)
+drush ne:pop-url                 # Process from URLs (fallback)
+```
+**Options**: 
+- `--batch_size=N`: Custom batch size (default: 50/25)
+- `--all`: Process all articles in one run
+
+#### Testing and Debugging
+```bash
+drush ne:test https://example.com  # Test extraction for specific URL
+drush news-extractor:test-extraction https://example.com  # Full alias
+```
+**Output**: Detailed extraction results and source mapping
+
+### Command Implementation
+
+#### Debug Features
+- **Field Existence Check**: Verify field availability on sample articles
+- **Data Preview**: Show actual field content and structure
+- **Processing Statistics**: Count articles at each processing stage
+- **Error Logging**: Comprehensive logging for troubleshooting
+
+#### Batch Processing Logic
+- **Memory Management**: Process articles in configurable batches
+- **Progress Tracking**: Real-time progress updates
+- **Error Handling**: Graceful failure recovery
+- **Performance Optimization**: Sleep delays between batches
+
+## Automated Processing Hooks
+
+### Drupal Hook Implementation
+
+#### Feed Processing Hook
+```php
+function news_extractor_feeds_process_alter(&$process, $item, $entity_interface)
+```
+- **Trigger**: During RSS feed import
+- **Action**: Extract source from feed metadata
+- **Priority**: First stage source population
+
+#### Node Creation Hook
+```php
+function news_extractor_node_insert($entity)
+```
+- **Trigger**: When new article created
+- **Actions**: 
+  1. Extract from JSON data if available
+  2. Fallback to URL domain extraction
+  3. Set initial news source
+
+#### Node Update Hook
+```php
+function news_extractor_node_update($entity)
+```
+- **Trigger**: When article updated
+- **Actions**:
+  1. Re-extract if URL changed
+  2. Update source if JSON data added
+  3. Maintain source consistency
+
+#### Cron Processing Hook
+```php
+function news_extractor_cron()
+```
+- **Frequency**: Hourly execution
+- **Processing**: 
+  - 25 articles from JSON data
+  - 25 articles from URL fallback
+  - Continuous background population
+
+## Performance Considerations
+
+### Database Optimization
+- **Indexing**: Optimized indexes on frequently queried fields
+- **Batch Processing**: Prevent memory exhaustion with large datasets
+- **Query Optimization**: Efficient entity queries with proper conditions
+
+### API Rate Limiting
+- **Diffbot**: Managed through existing integration
+- **AWS Bedrock**: Built-in rate limiting and retry logic
+- **Batch Delays**: Sleep intervals between processing batches
+
+### Caching Strategy
+- **Field Data**: Cache expensive field queries
+- **Statistics**: Cache aggregated statistics for dashboard
+- **API Responses**: Store complete responses for offline analysis
+
+## Error Handling and Logging
+
+### Logging Implementation
+```php
+\Drupal::logger('news_extractor')->info('Processing completed', [
+  '@count' => $updated_count,
+  '@batch' => $batch_size,
+]);
 ```
 
-## Database Optimization
+### Log Categories
+- **info**: Successful operations and processing milestones
+- **warning**: Non-critical issues and fallback usage
+- **error**: Processing failures and system errors
 
-### Indexes Required
-- `field_news_source` - For source-based queries
-- `field_json_scraped_article_data` - For processing discovery
-- `field_original_url` - For URL-based processing
-- `field_publication_date` - For temporal analysis
+### Error Recovery
+- **Graceful Degradation**: Continue processing on individual failures
+- **Retry Logic**: Automatic retry for transient failures
+- **Fallback Methods**: Multiple extraction methods ensure coverage
 
-### Query Patterns
-- Batch processing: 25-100 articles per operation
-- OR conditions for multi-field discovery
-- Range limits for memory management
-- Access checks disabled for administrative operations
+## Security and Access Control
 
-## Error Handling
+### Public Dashboard
+- **Access**: No authentication required
+- **Data**: Aggregated statistics only
+- **Privacy**: No personal data tracking
 
-### JSON Processing
-- Validation of JSON structure before parsing
-- Graceful handling of malformed data
-- Logging of parsing errors with article IDs
+### Admin Functions
+- **Permissions**: `access news_extractor admin` required
+- **Drush Commands**: Server access required
+- **Field Management**: Admin role required
 
-### Field Access
-- `hasField()` checks before field operations
-- Graceful degradation when fields missing
-- Comprehensive error logging
+### Data Protection
+- **Input Sanitization**: All user inputs properly sanitized
+- **XSS Prevention**: Output properly escaped
+- **SQL Injection**: Entity queries prevent injection
 
-### API Integration
-- Retry logic for Diffbot/Claude failures
-- Rate limiting compliance
-- Fallback processing for API unavailability
+## Deployment and Maintenance
 
-## Caching Strategy
+### Production Environment
+- **Server**: Ubuntu 22.04 LTS on AWS
+- **PHP**: 8.3.6 with Zend OPcache
+- **Database**: MySQL with InnoDB storage engine
+- **Caching**: Redis for session and cache storage
 
-### Content Caching
-- Diffbot responses stored in `field_json_scraped_article_data`
-- AI responses cached in multiple fields for different use cases
-- Deduplication via `field_article_hash`
+### Maintenance Procedures
+1. **Regular Monitoring**: Check `drush ne:stats` for processing health
+2. **Batch Processing**: Run manual processing during low-traffic periods
+3. **Log Review**: Monitor Drupal logs for processing errors
+4. **Performance Tuning**: Adjust batch sizes based on server performance
 
-### Processing Caching
-- Batch discovery queries cached per cron run
-- Domain mapping cached in memory during processing
-- Taxonomy term creation cached to avoid duplicates
+### Troubleshooting
+1. **Field Verification**: Use debug output to verify field structure
+2. **Query Testing**: Test individual queries for data availability
+3. **Processing Validation**: Use test commands for specific URLs
+4. **Error Analysis**: Review logs for systematic issues
 
-## Security Considerations
+## Integration Points
 
-### Data Access
-- Admin-only access to raw JSON and AI response fields
-- Public access to formatted analysis and scores
-- Input sanitization for all external data
+### External APIs
+- **Diffbot**: Content extraction and article parsing
+- **AWS Bedrock**: AI analysis and content processing
+- **RSS Feeds**: Content discovery and import
 
-### API Security
-- Secure credential management for Diffbot/Claude
-- Rate limiting to prevent abuse
-- Error handling to prevent information disclosure
+### Internal Systems
+- **Drupal Core**: Entity system, user management, permissions
+- **Feeds Module**: RSS processing and content import
+- **Views**: Data display and filtering
+- **Taxonomy**: Content categorization and tagging
 
-## Performance Optimization
+## Future Enhancements
 
-### Batch Processing
-- Configurable batch sizes for different server capabilities
-- Memory management with sleep intervals
-- Progress tracking for large operations
+### Planned Features
+- **Enhanced AI Analysis**: Additional analysis dimensions
+- **Real-time Processing**: Webhook-based immediate processing
+- **Advanced Analytics**: More sophisticated statistical analysis
+- **API Endpoints**: RESTful API for external integrations
 
-### Query Optimization
-- Efficient field discovery queries
-- Proper use of entity query conditions
-- Range limiting for memory management
+### Scalability Considerations
+- **Microservices**: Potential extraction to dedicated services
+- **Queue Processing**: Background job processing for heavy operations
+- **CDN Integration**: Static asset delivery optimization
+- **Database Sharding**: Horizontal scaling for large datasets
 
-### Content Processing
-- Asynchronous AI processing where possible
-- Incremental updates vs full reprocessing
-- Smart caching of expensive operations
+## Development Guidelines
+
+### Code Standards
+- **Drupal Standards**: Follow Drupal 11 coding standards
+- **Documentation**: Comprehensive inline documentation
+- **Error Handling**: Proper exception handling and logging
+- **Testing**: Unit tests for critical functions
+
+### Best Practices
+- **Batch Processing**: Always use batch processing for bulk operations
+- **Field Validation**: Verify field existence before access
+- **NULL Handling**: Proper NULL vs empty string handling in queries
+- **Performance**: Monitor and optimize query performance
