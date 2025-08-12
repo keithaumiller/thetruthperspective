@@ -11,7 +11,7 @@ use Drupal\node\Entity\Node;
 class NewsExtractorCommands extends DrushCommands {
 
   /**
-   * Populate news source field for existing articles from JSON data.
+   * Populate news source field for existing articles from site name or JSON data (hybrid approach).
    *
    * @param int $batch_size
    *   Number of articles to process per batch. Defaults to 100.
@@ -23,9 +23,9 @@ class NewsExtractorCommands extends DrushCommands {
    * @option batch_size Number of articles to process per batch
    * @option all Process all articles regardless of batch size
    * @usage news-extractor:populate-sources
-   *   Populate news sources from JSON data in batches of 100
+   *   Populate news sources from site name/JSON data in batches of 100
    * @usage news-extractor:populate-sources 50
-   *   Populate news sources from JSON data in batches of 50
+   *   Populate news sources from site name/JSON data in batches of 50
    * @usage news-extractor:populate-sources --all
    *   Process all articles in one run
    */
@@ -40,12 +40,17 @@ class NewsExtractorCommands extends DrushCommands {
 
     $this->output()->writeln("Processing articles in batches of {$batch_size}...");
     
-    // Get total count first
+    // Get total count for hybrid approach (site name OR JSON data)
     $total_query = \Drupal::entityQuery('node')
       ->condition('type', 'article')
-      ->condition('field_json_scraped_article_data', '', '<>')
       ->condition('field_news_source', '', '=')
       ->accessCheck(FALSE);
+    
+    $or_group = $total_query->orConditionGroup()
+      ->condition('field_site_name', '', '<>')
+      ->condition('field_json_scraped_article_data', '', '<>');
+    
+    $total_query->condition($or_group);
     $total_count = $total_query->count()->execute();
     
     if ($total_count == 0) {
@@ -53,7 +58,7 @@ class NewsExtractorCommands extends DrushCommands {
       return;
     }
     
-    $this->output()->writeln("Found {$total_count} articles with JSON data but missing news source.");
+    $this->output()->writeln("Found {$total_count} articles with site name/JSON data but missing news source.");
     
     $total_updated = 0;
     $batch_num = 1;
@@ -189,20 +194,26 @@ class NewsExtractorCommands extends DrushCommands {
     // Articles without news source
     $without_source = $total_articles - $with_source;
     
-    // Articles with JSON data but no source
-    $json_no_source = \Drupal::entityQuery('node')
+    // Articles with site name or JSON data but no news source
+    $site_or_json_no_source = \Drupal::entityQuery('node')
       ->condition('type', 'article')
-      ->condition('field_json_scraped_article_data', '', '<>')
       ->condition('field_news_source', '', '=')
-      ->accessCheck(FALSE)
-      ->count()
-      ->execute();
+      ->accessCheck(FALSE);
     
-    // Articles with URL but no source
-    $url_no_source = \Drupal::entityQuery('node')
+    $or_group = $site_or_json_no_source->orConditionGroup()
+      ->condition('field_site_name', '', '<>')
+      ->condition('field_json_scraped_article_data', '', '<>');
+    
+    $site_or_json_no_source->condition($or_group);
+    $site_or_json_count = $site_or_json_no_source->count()->execute();
+    
+    // Articles with URL but no source (for URL-only fallback)
+    $url_only_no_source = \Drupal::entityQuery('node')
       ->condition('type', 'article')
       ->condition('field_original_url.uri', '', '<>')
       ->condition('field_news_source', '', '=')
+      ->condition('field_site_name', '', '=')
+      ->condition('field_json_scraped_article_data', '', '=')
       ->accessCheck(FALSE)
       ->count()
       ->execute();
@@ -214,18 +225,18 @@ class NewsExtractorCommands extends DrushCommands {
     $this->output()->writeln("❌ Missing News Source: {$without_source}");
     $this->output()->writeln("");
     $this->output()->writeln("🔧 Processing Opportunities:");
-    $this->output()->writeln("📄 Articles with JSON data (ready for processing): {$json_no_source}");
-    $this->output()->writeln("🔗 Articles with URLs only: {$url_no_source}");
+    $this->output()->writeln("📄 Articles with site name/JSON data (hybrid approach): {$site_or_json_count}");
+    $this->output()->writeln("🔗 Articles with URLs only (fallback method): {$url_only_no_source}");
     $this->output()->writeln("");
     
-    if ($json_no_source > 0) {
+    if ($site_or_json_count > 0) {
       $this->output()->writeln("💡 Run: drush ne:pop-sources");
-      $this->output()->writeln("   To populate from JSON data (most reliable)");
+      $this->output()->writeln("   To populate using hybrid approach (site name + JSON fallback)");
     }
     
-    if ($url_no_source > 0) {
+    if ($url_only_no_source > 0) {
       $this->output()->writeln("💡 Run: drush ne:pop-url");
-      $this->output()->writeln("   To populate from URLs (fallback method)");
+      $this->output()->writeln("   To populate from URLs only (last resort method)");
     }
   }
 

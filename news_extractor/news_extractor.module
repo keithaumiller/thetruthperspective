@@ -827,9 +827,28 @@ function _news_extractor_extract_news_source_from_url($url) {
 }
 
 /**
- * STAGE 3: Extract news source from field_json_scraped_article_data.
+ * STAGE 3: Extract news source from field_site_name or field_json_scraped_article_data (hybrid approach).
  */
 function _news_extractor_extract_news_source_from_json_data(EntityInterface $entity) {
+  // PRIORITY 1: Try field_site_name first (most efficient)
+  if ($entity->hasField('field_site_name') && !$entity->get('field_site_name')->isEmpty()) {
+    $site_name = trim($entity->get('field_site_name')->value);
+    
+    if (!empty($site_name)) {
+      // Clean and standardize the site name
+      $cleaned_source = _news_extractor_clean_news_source($site_name);
+      
+      \Drupal::logger('news_extractor')->info('Extracted news source from field_site_name: @source (original: @original) for article @id', [
+        '@source' => $cleaned_source,
+        '@original' => $site_name,
+        '@id' => $entity->id(),
+      ]);
+      
+      return $cleaned_source;
+    }
+  }
+  
+  // PRIORITY 2: Fallback to JSON parsing from field_json_scraped_article_data
   if (!$entity->hasField('field_json_scraped_article_data') || $entity->get('field_json_scraped_article_data')->isEmpty()) {
     return NULL;
   }
@@ -856,7 +875,7 @@ function _news_extractor_extract_news_source_from_json_data(EntityInterface $ent
           // Clean and standardize the site name
           $cleaned_source = _news_extractor_clean_news_source($site_name);
           
-          \Drupal::logger('news_extractor')->info('Extracted news source from JSON data: @source (original: @original) for article @id', [
+          \Drupal::logger('news_extractor')->info('Extracted news source from JSON fallback: @source (original: @original) for article @id', [
             '@source' => $cleaned_source,
             '@original' => $site_name,
             '@id' => $entity->id(),
@@ -867,12 +886,12 @@ function _news_extractor_extract_news_source_from_json_data(EntityInterface $ent
       }
     }
     
-    \Drupal::logger('news_extractor')->warning('No siteName found in JSON data for article @id', [
+    \Drupal::logger('news_extractor')->warning('No siteName found in JSON data fallback for article @id', [
       '@id' => $entity->id(),
     ]);
     
   } catch (\Exception $e) {
-    \Drupal::logger('news_extractor')->error('Error parsing JSON data for article @id: @message', [
+    \Drupal::logger('news_extractor')->error('Error parsing JSON data fallback for article @id: @message', [
       '@id' => $entity->id(),
       '@message' => $e->getMessage(),
     ]);
@@ -942,16 +961,22 @@ function _news_extractor_clean_news_source($source) {
 }
 
 /**
- * Populate news source from existing JSON scraped data for articles.
+ * Populate news source from existing site name or JSON scraped data for articles (hybrid approach).
  */
 function _news_extractor_populate_news_source_from_json_data($batch_size = 50) {
-  // Find articles with JSON data but missing news source
+  // Find articles with site name field OR JSON data but missing news source
   $query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
-    ->condition('field_json_scraped_article_data', '', '<>')
     ->condition('field_news_source', '', '=')
     ->range(0, $batch_size)
     ->accessCheck(FALSE);
+
+  // Add OR condition group for field_site_name OR field_json_scraped_article_data
+  $or_group = $query->orConditionGroup()
+    ->condition('field_site_name', '', '<>')
+    ->condition('field_json_scraped_article_data', '', '<>');
+  
+  $query->condition($or_group);
 
   $nids = $query->execute();
 
@@ -970,7 +995,7 @@ function _news_extractor_populate_news_source_from_json_data($batch_size = 50) {
       $node->save();
       $updated_count++;
       
-      \Drupal::logger('news_extractor')->info('Populated news source from JSON data for article @id (@title): @source', [
+      \Drupal::logger('news_extractor')->info('Populated news source via hybrid approach for article @id (@title): @source', [
         '@id' => $node->id(),
         '@title' => $node->getTitle(),
         '@source' => $news_source,
