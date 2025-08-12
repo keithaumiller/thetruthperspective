@@ -14,19 +14,6 @@
 <div class="donation-support-block">
   <div class="donation-content">
     
-    <div class="donation-header">
-      <h3 class="donation-title">
-        <span class="donation-icon">💙</span>
-        Support The Truth Perspective
-      </h3>
-    </div>
-
-    {% if donation_message %}
-      <div class="donation-message">
-        <p>{{ donation_message }}</p>
-      </div>
-    {% endif %}
-
     {% if show_venmo_link and venmo_username %}
       <div class="donation-action">
         <div class="venmo-section">
@@ -44,18 +31,6 @@
         </div>
       </div>
     {% endif %}
-
-    {% if custom_message %}
-      <div class="donation-custom-message">
-        <p>{{ custom_message }}</p>
-      </div>
-    {% endif %}
-
-    <div class="donation-footer">
-      <p class="gratitude-message">
-        <em>Thank you for supporting independent journalism and transparency in media analysis.</em>
-      </p>
-    </div>
 
   </div>
 </div>
