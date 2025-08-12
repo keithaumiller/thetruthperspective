@@ -40,6 +40,45 @@ class NewsExtractorCommands extends DrushCommands {
 
     $this->output()->writeln("Processing articles in batches of {$batch_size}...");
     
+    // Debug: Check what fields exist and what data is available
+    $this->output()->writeln("🔍 <info>Debugging available data...</info>");
+    
+    // Check total articles
+    $all_articles = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    $this->output()->writeln("📰 Total articles: {$all_articles}");
+    
+    // Check articles with JSON data (any content)
+    $with_json = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_json_scraped_article_data', '', '<>')
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    $this->output()->writeln("📄 Articles with JSON data: {$with_json}");
+    
+    // Check articles with empty news source
+    $empty_source = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_news_source', '', '=')
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    $this->output()->writeln("❌ Articles with empty news source: {$empty_source}");
+    
+    // Check articles with both JSON and empty source
+    $json_and_empty = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_json_scraped_article_data', '', '<>')
+      ->condition('field_news_source', '', '=')
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    $this->output()->writeln("🎯 Articles with JSON but no source: {$json_and_empty}");
+    
     // Get total count for JSON data processing
     $total_query = \Drupal::entityQuery('node')
       ->condition('type', 'article')
@@ -171,6 +210,59 @@ class NewsExtractorCommands extends DrushCommands {
   public function showSourceStats() {
     $this->output()->writeln('📊 News Source Field Statistics:');
     $this->output()->writeln('');
+    
+    // First, let's debug what fields actually exist
+    $this->output()->writeln("🔍 <info>Debugging field existence...</info>");
+    
+    // Get a sample article to check field structure
+    $sample_query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->range(0, 1)
+      ->accessCheck(FALSE);
+    $sample_ids = $sample_query->execute();
+    
+    if (!empty($sample_ids)) {
+      $sample_id = reset($sample_ids);
+      $sample_node = \Drupal::entityTypeManager()->getStorage('node')->load($sample_id);
+      
+      $this->output()->writeln("📋 <info>Sample article ID: {$sample_id}</info>");
+      
+      // Check which fields exist
+      $important_fields = [
+        'field_news_source',
+        'field_json_scraped_article_data', 
+        'field_url',
+        'field_site_name'
+      ];
+      
+      foreach ($important_fields as $field_name) {
+        if ($sample_node->hasField($field_name)) {
+          $value = $sample_node->get($field_name)->value;
+          $status = !empty($value) ? "✅ HAS DATA" : "⚪ EMPTY";
+          $this->output()->writeln("   {$field_name}: {$status}");
+          if (!empty($value) && strlen($value) > 100) {
+            $this->output()->writeln("      Preview: " . substr($value, 0, 100) . "...");
+          } elseif (!empty($value)) {
+            $this->output()->writeln("      Value: {$value}");
+          }
+        } else {
+          $this->output()->writeln("   {$field_name}: ❌ FIELD NOT FOUND");
+        }
+      }
+      
+      // Also check all fields that start with 'field_'
+      $this->output()->writeln("📝 <info>All available fields:</info>");
+      $field_definitions = $sample_node->getFieldDefinitions();
+      foreach ($field_definitions as $field_name => $definition) {
+        if (strpos($field_name, 'field_') === 0) {
+          $value = $sample_node->get($field_name)->value;
+          $status = !empty($value) ? "✅" : "⚪";
+          $this->output()->writeln("   {$field_name}: {$status}");
+        }
+      }
+    }
+    
+    $this->output()->writeln("");
     
     // Total articles
     $total_articles = \Drupal::entityQuery('node')
