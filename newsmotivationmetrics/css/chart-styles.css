@@ -494,3 +494,57 @@
   color: #003d66;
   text-decoration: none;
 }
+
+/* === FULL WIDTH METRICS PAGE === */
+body.path-metrics .layout-container,
+body.path-metrics .layout-content,
+body.path-metrics .region-content,
+body.path-metrics .grid-full {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+body.path-metrics .layout--onecol {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Override Olivero's content width constraints */
+body.path-metrics .layout--pass--content-medium,
+body.path-metrics .layout--pass--content-narrow {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Ensure charts and content sections use full width */
+body.path-metrics .taxonomy-timeline-section {
+  max-width: none !important;
+  width: calc(100% - 40px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+body.path-metrics .news-metrics-header {
+  max-width: none !important;
+  width: calc(100% - 40px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Responsive adjustments for full width */
+@media (max-width: 768px) {
+  body.path-metrics .layout-container,
+  body.path-metrics .layout-content,
+  body.path-metrics .region-content {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  
+  body.path-metrics .taxonomy-timeline-section,
+  body.path-metrics .news-metrics-header {
+    width: calc(100% - 20px) !important;
+  }
+}
