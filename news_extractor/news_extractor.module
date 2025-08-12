@@ -972,7 +972,10 @@ function _news_extractor_populate_news_source_from_json_data($batch_size = 50) {
   $query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
     ->condition('field_json_scraped_article_data', '', '<>')
-    ->condition('field_news_source', '', '=')
+    ->group()
+      ->condition('field_news_source', NULL, 'IS NULL')
+      ->condition('field_news_source', '', '=')
+    ->groupOperator('OR')
     ->range(0, $batch_size)
     ->accessCheck(FALSE);
 
@@ -1024,7 +1027,10 @@ function _news_extractor_fix_missing_news_sources() {
   $query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
     ->condition('field_original_url.uri', '', '<>')
-    ->condition('field_news_source', '', '=')
+    ->group()
+      ->condition('field_news_source', NULL, 'IS NULL')
+      ->condition('field_news_source', '', '=')
+    ->groupOperator('OR')
     ->range(0, 25)
     ->accessCheck(FALSE);
 

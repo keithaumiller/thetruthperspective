@@ -60,30 +60,39 @@ class NewsExtractorCommands extends DrushCommands {
       ->execute();
     $this->output()->writeln("📄 Articles with JSON data: {$with_json}");
     
-    // Check articles with empty news source
+    // Check articles with empty news source (using proper NULL check)
     $empty_source = \Drupal::entityQuery('node')
       ->condition('type', 'article')
-      ->condition('field_news_source', '', '=')
+      ->group()
+        ->condition('field_news_source', NULL, 'IS NULL')
+        ->condition('field_news_source', '', '=')
+      ->groupOperator('OR')
       ->accessCheck(FALSE)
       ->count()
       ->execute();
     $this->output()->writeln("❌ Articles with empty news source: {$empty_source}");
     
-    // Check articles with both JSON and empty source
+    // Check articles with both JSON and empty source (using proper NULL check)
     $json_and_empty = \Drupal::entityQuery('node')
       ->condition('type', 'article')
       ->condition('field_json_scraped_article_data', '', '<>')
-      ->condition('field_news_source', '', '=')
+      ->group()
+        ->condition('field_news_source', NULL, 'IS NULL')
+        ->condition('field_news_source', '', '=')
+      ->groupOperator('OR')
       ->accessCheck(FALSE)
       ->count()
       ->execute();
     $this->output()->writeln("🎯 Articles with JSON but no source: {$json_and_empty}");
     
-    // Get total count for JSON data processing
+    // Get total count for JSON data processing (using proper NULL check)
     $total_query = \Drupal::entityQuery('node')
       ->condition('type', 'article')
       ->condition('field_json_scraped_article_data', '', '<>')
-      ->condition('field_news_source', '', '=')
+      ->group()
+        ->condition('field_news_source', NULL, 'IS NULL')
+        ->condition('field_news_source', '', '=')
+      ->groupOperator('OR')
       ->accessCheck(FALSE);
     
     $total_count = $total_query->count()->execute();
@@ -139,7 +148,10 @@ class NewsExtractorCommands extends DrushCommands {
     $total_query = \Drupal::entityQuery('node')
       ->condition('type', 'article')
       ->condition('field_original_url.uri', '', '<>')
-      ->condition('field_news_source', '', '=')
+      ->group()
+        ->condition('field_news_source', NULL, 'IS NULL')
+        ->condition('field_news_source', '', '=')
+      ->groupOperator('OR')
       ->accessCheck(FALSE);
     $total_count = $total_query->count()->execute();
     
@@ -160,7 +172,10 @@ class NewsExtractorCommands extends DrushCommands {
       $query = \Drupal::entityQuery('node')
         ->condition('type', 'article')
         ->condition('field_original_url.uri', '', '<>')
-        ->condition('field_news_source', '', '=')
+        ->group()
+          ->condition('field_news_source', NULL, 'IS NULL')
+          ->condition('field_news_source', '', '=')
+        ->groupOperator('OR')
         ->range(0, $batch_size)
         ->accessCheck(FALSE);
 
@@ -274,7 +289,8 @@ class NewsExtractorCommands extends DrushCommands {
     // Articles with news source
     $with_source = \Drupal::entityQuery('node')
       ->condition('type', 'article')
-      ->condition('field_news_source', '', '<>')
+      ->condition('field_news_source', NULL, 'IS NOT NULL')
+      ->condition('field_news_source', '', '!=')
       ->accessCheck(FALSE)
       ->count()
       ->execute();
@@ -282,11 +298,14 @@ class NewsExtractorCommands extends DrushCommands {
     // Articles without news source
     $without_source = $total_articles - $with_source;
     
-    // Articles with JSON data but no source
+    // Articles with JSON data but no source (using proper NULL check)
     $json_no_source = \Drupal::entityQuery('node')
       ->condition('type', 'article')
       ->condition('field_json_scraped_article_data', '', '<>')
-      ->condition('field_news_source', '', '=')
+      ->group()
+        ->condition('field_news_source', NULL, 'IS NULL')
+        ->condition('field_news_source', '', '=')
+      ->groupOperator('OR')
       ->accessCheck(FALSE)
       ->count()
       ->execute();
@@ -295,7 +314,10 @@ class NewsExtractorCommands extends DrushCommands {
     $url_only_no_source = \Drupal::entityQuery('node')
       ->condition('type', 'article')
       ->condition('field_original_url.uri', '', '<>')
-      ->condition('field_news_source', '', '=')
+      ->group()
+        ->condition('field_news_source', NULL, 'IS NULL')
+        ->condition('field_news_source', '', '=')
+      ->groupOperator('OR')
       ->accessCheck(FALSE)
       ->count()
       ->execute();
