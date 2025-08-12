@@ -383,4 +383,166 @@ class NewsExtractorCommands extends DrushCommands {
     }
   }
 
+  /**
+   * Clean up articles with invalid JSON and attempt URL fallback.
+   *
+   * @command news-extractor:fix-invalid-json
+   * @aliases ne:fix-json
+   * @usage drush ne:fix-json
+   *   Attempt to fix articles with invalid JSON by using URL extraction
+   */
+  public function fixInvalidJson() {
+    $this->output()->writeln("🔧 Fixing articles with invalid JSON data...");
+    
+    // Find articles with JSON data but still missing news source (likely invalid JSON)
+    $or_group = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_news_source', NULL, 'IS NULL')
+      ->condition('field_news_source', '', '=');
+    
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_json_scraped_article_data', '', '<>')
+      ->condition($or_group)
+      ->accessCheck(FALSE);
+    
+    $nids = $query->execute();
+    
+    if (empty($nids)) {
+      $this->output()->writeln("✅ No articles with invalid JSON found.");
+      return;
+    }
+    
+    $this->output()->writeln("Found " . count($nids) . " articles with JSON data but no source (likely invalid JSON)");
+    
+    $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($nids);
+    $fixed_count = 0;
+    
+    foreach ($nodes as $node) {
+      // Try URL extraction as fallback
+      if ($node->hasField('field_original_url') && !$node->get('field_original_url')->isEmpty()) {
+        $url = $node->get('field_original_url')->uri;
+        $extracted_source = _news_extractor_extract_news_source_from_url($url);
+        
+        if (!empty($extracted_source)) {
+          $node->set('field_news_source', $extracted_source);
+          $node->save();
+          $fixed_count++;
+          
+          $this->output()->writeln("  ✅ Fixed article {$node->id()} using URL: {$extracted_source}");
+          
+          \Drupal::logger('news_extractor')->info('Fixed invalid JSON article @id using URL extraction: @source', [
+            '@id' => $node->id(),
+            '@source' => $extracted_source,
+          ]);
+        } else {
+          $this->output()->writeln("  ❌ Could not extract source for article {$node->id()}");
+        }
+      } else {
+        $this->output()->writeln("  ❌ No URL available for article {$node->id()}");
+      }
+    }
+    
+    $this->output()->writeln("🎉 Fixed {$fixed_count} articles using URL extraction fallback.");
+  }
+
+  /**
+   * Show processing summary and recommendations.
+   *
+   * @command news-extractor:summary
+   * @aliases ne:summary
+   * @usage drush ne:summary
+   *   Show processing status and next steps
+   */
+  public function showSummary() {
+    $this->output()->writeln("📋 News Extractor Processing Summary");
+    $this->output()->writeln("====================================");
+    
+    // Get total articles
+    $total_articles = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    
+    // Articles with news source
+    $with_source = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_news_source', '', '<>')
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    
+    // Articles with JSON data
+    $with_json = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_json_scraped_article_data', '', '<>')
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    
+    // Articles missing source but have JSON (potentially invalid JSON)
+    $or_group = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_news_source', NULL, 'IS NULL')
+      ->condition('field_news_source', '', '=');
+    
+    $json_no_source = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_json_scraped_article_data', '', '<>')
+      ->condition($or_group)
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    
+    // Articles with URLs but no source
+    $or_group2 = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_news_source', NULL, 'IS NULL')
+      ->condition('field_news_source', '', '=');
+    
+    $url_no_source = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_original_url.uri', '', '<>')
+      ->condition($or_group2)
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    
+    $missing_source = $total_articles - $with_source;
+    $percentage = $total_articles > 0 ? round(($with_source / $total_articles) * 100, 1) : 0;
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("📊 Overall Statistics:");
+    $this->output()->writeln("  📰 Total Articles: {$total_articles}");
+    $this->output()->writeln("  ✅ With News Source: {$with_source} ({$percentage}%)");
+    $this->output()->writeln("  ❌ Missing News Source: {$missing_source}");
+    $this->output()->writeln("  📄 With JSON Data: {$with_json}");
+    $this->output()->writeln("");
+    
+    $this->output()->writeln("🔧 Processing Status:");
+    $this->output()->writeln("  🎯 JSON but no source: {$json_no_source} (likely invalid JSON)");
+    $this->output()->writeln("  🔗 URL but no source: {$url_no_source} (fallback available)");
+    $this->output()->writeln("");
+    
+    if ($json_no_source > 0) {
+      $this->output()->writeln("💡 Recommendations:");
+      $this->output()->writeln("  🔧 Run: drush ne:fix-json");
+      $this->output()->writeln("     To fix articles with invalid JSON using URL extraction");
+      $this->output()->writeln("");
+    }
+    
+    if ($url_no_source > 0 && $json_no_source == 0) {
+      $this->output()->writeln("💡 Recommendations:");
+      $this->output()->writeln("  🔗 Run: drush ne:pop-url");
+      $this->output()->writeln("     To extract sources from URLs");
+      $this->output()->writeln("");
+    }
+    
+    if ($percentage >= 95) {
+      $this->output()->writeln("🎉 Excellent! {$percentage}% of articles have news sources.");
+    } elseif ($percentage >= 90) {
+      $this->output()->writeln("👍 Good progress! {$percentage}% of articles have news sources.");
+    } else {
+      $this->output()->writeln("🚧 More processing needed. {$percentage}% of articles have news sources.");
+    }
+  }
+
 }
