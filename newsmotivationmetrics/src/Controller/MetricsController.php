@@ -73,40 +73,68 @@ class MetricsController extends ControllerBase {
   }
 
   /**
-   * Display the public metrics dashboard.
-   * 
-   * Block-based approach using existing working timeline chart block.
-   * 
-   * @return array
-   *   Drupal render array for the dashboard page.
+   * Display the metrics dashboard.
    */
   public function dashboard() {
-    $block_manager = \Drupal::service('plugin.manager.block');
+    $block_manager = $this->blockManager;
     
-    $build = [];
+    // Create header block
+    $header_block = $block_manager->createInstance('metrics_header', []);
+    $header_content = $header_block->build();
     
-    // Create and render each metrics block
-    $header_block = $block_manager->createInstance('metrics_header_block');
-    $build['header'] = $header_block->build();
+    // Create content analysis overview block
+    $content_analysis_block = $block_manager->createInstance('content_analysis_overview', []);
+    $content_analysis_content = $content_analysis_block->build();
     
-    // Use the existing working timeline chart block
-    $timeline_block = $block_manager->createInstance('taxonomy_timeline_chart');
-    $build['timeline'] = $timeline_block->build();
+    // Create temporal processing analytics block
+    $temporal_block = $block_manager->createInstance('temporal_processing_analytics', []);
+    $temporal_content = $temporal_block->build();
     
-    $overview_block = $block_manager->createInstance('metrics_overview_block');
-    $build['overview'] = $overview_block->build();
+    // Create sentiment distribution analysis block
+    $sentiment_block = $block_manager->createInstance('sentiment_distribution_analysis', []);
+    $sentiment_content = $sentiment_block->build();
     
-    $methodology_block = $block_manager->createInstance('methodology_block');
-    $build['methodology'] = $methodology_block->build();
+    // Create timeline chart block (using existing working implementation)
+    $timeline_block = $block_manager->createInstance('taxonomy_timeline_chart', []);
+    $timeline_content = $timeline_block->build();
     
-    // Add wrapper for styling
-    $build['#type'] = 'container';
-    $build['#attributes'] = ['class' => ['metrics-dashboard-content']];
+    // Create entity recognition metrics block
+    $entity_block = $block_manager->createInstance('entity_recognition_metrics', []);
+    $entity_content = $entity_block->build();
     
-    return $build;
-  }
-
-  /**
+    // Create recent activity metrics block
+    $activity_block = $block_manager->createInstance('recent_activity_metrics', []);
+    $activity_content = $activity_block->build();
+    
+    // Create analysis quality metrics block
+    $quality_block = $block_manager->createInstance('analysis_quality_metrics', []);
+    $quality_content = $quality_block->build();
+    
+    // Create about truth perspective analytics block
+    $about_block = $block_manager->createInstance('about_truth_perspective_analytics', []);
+    $about_content = $about_block->build();
+    
+    // Return all blocks in organized layout
+    return [
+      '#theme' => 'container',
+      '#attributes' => ['class' => ['metrics-dashboard', 'fullwidth-content']],
+      'header' => $header_content,
+      'content_analysis' => $content_analysis_content,
+      'temporal_analytics' => $temporal_content,
+      'sentiment_analysis' => $sentiment_content,
+      'timeline_chart' => $timeline_content,
+      'entity_metrics' => $entity_content,
+      'activity_metrics' => $activity_content,
+      'quality_metrics' => $quality_content,
+      'about_info' => $about_content,
+      '#attached' => [
+        'library' => [
+          'newsmotivationmetrics/chart-behavior',
+          'newsmotivationmetrics/chart-styles',
+        ],
+      ],
+    ];
+  }  /**
    * Display the admin version of the dashboard.
    * 
    * @return array
