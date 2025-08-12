@@ -216,7 +216,7 @@ class SentimentDistributionAnalysisBlock extends BlockBase implements ContainerF
     $build = [
       '#type' => 'details',
       '#title' => '💭 Sentiment Distribution Analysis',
-      '#open' => TRUE,
+      '#open' => FALSE,
       '#attributes' => ['class' => ['sentiment-distribution-analysis']],
       'table' => [
         '#type' => 'table',

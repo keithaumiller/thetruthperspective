@@ -158,7 +158,7 @@ class ContentAnalysisOverviewBlock extends BlockBase implements ContainerFactory
     $build = [
       '#type' => 'details',
       '#title' => '📊 Content Analysis Overview',
-      '#open' => TRUE,
+      '#open' => FALSE,
       '#attributes' => ['class' => ['content-analysis-overview']],
       'table' => [
         '#type' => 'table',

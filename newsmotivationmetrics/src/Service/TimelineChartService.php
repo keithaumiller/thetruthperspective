@@ -157,23 +157,30 @@ class TimelineChartService implements TimelineChartServiceInterface {
    */
   protected function buildChartControls(array $top_terms, string $canvas_id): array {
     $controls = [
+      '#type' => 'details',
+      '#title' => t('📊 Chart Controls'),
+      '#open' => FALSE,
+      '#attributes' => ['class' => ['chart-controls-section']],
+    ];
+
+    $controls['controls_container'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['chart-controls']],
     ];
 
-    $controls['selector_group'] = [
+    $controls['controls_container']['selector_group'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['control-group']],
     ];
 
-    $controls['selector_group']['label'] = [
+    $controls['controls_container']['selector_group']['label'] = [
       '#type' => 'html_tag',
       '#tag' => 'label',
       '#value' => t('Select Terms (max 10):'),
       '#attributes' => ['for' => $canvas_id === 'taxonomy-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id)],
     ];
 
-    $controls['selector_group']['selector'] = [
+    $controls['controls_container']['selector_group']['selector'] = [
       '#type' => 'select',
       '#multiple' => TRUE,
       '#options' => $this->chartDataService->buildTermOptionsArray($top_terms),
@@ -188,14 +195,14 @@ class TimelineChartService implements TimelineChartServiceInterface {
       ],
     ];
 
-    $controls['buttons'] = [
+    $controls['controls_container']['buttons'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['control-buttons']],
     ];
 
     $unique_id = $this->getUniqueId($canvas_id);
 
-    $controls['buttons']['reset'] = [
+    $controls['controls_container']['buttons']['reset'] = [
       '#type' => 'html_tag',
       '#tag' => 'button',
       '#value' => t('Reset to Top 10'),
@@ -207,7 +214,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       ],
     ];
 
-    $controls['buttons']['clear'] = [
+    $controls['controls_container']['buttons']['clear'] = [
       '#type' => 'html_tag',
       '#tag' => 'button',
       '#value' => t('Clear All'),
@@ -219,19 +226,19 @@ class TimelineChartService implements TimelineChartServiceInterface {
       ],
     ];
 
-    $controls['info'] = [
+    $controls['controls_container']['info'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['chart-info']],
     ];
 
-    $controls['info']['text'] = [
+    $controls['controls_container']['info']['text'] = [
       '#type' => 'html_tag',
       '#tag' => 'span',
       '#value' => t('📊 Select up to 10 terms to display. Top 10 terms shown by default.'),
       '#attributes' => ['class' => ['info-text']],
     ];
 
-    $controls['info']['loading'] = [
+    $controls['controls_container']['info']['loading'] = [
       '#type' => 'html_tag',
       '#tag' => 'span',
       '#value' => t('Loading additional terms in background...'),

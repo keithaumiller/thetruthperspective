@@ -220,7 +220,7 @@ class RecentActivityMetricsBlock extends BlockBase implements ContainerFactoryPl
     $build = [
       '#type' => 'details',
       '#title' => '⚡ Recent Activity',
-      '#open' => TRUE,
+      '#open' => FALSE,
       '#attributes' => ['class' => ['recent-activity-metrics']],
       'table' => [
         '#type' => 'table',

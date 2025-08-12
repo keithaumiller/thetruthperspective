@@ -150,7 +150,7 @@ class TemporalProcessingAnalyticsBlock extends BlockBase implements ContainerFac
     $build = [
       '#type' => 'details',
       '#title' => '⏱️ Temporal Processing Analytics',
-      '#open' => TRUE,
+      '#open' => FALSE,
       '#attributes' => ['class' => ['temporal-processing-analytics']],
       'table' => [
         '#type' => 'table',

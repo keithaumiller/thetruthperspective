@@ -206,7 +206,7 @@ class EntityRecognitionMetricsBlock extends BlockBase implements ContainerFactor
     $build = [
       '#type' => 'details',
       '#title' => '🏷️ Entity Recognition Metrics',
-      '#open' => TRUE,
+      '#open' => FALSE,
       '#attributes' => ['class' => ['entity-recognition-metrics']],
       'table' => [
         '#type' => 'table',

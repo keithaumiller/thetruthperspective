@@ -202,7 +202,7 @@ class AnalysisQualityMetricsBlock extends BlockBase implements ContainerFactoryP
     $build = [
       '#type' => 'details',
       '#title' => '🔍 Analysis Quality Metrics',
-      '#open' => TRUE,
+      '#open' => FALSE,
       '#attributes' => ['class' => ['analysis-quality-metrics']],
       'table' => [
         '#type' => 'table',
