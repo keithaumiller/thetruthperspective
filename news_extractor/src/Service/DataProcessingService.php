@@ -524,6 +524,50 @@ class DataProcessingService {
   }
 
   /**
+   * Extract news source from feed item data (before entity processing).
+   *
+   * @param array $item
+   *   The feed item data.
+   *
+   * @return string|null
+   *   The news source or NULL if not found.
+   */
+  public function extractNewsSourceFromFeed(array $item) {
+    $news_source = '';
+    
+    // Priority 1: Check for explicit source field in feed
+    if (!empty($item['source'])) {
+      $news_source = $item['source'];
+    }
+    // Priority 2: Check for dc:source in Dublin Core metadata
+    elseif (!empty($item['dc:source'])) {
+      $news_source = $item['dc:source'];
+    }
+    // Priority 3: Check feed title/description (often contains source)
+    elseif (!empty($item['feed_title'])) {
+      $news_source = $item['feed_title'];
+    }
+    // Priority 4: Check description for source patterns (Source: CNN, Via: Reuters, etc.)
+    elseif (!empty($item['description']) && preg_match('/(?:Source|Via|From):\s*(.+?)(?:\n|$|\|)/i', $item['description'], $matches)) {
+      $news_source = trim($matches[1]);
+    }
+    // Priority 5: Extract from link URL as last resort
+    elseif (!empty($item['link'])) {
+      $news_source = $this->extractSourceFromUrl($item['link']);
+    }
+    
+    // Clean and standardize the news source
+    if (!empty($news_source)) {
+      $news_source = $this->cleanNewsSource($news_source);
+      $this->logger()->info('Extracted news source from feed data: @source', [
+        '@source' => $news_source,
+      ]);
+    }
+    
+    return !empty($news_source) ? $news_source : NULL;
+  }
+
+  /**
    * Clean and standardize news source name.
    *
    * @param string $source

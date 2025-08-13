@@ -60,8 +60,11 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
     return;
   }
 
-  // Extract news source from feed data
-  $news_source = _news_extractor_extract_news_source_from_feed($item);
+  // Extract news source from feed data using service
+  /** @var \Drupal\news_extractor\Service\DataProcessingService $data_processing_service */
+  $data_processing_service = \Drupal::service('news_extractor.data_processing');
+  $news_source = $data_processing_service->extractNewsSourceFromFeed($item);
+  
   if (!empty($news_source) && $entity_interface->getTarget()->hasField('field_news_source')) {
     $entity_interface->getTarget()->set('field_news_source', $news_source);
     \Drupal::logger('news_extractor')->info('Set news source from feed: @source', [
@@ -79,6 +82,22 @@ function news_extractor_entity_insert(EntityInterface $entity) {
     $original_url = $entity->get('field_original_url')->uri ?? '';
     
     if (!empty($original_url)) {
+      // Ensure news source is set before full processing
+      if ($entity->hasField('field_news_source') && $entity->get('field_news_source')->isEmpty()) {
+        /** @var \Drupal\news_extractor\Service\DataProcessingService $data_processing_service */
+        $data_processing_service = \Drupal::service('news_extractor.data_processing');
+        $news_source = $data_processing_service->extractNewsSource($entity);
+        
+        if (!empty($news_source)) {
+          $entity->set('field_news_source', $news_source);
+          $entity->save();
+          \Drupal::logger('news_extractor')->info('Set news source during entity insert: @source for @title', [
+            '@source' => $news_source,
+            '@title' => $entity->getTitle(),
+          ]);
+        }
+      }
+      
       // Use the orchestrator service for complete processing
       /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
       $extraction_service = \Drupal::service('news_extractor.extraction');
@@ -251,4 +270,54 @@ function news_extractor_get_processing_status($limit = 10) {
   }
 
   return $status_reports;
+}
+
+/**
+ * Helper function to check for blocked content in title and link.
+ */
+function _news_extractor_has_blocked_content($title, $link) {
+  $blocked_strings = [
+    'comparecards.com',
+    'fool.com',
+    'lendingtree.com',
+  ];
+
+  foreach ($blocked_strings as $str) {
+    if (stripos($title, $str) !== FALSE) {
+      \Drupal::logger('news_extractor')->info('Skipping blocked string in title: @title', [
+        '@title' => $title,
+      ]);
+      return TRUE;
+    }
+    
+    if (stripos($link, $str) !== FALSE) {
+      \Drupal::logger('news_extractor')->info('Skipping blocked string in link: @url', [
+        '@url' => $link,
+      ]);
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * Helper function to check for invalid titles.
+ */
+function _news_extractor_has_invalid_title($title) {
+  // Skip items with missing or empty titles
+  if (empty($title) || trim($title) == '') {
+    \Drupal::logger('news_extractor')->info('Skipping item with missing or empty title');
+    return TRUE;
+  }
+
+  // Skip items with very short titles
+  if (strlen(trim($title)) < 10) {
+    \Drupal::logger('news_extractor')->info('Skipping item with very short title: @title', [
+      '@title' => $title,
+    ]);
+    return TRUE;
+  }
+
+  return FALSE;
 }

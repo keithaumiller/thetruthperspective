@@ -380,6 +380,29 @@ class ScrapingService {
       $entity->set('field_site_name', $article_data['siteName']);
     }
 
+    // Extract and store news source if not already set
+    if ($entity->hasField('field_news_source') && $entity->get('field_news_source')->isEmpty()) {
+      $news_source = NULL;
+      
+      // Try to extract from siteName first
+      if (!empty($article_data['siteName'])) {
+        $news_source = $this->cleanNewsSourceName($article_data['siteName']);
+      }
+      // Fallback to URL extraction
+      elseif ($entity->hasField('field_original_url') && !$entity->get('field_original_url')->isEmpty()) {
+        $url = $entity->get('field_original_url')->uri;
+        $news_source = $this->extractSourceFromUrl($url);
+      }
+      
+      if (!empty($news_source)) {
+        $entity->set('field_news_source', $news_source);
+        $this->logger()->info('Set news source from Diffbot data: @source for @title', [
+          '@source' => $news_source,
+          '@title' => $entity->getTitle(),
+        ]);
+      }
+    }
+
     // Store breadcrumb
     if (!empty($article_data['breadcrumb']) && $entity->hasField('field_breadcrumb')) {
       $breadcrumb_text = is_array($article_data['breadcrumb'])
@@ -512,6 +535,83 @@ class ScrapingService {
         ]);
       }
     }
+  }
+
+  /**
+   * Clean and standardize news source name.
+   *
+   * @param string $source
+   *   The raw source name.
+   *
+   * @return string
+   *   The cleaned source name.
+   */
+  protected function cleanNewsSourceName($source) {
+    $source = trim($source);
+
+    // Common source name mappings
+    $source_map = [
+      'CNN.com' => 'CNN',
+      'CNN Politics' => 'CNN Politics',
+      'Fox News' => 'Fox News',
+      'Reuters.com' => 'Reuters',
+      'AP News' => 'Associated Press',
+      'NPR.org' => 'NPR',
+      'BBC News' => 'BBC News',
+      'WSJ.com' => 'Wall Street Journal',
+      'The New York Times' => 'New York Times',
+      'The Washington Post' => 'Washington Post',
+      'POLITICO' => 'Politico',
+      'The Hill' => 'The Hill',
+    ];
+
+    return $source_map[$source] ?? $source;
+  }
+
+  /**
+   * Extract source from URL as fallback.
+   *
+   * @param string $url
+   *   The URL to extract from.
+   *
+   * @return string|null
+   *   The extracted source or NULL.
+   */
+  protected function extractSourceFromUrl($url) {
+    $parsed_url = parse_url($url);
+    if (!isset($parsed_url['host'])) {
+      return NULL;
+    }
+
+    $host = strtolower($parsed_url['host']);
+    $host = preg_replace('/^www\./', '', $host);
+
+    $domain_map = [
+      'cnn.com' => 'CNN',
+      'foxnews.com' => 'Fox News',
+      'reuters.com' => 'Reuters',
+      'ap.org' => 'Associated Press',
+      'npr.org' => 'NPR',
+      'bbc.com' => 'BBC News',
+      'wsj.com' => 'Wall Street Journal',
+      'nytimes.com' => 'New York Times',
+      'washingtonpost.com' => 'Washington Post',
+      'politico.com' => 'Politico',
+      'thehill.com' => 'The Hill',
+    ];
+
+    if (isset($domain_map[$host])) {
+      return $domain_map[$host];
+    }
+
+    // For unknown domains, convert to title case
+    $parts = explode('.', $host);
+    if (count($parts) >= 2) {
+      $domain_name = $parts[0];
+      return ucwords(str_replace(['-', '_'], ' ', $domain_name));
+    }
+
+    return ucwords(str_replace(['-', '_', '.'], ' ', $host));
   }
 
 }
