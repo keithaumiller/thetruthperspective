@@ -526,29 +526,32 @@ class MetricsDataService implements MetricsDataServiceInterface {
       $start_date = clone $end_date;
       $start_date->sub(new \DateInterval('P' . $options['days_back'] . 'D'));
       
-      // Query to get news sources with their timeline data
-      $query = $connection->select('node__field_news_source', 'ns')
-        ->fields('ns', ['entity_id', 'field_news_source_value']);
+      // Start with node_field_data like the working getNewsSourceMetrics method
+      $query = $connection->select('node_field_data', 'n');
+      $query->fields('n', ['nid', 'created', 'title']);
       
-      $query->join('node_field_data', 'n', 'n.nid = ns.entity_id');
-      $query->fields('n', ['created', 'title']);
+      // Join with news source field
+      $query->leftJoin('node__field_news_source', 'ns', 'ns.entity_id = n.nid');
+      $query->addField('ns', 'field_news_source_value', 'news_source');
       
       // Join with bias field
-      $query->leftJoin('node__field_bias_rating', 'bias', 'bias.entity_id = ns.entity_id');
+      $query->leftJoin('node__field_bias_rating', 'bias', 'bias.entity_id = n.nid');
       $query->addField('bias', 'field_bias_rating_value', 'bias_rating');
       
       // Join with credibility field
-      $query->leftJoin('node__field_credibility_score', 'cred', 'cred.entity_id = ns.entity_id');
+      $query->leftJoin('node__field_credibility_score', 'cred', 'cred.entity_id = n.nid');
       $query->addField('cred', 'field_credibility_score_value', 'credibility_score');
       
-      // Join with sentiment field
-      $query->leftJoin('node__field_sentiment_score', 'sent', 'sent.entity_id = ns.entity_id');
-      $query->addField('sent', 'field_sentiment_score_value', 'sentiment_score');
+      // Join with sentiment field (using correct field name)
+      $query->leftJoin('node__field_article_sentiment_score', 'sent', 'sent.entity_id = n.nid');
+      $query->addField('sent', 'field_article_sentiment_score_value', 'sentiment_score');
       
       $query->condition('n.type', 'article')
         ->condition('n.status', 1)
         ->condition('n.created', $start_date->getTimestamp(), '>=')
-        ->condition('n.created', $end_date->getTimestamp(), '<=');
+        ->condition('n.created', $end_date->getTimestamp(), '<=')
+        ->condition('ns.field_news_source_value', '', '<>') // Only articles with news source
+        ->condition('ns.field_news_source_value', NULL, 'IS NOT NULL');
       
       // Filter by specific sources if provided
       if (!empty($options['source_ids'])) {
@@ -559,12 +562,17 @@ class MetricsDataService implements MetricsDataServiceInterface {
       
       $results = $query->execute()->fetchAll();
       
+      // Debug: Log the number of results found
+      $this->loggerFactory->get('newsmotivationmetrics')->info('News source timeline query found @count results', [
+        '@count' => count($results),
+      ]);
+      
       // Process timeline data by source
       $timeline_data = [];
       $source_data = [];
       
       foreach ($results as $row) {
-        $source_name = $row->field_news_source_value;
+        $source_name = $row->news_source;
         $date = date('Y-m-d', $row->created);
         
         if (!isset($source_data[$source_name])) {
@@ -692,26 +700,32 @@ class MetricsDataService implements MetricsDataServiceInterface {
       $database = $this->database;
       $connection = $database;
       
-      // Query to get top news sources by article count
-      $query = $connection->select('node__field_news_source', 'ns')
-        ->fields('ns', ['field_news_source_value']);
+      // Start with node_field_data like other working methods
+      $query = $connection->select('node_field_data', 'n');
+      $query->fields('n', ['nid']);
       
-      $query->join('node_field_data', 'n', 'n.nid = ns.entity_id');
+      // Join with news source field
+      $query->leftJoin('node__field_news_source', 'ns', 'ns.entity_id = n.nid');
+      $query->addField('ns', 'field_news_source_value', 'news_source');
+      
+      // Add aggregation for count
+      $query->addExpression('COUNT(n.nid)', 'article_count');
+      
       $query->condition('n.type', 'article')
-        ->condition('n.status', 1);
-      
-      $query->groupBy('ns.field_news_source_value');
-      $query->addExpression('COUNT(ns.entity_id)', 'article_count');
-      $query->orderBy('article_count', 'DESC');
-      $query->range(0, $limit);
+        ->condition('n.status', 1)
+        ->condition('ns.field_news_source_value', '', '<>')
+        ->condition('ns.field_news_source_value', NULL, 'IS NOT NULL')
+        ->groupBy('ns.field_news_source_value')
+        ->orderBy('article_count', 'DESC')
+        ->range(0, $limit);
       
       $results = $query->execute()->fetchAll();
       
       $sources = [];
       foreach ($results as $row) {
         $sources[] = [
-          'source_id' => $row->field_news_source_value,
-          'source_name' => $row->field_news_source_value,
+          'source_id' => $row->news_source,
+          'source_name' => $row->news_source,
           'article_count' => (int) $row->article_count,
         ];
       }
