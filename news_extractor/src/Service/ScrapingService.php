@@ -454,6 +454,9 @@ class ScrapingService {
     // POST-PROCESSOR: Unpublish articles with "Scraped data unavailable"
     $this->postProcessScrapedDataStatus($entity);
 
+    // POST-PROCESSOR: Unpublish articles with pending motivation analysis
+    $this->postProcessMotivationAnalysis($entity);
+
     $this->logger()->info('Updated metadata fields for: @title', [
       '@title' => $entity->getTitle(),
     ]);
@@ -493,6 +496,50 @@ class ScrapingService {
         // Set news source to indicate the issue
         if ($entity->hasField('field_news_source')) {
           $entity->set('field_news_source', 'Source Unavailable');
+        }
+      }
+    }
+  }
+
+  /**
+   * Post-process motivation analysis to unpublish nodes with pending analysis.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to check and potentially unpublish.
+   */
+  protected function postProcessMotivationAnalysis(EntityInterface $entity) {
+    // Check if entity has the motivation analysis field
+    if (!$entity->hasField('field_motivation_analysis')) {
+      return;
+    }
+
+    $motivation_analysis = $entity->get('field_motivation_analysis')->value;
+    
+    // Unpublish if analysis contains pending indicators
+    if (!empty($motivation_analysis) && 
+        (strpos($motivation_analysis, 'Analysis is Pending') !== false ||
+         strpos($motivation_analysis, 'No analysis data available') !== false)) {
+      
+      // Unpublish the article
+      if ($entity->isPublished()) {
+        $entity->setUnpublished();
+        
+        $this->logger()->warning('Unpublished article with pending motivation analysis: @title (ID: @id)', [
+          '@title' => $entity->getTitle(),
+          '@id' => $entity->id(),
+        ]);
+        
+        // Update the analysis field to reflect the action taken
+        if (strpos($motivation_analysis, 'Analysis is Pending') !== false) {
+          $entity->set('field_motivation_analysis', [
+            'value' => str_replace('Analysis is Pending', 'Unpublished - Analysis Pending', $motivation_analysis),
+            'format' => $entity->get('field_motivation_analysis')->format ?: 'basic_html',
+          ]);
+        } else {
+          $entity->set('field_motivation_analysis', [
+            'value' => '<p>Unpublished - No analysis data available.</p>',
+            'format' => $entity->get('field_motivation_analysis')->format ?: 'basic_html',
+          ]);
         }
       }
     }
