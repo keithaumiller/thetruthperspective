@@ -87,7 +87,7 @@
   // Function to assign colors to sources based on strict rules
   function assignSourceColors(selectedSources) {
     // Normalize all source names first
-    const normalizedSources = selectedSources.map(source => normalizeSourceName(source));
+    let normalizedSources = selectedSources.map(source => normalizeSourceName(source));
     
     // Limit to maximum 3 sources
     if (normalizedSources.length > 3) {
