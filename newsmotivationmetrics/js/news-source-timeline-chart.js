@@ -159,6 +159,11 @@
             credibility: '#EF4444', // Medium red for Fox News credibility
             sentiment: '#FCA5A5'    // Light red for Fox News sentiment
           },
+          'FOXNews.com': {  // Handle the actual data format
+            bias: '#B91C1C',        // Dark red for Fox News bias
+            credibility: '#EF4444', // Medium red for Fox News credibility
+            sentiment: '#FCA5A5'    // Light red for Fox News sentiment
+          },
           'Reuters': {
             bias: '#166534',        // Dark green for Reuters bias
             credibility: '#22C55E', // Medium green for Reuters credibility
@@ -167,8 +172,23 @@
         };
         
         // Get the source name and metric type
-        const sourceName = sourceData.source_name;
+        let sourceName = sourceData.source_name;
         const metricType = sourceData.metric_type;
+        
+        // Clean up source name for better matching
+        // Handle cases like "FOXNews.com - Bias Rating" -> "FOXNews.com"
+        if (sourceName && sourceName.includes(' - ')) {
+          sourceName = sourceName.split(' - ')[0];
+        }
+        
+        // Normalize common variations
+        if (sourceName && sourceName.toLowerCase().includes('fox')) {
+          sourceName = sourceName.includes('.com') ? 'FOXNews.com' : 'Fox News';
+        } else if (sourceName && sourceName.toLowerCase().includes('cnn')) {
+          sourceName = 'CNN';
+        } else if (sourceName && sourceName.toLowerCase().includes('reuters')) {
+          sourceName = 'Reuters';
+        }
         
         // Determine color based on source and metric
         let color = '#6B7280'; // Default gray if source not found
@@ -357,6 +377,11 @@
         credibility: '#EF4444', // Medium red for Fox News credibility
         sentiment: '#FCA5A5'    // Light red for Fox News sentiment
       },
+      'FOXNews.com': {  // Handle the actual data format
+        bias: '#B91C1C',        // Dark red for Fox News bias
+        credibility: '#EF4444', // Medium red for Fox News credibility
+        sentiment: '#FCA5A5'    // Light red for Fox News sentiment
+      },
       'Reuters': {
         bias: '#166534',        // Dark green for Reuters bias
         credibility: '#22C55E', // Medium green for Reuters credibility
@@ -366,8 +391,23 @@
 
     chart.data.datasets = filteredData.map((sourceData, index) => {
       // Get the source name and metric type
-      const sourceName = sourceData.source_name;
+      let sourceName = sourceData.source_name;
       const metricType = sourceData.metric_type;
+      
+      // Clean up source name for better matching
+      // Handle cases like "FOXNews.com - Bias Rating" -> "FOXNews.com"
+      if (sourceName && sourceName.includes(' - ')) {
+        sourceName = sourceName.split(' - ')[0];
+      }
+      
+      // Normalize common variations
+      if (sourceName && sourceName.toLowerCase().includes('fox')) {
+        sourceName = sourceName.includes('.com') ? 'FOXNews.com' : 'Fox News';
+      } else if (sourceName && sourceName.toLowerCase().includes('cnn')) {
+        sourceName = 'CNN';
+      } else if (sourceName && sourceName.toLowerCase().includes('reuters')) {
+        sourceName = 'Reuters';
+      }
       
       // Determine color based on source and metric
       let color = '#6B7280'; // Default gray if source not found
