@@ -7,27 +7,22 @@ The environment is a Drupal 11 modules repository for The Truth Perspective plat
 
 Dev/prod environment: The code is deployed on a production server with the following specifications:
 - **Server**: Ubuntu 22.04 LTS
-ubuntu@ip-172-16-4-59:~$ uname -a
-Linux ip-172-16-4-59 6.8.0-1031-aws #33-Ubuntu SMP Fri Jun 20 18:11:07 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
-ubuntu@ip-172-16-4-59:~$ php -version
+ubuntu@ip-:~$ uname -a
+Linux ip- 6.8.0-1031-aws #33-Ubuntu SMP Fri Jun 20 18:11:07 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+ubuntu@ip-:~$ php -version
 PHP 8.3.6 (cli) (built: Jul 14 2025 18:30:55) (NTS)
 Copyright (c) The PHP Group
 Zend Engine v4.3.6, Copyright (c) Zend Technologies
     with Zend OPcache v8.3.6, Copyright (c), by Zend Technologies
-ubuntu@ip-172-16-4-59:~$ python -version
-Command 'python' not found, did you mean:
-  command 'python3' from deb python3
-  command 'python' from deb python-is-python3
 
-  ---
-applyTo: '**'
----
+
 
 Skip giving "Immediate Fix:" solutions
 Instead, focus on the fix for the codebase.
 Code is tested on the server, not locally in the workspace.
 Always generate the commit and push commands for the code changes after changes are generated and applied to the workspace. Do not include curl commands or testing commands just commit and push commands
 Always highlight which file is recomended to update.
+Always include the ARCHITECTURE.md and README.md files in the context.
 
 When generating code, always assume the code is being written for the production server.
 

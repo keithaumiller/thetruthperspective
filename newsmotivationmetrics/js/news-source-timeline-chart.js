@@ -71,7 +71,7 @@
       }
 
       // Get chart data from settings
-      const chartData = settings.newsmotivationmetrics || {};
+      const chartData = settings.newsmotivationmetrics_sources || {};
       
       if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
         throw new Error('No news source timeline data available');
@@ -87,21 +87,6 @@
         extendedSourcesCount: chartData.extendedSources?.timelineData?.length || 0
       });
       console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
-      
-      // DEBUG: Log the actual timeline data structure
-      console.log('🔍 DEBUG: Timeline data structure:');
-      if (chartData.timelineData && Array.isArray(chartData.timelineData)) {
-        chartData.timelineData.forEach((item, index) => {
-          console.log(`  Dataset ${index}:`, {
-            source_name: item?.source_name || 'UNDEFINED',
-            metric_type: item?.metric_type || 'UNDEFINED', 
-            hasData: Array.isArray(item?.data),
-            dataLength: Array.isArray(item?.data) ? item.data.length : 0
-          });
-        });
-      } else {
-        console.log('  Timeline data is not an array or is missing');
-      }
       
       // Log extended sources availability
       if (chartData.extendedSources) {
@@ -313,12 +298,12 @@
     console.log('📊 Updating chart with selected sources:', selectedSourceIds);
 
     // Combine timeline data from both top sources and extended sources
-    let allData = drupalSettings.newsmotivationmetrics.timelineData || [];
+    let allData = drupalSettings.newsmotivationmetrics_sources.timelineData || [];
     
     // Add extended sources data if available
-    if (drupalSettings.newsmotivationmetrics.extendedSources && 
-        drupalSettings.newsmotivationmetrics.extendedSources.timelineData) {
-      const extendedData = drupalSettings.newsmotivationmetrics.extendedSources.timelineData;
+    if (drupalSettings.newsmotivationmetrics_sources.extendedSources && 
+        drupalSettings.newsmotivationmetrics_sources.extendedSources.timelineData) {
+      const extendedData = drupalSettings.newsmotivationmetrics_sources.extendedSources.timelineData;
       console.log('📈 Found extended source data with', extendedData.length, 'datasets');
       
       // Merge extended data, avoiding duplicates

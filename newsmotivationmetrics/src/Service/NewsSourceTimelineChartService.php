@@ -171,7 +171,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
     ];
 
     // Attach JavaScript settings and libraries
-    $build['#attached']['drupalSettings']['newsmotivationmetrics'] = $this->buildJavaScriptSettings($chart_data, $options, $extended_sources);
+    $build['#attached']['drupalSettings']['newsmotivationmetrics_sources'] = $this->buildJavaScriptSettings($chart_data, $options, $extended_sources);
     $build['#attached']['library'] = [$options['library']];
 
     return $build;
