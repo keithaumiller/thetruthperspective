@@ -88,6 +88,21 @@
       });
       console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
       
+      // DEBUG: Log the actual timeline data structure
+      console.log('🔍 DEBUG: Timeline data structure:');
+      if (chartData.timelineData && Array.isArray(chartData.timelineData)) {
+        chartData.timelineData.forEach((item, index) => {
+          console.log(`  Dataset ${index}:`, {
+            source_name: item?.source_name || 'UNDEFINED',
+            metric_type: item?.metric_type || 'UNDEFINED', 
+            hasData: Array.isArray(item?.data),
+            dataLength: Array.isArray(item?.data) ? item.data.length : 0
+          });
+        });
+      } else {
+        console.log('  Timeline data is not an array or is missing');
+      }
+      
       // Log extended sources availability
       if (chartData.extendedSources) {
         console.log('📈 Extended sources available:', chartData.extendedSources.timelineData?.length || 0, 'additional datasets');
