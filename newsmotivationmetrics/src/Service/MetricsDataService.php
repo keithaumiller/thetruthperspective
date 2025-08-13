@@ -701,9 +701,8 @@ class MetricsDataService implements MetricsDataServiceInterface {
       $database = $this->database;
       $connection = $database;
       
-      // Start with node_field_data like other working methods
+      // Fix MySQL strict mode compliance - only select what we group by
       $query = $connection->select('node_field_data', 'n');
-      $query->fields('n', ['nid']);
       
       // Join with news source field
       $query->leftJoin('node__field_news_source', 'ns', 'ns.entity_id = n.nid');
