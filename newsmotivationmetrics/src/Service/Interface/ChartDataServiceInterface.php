@@ -42,4 +42,29 @@ interface ChartDataServiceInterface {
    */
   public function getChartDebugInfo(): array;
 
+  /**
+   * Get chart-ready news source timeline data.
+   *
+   * @param array $options
+   *   Chart configuration options including:
+   *   - limit: Number of news sources to include
+   *   - days_back: Number of days to look back
+   *   - source_ids: Specific sources to include
+   * 
+   * @return array
+   *   Chart.js compatible data structure with credibility, bias, and sentiment.
+   */
+  public function getNewsSourceTimelineChartData(array $options = []): array;
+
+  /**
+   * Get news source selector options for UI controls.
+   *
+   * @param array $sources
+   *   Array of news source data.
+   * 
+   * @return array
+   *   Options array for Drupal select elements.
+   */
+  public function buildNewsSourceOptionsArray(array $sources): array;
+
 }

@@ -506,4 +506,225 @@ class MetricsDataService implements MetricsDataServiceInterface {
     }
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getNewsSourceTimelineData(array $options = []): array {
+    try {
+      // Set default options
+      $options = $options + [
+        'limit' => 10,
+        'days_back' => 30,
+        'source_ids' => [],
+      ];
+
+      $database = $this->database;
+      $connection = $database;
+      
+      // Calculate date range
+      $end_date = new \DateTime();
+      $start_date = clone $end_date;
+      $start_date->sub(new \DateInterval('P' . $options['days_back'] . 'D'));
+      
+      // Query to get news sources with their timeline data
+      $query = $connection->select('node__field_news_source', 'ns')
+        ->fields('ns', ['entity_id', 'field_news_source_value']);
+      
+      $query->join('node_field_data', 'n', 'n.nid = ns.entity_id');
+      $query->fields('n', ['created', 'title']);
+      
+      // Join with bias field
+      $query->leftJoin('node__field_bias_rating', 'bias', 'bias.entity_id = ns.entity_id');
+      $query->addField('bias', 'field_bias_rating_value', 'bias_rating');
+      
+      // Join with credibility field
+      $query->leftJoin('node__field_credibility_score', 'cred', 'cred.entity_id = ns.entity_id');
+      $query->addField('cred', 'field_credibility_score_value', 'credibility_score');
+      
+      // Join with sentiment field
+      $query->leftJoin('node__field_sentiment_score', 'sent', 'sent.entity_id = ns.entity_id');
+      $query->addField('sent', 'field_sentiment_score_value', 'sentiment_score');
+      
+      $query->condition('n.type', 'article')
+        ->condition('n.status', 1)
+        ->condition('n.created', $start_date->getTimestamp(), '>=')
+        ->condition('n.created', $end_date->getTimestamp(), '<=');
+      
+      // Filter by specific sources if provided
+      if (!empty($options['source_ids'])) {
+        $query->condition('ns.field_news_source_value', $options['source_ids'], 'IN');
+      }
+      
+      $query->orderBy('n.created', 'DESC');
+      
+      $results = $query->execute()->fetchAll();
+      
+      // Process timeline data by source
+      $timeline_data = [];
+      $source_data = [];
+      
+      foreach ($results as $row) {
+        $source_name = $row->field_news_source_value;
+        $date = date('Y-m-d', $row->created);
+        
+        if (!isset($source_data[$source_name])) {
+          $source_data[$source_name] = [];
+        }
+        
+        if (!isset($source_data[$source_name][$date])) {
+          $source_data[$source_name][$date] = [
+            'bias_total' => 0,
+            'credibility_total' => 0,
+            'sentiment_total' => 0,
+            'count' => 0,
+          ];
+        }
+        
+        $source_data[$source_name][$date]['bias_total'] += (float) ($row->bias_rating ?? 0);
+        $source_data[$source_name][$date]['credibility_total'] += (float) ($row->credibility_score ?? 0);
+        $source_data[$source_name][$date]['sentiment_total'] += (float) ($row->sentiment_score ?? 0);
+        $source_data[$source_name][$date]['count']++;
+      }
+      
+      // Generate date range for timeline
+      $current_date = clone $start_date;
+      $date_range = [];
+      while ($current_date <= $end_date) {
+        $date_range[] = $current_date->format('Y-m-d');
+        $current_date->add(new \DateInterval('P1D'));
+      }
+      
+      // Format timeline data for Chart.js
+      foreach ($source_data as $source_name => $dates) {
+        // Create bias rating timeline
+        $bias_data = [];
+        foreach ($date_range as $date) {
+          if (isset($dates[$date]) && $dates[$date]['count'] > 0) {
+            $bias_data[] = [
+              'date' => $date,
+              'value' => round($dates[$date]['bias_total'] / $dates[$date]['count'], 2),
+            ];
+          } else {
+            $bias_data[] = [
+              'date' => $date,
+              'value' => 0,
+            ];
+          }
+        }
+        
+        // Create credibility score timeline
+        $credibility_data = [];
+        foreach ($date_range as $date) {
+          if (isset($dates[$date]) && $dates[$date]['count'] > 0) {
+            $credibility_data[] = [
+              'date' => $date,
+              'value' => round($dates[$date]['credibility_total'] / $dates[$date]['count'], 2),
+            ];
+          } else {
+            $credibility_data[] = [
+              'date' => $date,
+              'value' => 0,
+            ];
+          }
+        }
+        
+        // Create sentiment score timeline
+        $sentiment_data = [];
+        foreach ($date_range as $date) {
+          if (isset($dates[$date]) && $dates[$date]['count'] > 0) {
+            $sentiment_data[] = [
+              'date' => $date,
+              'value' => round($dates[$date]['sentiment_total'] / $dates[$date]['count'], 2),
+            ];
+          } else {
+            $sentiment_data[] = [
+              'date' => $date,
+              'value' => 0,
+            ];
+          }
+        }
+        
+        // Add source datasets (3 lines per source: bias, credibility, sentiment)
+        $timeline_data[] = [
+          'source_name' => $source_name . ' - Bias Rating',
+          'source_id' => $source_name,
+          'metric_type' => 'bias',
+          'data' => $bias_data,
+        ];
+        
+        $timeline_data[] = [
+          'source_name' => $source_name . ' - Credibility Score',
+          'source_id' => $source_name,
+          'metric_type' => 'credibility',
+          'data' => $credibility_data,
+        ];
+        
+        $timeline_data[] = [
+          'source_name' => $source_name . ' - Sentiment Score',
+          'source_id' => $source_name,
+          'metric_type' => 'sentiment',
+          'data' => $sentiment_data,
+        ];
+      }
+      
+      // Limit to requested number of sources (multiply by 3 for 3 metrics per source)
+      $max_datasets = $options['limit'] * 3;
+      if (count($timeline_data) > $max_datasets) {
+        $timeline_data = array_slice($timeline_data, 0, $max_datasets);
+      }
+      
+      return $timeline_data;
+      
+    } catch (\Exception $e) {
+      $this->loggerFactory->get('newsmotivationmetrics')->error('Failed to load news source timeline data: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      
+      return [];
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getTopNewsSources(int $limit = 10): array {
+    try {
+      $database = $this->database;
+      $connection = $database;
+      
+      // Query to get top news sources by article count
+      $query = $connection->select('node__field_news_source', 'ns')
+        ->fields('ns', ['field_news_source_value']);
+      
+      $query->join('node_field_data', 'n', 'n.nid = ns.entity_id');
+      $query->condition('n.type', 'article')
+        ->condition('n.status', 1);
+      
+      $query->groupBy('ns.field_news_source_value');
+      $query->addExpression('COUNT(ns.entity_id)', 'article_count');
+      $query->orderBy('article_count', 'DESC');
+      $query->range(0, $limit);
+      
+      $results = $query->execute()->fetchAll();
+      
+      $sources = [];
+      foreach ($results as $row) {
+        $sources[] = [
+          'source_id' => $row->field_news_source_value,
+          'source_name' => $row->field_news_source_value,
+          'article_count' => (int) $row->article_count,
+        ];
+      }
+      
+      return $sources;
+      
+    } catch (\Exception $e) {
+      $this->loggerFactory->get('newsmotivationmetrics')->error('Failed to load top news sources: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      
+      return [];
+    }
+  }
+
 }

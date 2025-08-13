@@ -74,4 +74,29 @@ interface MetricsDataServiceInterface {
    */
   public function getAllMetricsData(): array;
 
+  /**
+   * Get news source timeline data for chart visualization.
+   *
+   * @param array $options
+   *   Configuration options including:
+   *   - limit: Number of sources to include
+   *   - days_back: Number of days to look back
+   *   - source_ids: Specific sources to include
+   *
+   * @return array
+   *   Timeline data with credibility, bias, and sentiment by source.
+   */
+  public function getNewsSourceTimelineData(array $options = []): array;
+
+  /**
+   * Get top news sources by article count.
+   *
+   * @param int $limit
+   *   Maximum number of sources to return.
+   *
+   * @return array
+   *   Array of news source data ordered by article count.
+   */
+  public function getTopNewsSources(int $limit = 10): array;
+
 }

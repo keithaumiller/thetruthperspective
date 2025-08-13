@@ -141,4 +141,63 @@ class ChartDataService implements ChartDataServiceInterface {
     }
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getNewsSourceTimelineChartData(array $options = []): array {
+    try {
+      // Set default options
+      $options = $options + [
+        'limit' => 10,
+        'days_back' => 30,
+        'source_ids' => [],
+      ];
+
+      // Get news source timeline data from metrics service
+      $timeline_data = $this->metricsDataService->getNewsSourceTimelineData($options);
+      
+      if (empty($timeline_data)) {
+        return [
+          'timeline_data' => [],
+          'top_sources' => [],
+          'debug_info' => $this->getChartDebugInfo(),
+        ];
+      }
+
+      // Format data for Chart.js
+      return [
+        'timeline_data' => $timeline_data,
+        'top_sources' => $this->metricsDataService->getTopNewsSources($options['limit']),
+        'debug_info' => $this->getChartDebugInfo(),
+      ];
+
+    } catch (\Exception $e) {
+      $this->loggerFactory->get('newsmotivationmetrics')->error('News source timeline data error: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      
+      return [
+        'timeline_data' => [],
+        'top_sources' => [],
+        'debug_info' => $this->getChartDebugInfo(),
+        'error' => $e->getMessage(),
+      ];
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildNewsSourceOptionsArray(array $sources): array {
+    $options = [];
+    
+    foreach ($sources as $source) {
+      if (isset($source['source_id']) && isset($source['source_name'])) {
+        $options[$source['source_id']] = $source['source_name'];
+      }
+    }
+    
+    return $options;
+  }
+
 }

@@ -18,3 +18,7 @@ services:
   newsmotivationmetrics.news_motivation_timeline_chart_service:
     class: Drupal\newsmotivationmetrics\Service\NewsMotivationTimelineChartService
     arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
+
+  newsmotivationmetrics.news_source_timeline_chart_service:
+    class: Drupal\newsmotivationmetrics\Service\NewsSourceTimelineChartService
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
