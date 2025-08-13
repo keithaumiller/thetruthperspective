@@ -261,7 +261,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
     $controls['controls_container']['help_text'] = [
       '#type' => 'html_tag',
       '#tag' => 'div',
-      '#value' => '💡 Each source shows 3 trend lines: Credibility Score, Bias Rating, and Sentiment Score. Colors: CNN=Blue, Fox=Red, others assigned Red/Blue/Green by position. Use Ctrl+Click to select multiple sources.',
+      '#value' => '💡 Each source shows 3 trend lines: <strong>Credibility Score</strong> (factual accuracy, 0-100), <strong>Bias Rating</strong> (political lean, lower=left, higher=right), and <strong>Sentiment Score</strong> (emotional tone, 0-100). Colors: CNN=Blue, Fox=Red, others assigned Red/Blue/Green by position. Use Ctrl+Click to select multiple sources.',
       '#attributes' => ['class' => ['help-text', 'text-muted', 'small']],
     ];
 
