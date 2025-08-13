@@ -500,8 +500,13 @@
     }
 
     // Update chart datasets with unique color assignment
-    // Get unique source names for color assignment (use ORIGINAL names, not normalized)
-    const uniqueSelectedSources = [...new Set(filteredData.map(item => item.source_name))];
+    // Get unique source names for color assignment (extract base source name from dataset names)
+    const uniqueSelectedSources = [...new Set(filteredData.map(item => {
+      // Extract base source name from dataset names like "FOXNews.com - Bias Rating"
+      const sourceName = item.source_name;
+      const baseName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
+      return baseName;
+    }))];
     
     console.log('Unique selected sources for coloring:', uniqueSelectedSources);
     
@@ -513,8 +518,11 @@
       let sourceName = sourceData.source_name;
       const metricType = sourceData.metric_type;
       
-      // Normalize source name for color lookup
-      const normalizedSourceName = normalizeSourceName(sourceName);
+      // Extract base source name from dataset names like "FOXNews.com - Bias Rating"
+      const baseSourceName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
+      
+      // Normalize base source name for color lookup
+      const normalizedSourceName = normalizeSourceName(baseSourceName);
       
       // Get color scheme for this source using normalized name
       const colorIndex = sourceColorMap[normalizedSourceName] || 2; // Default to green if not found
@@ -523,7 +531,7 @@
       // Get color for this metric type
       const color = colorScheme[metricType] || '#6B7280';
       
-      console.log(`DEBUG: ${sourceName} -> ${normalizedSourceName}`);
+      console.log(`DEBUG: ${sourceName} -> ${baseSourceName} -> ${normalizedSourceName}`);
       console.log(`DEBUG: sourceColorMap keys:`, Object.keys(sourceColorMap));
       console.log(`DEBUG: sourceColorMap[${normalizedSourceName}] = ${sourceColorMap[normalizedSourceName]}`);
       console.log(`DEBUG: normalizedSourceName type:`, typeof normalizedSourceName, `length:`, normalizedSourceName.length);
