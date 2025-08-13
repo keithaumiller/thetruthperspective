@@ -476,6 +476,10 @@ class DataProcessingService {
 
   /**
    * Extract news source from various entity fields.
+   * 
+   * NOTE: This method is primarily for URL-based fallback extraction.
+   * Primary news source setting should happen in ScrapingService::updateMetadataFields()
+   * when we have actual Diffbot metadata available.
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The entity to extract source from.
@@ -492,34 +496,46 @@ class DataProcessingService {
       }
     }
 
-    // Fallback to JSON data
+    // Try JSON data only if it contains actual data
     if ($entity->hasField('field_json_scraped_article_data') && !$entity->get('field_json_scraped_article_data')->isEmpty()) {
       $json_data = $entity->get('field_json_scraped_article_data')->value;
 
+      // Skip placeholder data and go to URL fallback
       if (trim($json_data) === "Scraped data unavailable.") {
-        return "Source Unavailable";
-      }
-
-      try {
-        $parsed_data = json_decode($json_data, TRUE);
-        if (json_last_error() === JSON_ERROR_NONE && isset($parsed_data['objects'][0]['siteName'])) {
-          $site_name = trim($parsed_data['objects'][0]['siteName']);
-          return $this->cleanNewsSource($site_name);
+        $this->logger()->info('JSON data unavailable, falling back to URL extraction');
+      } else {
+        try {
+          $parsed_data = json_decode($json_data, TRUE);
+          if (json_last_error() === JSON_ERROR_NONE && isset($parsed_data['objects'][0]['siteName'])) {
+            $site_name = trim($parsed_data['objects'][0]['siteName']);
+            return $this->cleanNewsSource($site_name);
+          }
+        }
+        catch (\Exception $e) {
+          $this->logger()->error('Error parsing JSON data for news source extraction: @error', [
+            '@error' => $e->getMessage(),
+          ]);
         }
       }
-      catch (\Exception $e) {
-        $this->logger()->error('Error parsing JSON data for news source extraction: @error', [
-          '@error' => $e->getMessage(),
+    }
+
+    // URL fallback extraction
+    if ($entity->hasField('field_original_url') && !$entity->get('field_original_url')->isEmpty()) {
+      $url = $entity->get('field_original_url')->uri;
+      $extracted_source = $this->extractSourceFromUrl($url);
+      
+      if ($extracted_source) {
+        $this->logger()->info('Extracted news source from URL: @source from @url', [
+          '@source' => $extracted_source,
+          '@url' => $url,
         ]);
+        return $extracted_source;
       }
     }
 
-    // Final fallback to URL
-    if ($entity->hasField('field_original_url') && !$entity->get('field_original_url')->isEmpty()) {
-      $url = $entity->get('field_original_url')->uri;
-      return $this->extractSourceFromUrl($url);
-    }
-
+    $this->logger()->warning('Could not extract news source for entity @id', [
+      '@id' => $entity->id(),
+    ]);
     return NULL;
   }
 

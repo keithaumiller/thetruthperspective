@@ -380,26 +380,50 @@ class ScrapingService {
       $entity->set('field_site_name', $article_data['siteName']);
     }
 
-    // Extract and store news source if not already set
-    if ($entity->hasField('field_news_source') && $entity->get('field_news_source')->isEmpty()) {
-      $news_source = NULL;
+    // PRIMARY NEWS SOURCE EXTRACTION - This is the main place where news source gets set
+    if ($entity->hasField('field_news_source')) {
+      $current_source = $entity->get('field_news_source')->value;
+      $new_source = NULL;
       
-      // Try to extract from siteName first
+      // Extract from Diffbot siteName (Priority 1)
       if (!empty($article_data['siteName'])) {
-        $news_source = $this->cleanNewsSourceName($article_data['siteName']);
+        $new_source = $this->cleanNewsSourceName($article_data['siteName']);
+        $this->logger()->info('Extracted news source from Diffbot siteName: @source', [
+          '@source' => $new_source,
+        ]);
       }
-      // Fallback to URL extraction
+      // Fallback to URL extraction (Priority 2)
       elseif ($entity->hasField('field_original_url') && !$entity->get('field_original_url')->isEmpty()) {
         $url = $entity->get('field_original_url')->uri;
-        $news_source = $this->extractSourceFromUrl($url);
+        $new_source = $this->extractSourceFromUrl($url);
+        $this->logger()->info('Extracted news source from URL: @source from @url', [
+          '@source' => $new_source,
+          '@url' => $url,
+        ]);
       }
       
-      if (!empty($news_source)) {
-        $entity->set('field_news_source', $news_source);
-        $this->logger()->info('Set news source from Diffbot data: @source for @title', [
-          '@source' => $news_source,
-          '@title' => $entity->getTitle(),
-        ]);
+      // Set or update the news source
+      if (!empty($new_source)) {
+        // Always update if current source is empty, "Source Unavailable", or different
+        if (empty($current_source) || 
+            $current_source === 'Source Unavailable' || 
+            $current_source !== $new_source) {
+          
+          $entity->set('field_news_source', $new_source);
+          $this->logger()->info('Updated news source for @title: @old → @new', [
+            '@title' => $entity->getTitle(),
+            '@old' => $current_source ?: 'EMPTY',
+            '@new' => $new_source,
+          ]);
+        }
+      } else {
+        // Only set to "Source Unavailable" if field is completely empty
+        if (empty($current_source)) {
+          $entity->set('field_news_source', 'Source Unavailable');
+          $this->logger()->warning('Could not extract news source for @title, set to unavailable', [
+            '@title' => $entity->getTitle(),
+          ]);
+        }
       }
     }
 

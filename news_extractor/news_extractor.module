@@ -82,21 +82,8 @@ function news_extractor_entity_insert(EntityInterface $entity) {
     $original_url = $entity->get('field_original_url')->uri ?? '';
     
     if (!empty($original_url)) {
-      // Ensure news source is set before full processing
-      if ($entity->hasField('field_news_source') && $entity->get('field_news_source')->isEmpty()) {
-        /** @var \Drupal\news_extractor\Service\DataProcessingService $data_processing_service */
-        $data_processing_service = \Drupal::service('news_extractor.data_processing');
-        $news_source = $data_processing_service->extractNewsSource($entity);
-        
-        if (!empty($news_source)) {
-          $entity->set('field_news_source', $news_source);
-          $entity->save();
-          \Drupal::logger('news_extractor')->info('Set news source during entity insert: @source for @title', [
-            '@source' => $news_source,
-            '@title' => $entity->getTitle(),
-          ]);
-        }
-      }
+      // Note: News source extraction is handled during Diffbot scraping in ScrapingService::updateMetadataFields()
+      // This ensures we have the actual siteName from Diffbot API for accurate source identification
       
       // Use the orchestrator service for complete processing
       /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */

@@ -128,53 +128,103 @@ The Truth Perspective is an AI-powered news analysis platform built on Drupal 11
 
 ## Data Processing Pipeline
 
-### Stage 1: Content Import
+### Stage 1: Content Import (Feed Processing)
 ```
-RSS Feed → Feeds Module → Article Creation → Initial Field Population
+RSS/JSON Feed → Feeds Module → Entity Creation → Initial Fields
 ```
-- **Process**: RSS feeds processed via Drupal Feeds module
-- **Hook**: `news_extractor_feeds_process_alter()`
-- **Actions**: Extract source from feed metadata, set initial field values
+- **Process**: `diffbot_integration` feeds import article list from Diffbot API
+- **Data Available**: `title`, `field_original_url` (link from feed)
+- **Hook**: `news_extractor_feeds_process_alter()` (NOT called for diffbot_integration)
+- **Initial State**: Minimal entity with URL only
 
-### Stage 2: Content Enhancement (Diffbot)
+### Stage 2: Entity Creation
 ```
-Article URL → Diffbot API → JSON Response → field_json_scraped_article_data
+Minimal Entity → hook_entity_insert() → Queue Full Processing
 ```
-- **Process**: Diffbot extracts clean article content and metadata
-- **Storage**: Complete response stored in `field_json_scraped_article_data`
-- **Format**: JSON with objects[], request[], and metadata
+- **Location**: `news_extractor_entity_insert()`
+- **Action**: Trigger complete article processing pipeline
+- **Note**: News source extraction deferred to metadata stage
 
-### Stage 3: News Source Population (Multi-Stage)
+### Stage 3: Content Scraping (Diffbot Individual Article API)
 ```
-Priority 1: JSON Data → siteName Extraction → Cleaned Source Name
-Priority 2: URL Domain → Domain Mapping → Standardized Name
-Priority 3: Feed Metadata → RSS Source → Cleaned Name
+Article URL → Diffbot Article API → Complete Article Data → JSON Storage
 ```
+- **External Dependency**: Diffbot Article Analysis API
+- **API Endpoint**: `https://api.diffbot.com/v3/article`
+- **Rate Limits**: 13-second delay between calls
+- **Data Retrieved**: `siteName`, `text`, `author`, `date`, `images`
+- **Storage**: Complete response in `field_json_scraped_article_data`
 
-#### Implementation Details:
-- **Primary Method**: Extract from Diffbot JSON `objects[].siteName`
-- **Fallback Method**: Extract from URL domain mapping
-- **Feed Method**: Extract from RSS feed metadata
-- **Cleaning**: Remove suffixes, standardize common sources
+### Stage 4: Metadata Update (PRIMARY NEWS SOURCE SETTING)
+```
+Diffbot Article Data → Extract siteName → Clean & Standardize → field_news_source
+```
+- **Location**: `ScrapingService::updateMetadataFields()`
+- **Primary Source**: `siteName` from Diffbot JSON (e.g., "CNN Politics")
+- **Cleaning**: Map "CNN Politics" → "CNN", "Reuters.com" → "Reuters"
+- **Fallback**: URL domain extraction if siteName unavailable
+- **Update Logic**: Always update if empty, "Source Unavailable", or different
 
-### Stage 4: AI Analysis (Claude)
+#### News Source Extraction Priority:
+1. **Diffbot siteName** (Priority 1): `"CNN Politics"` → `"CNN"`
+2. **URL Domain Mapping** (Priority 2): `cnn.com` → `"CNN"`
+3. **Unknown Domain Processing** (Priority 3): `unknown-news.com` → `"Unknown News"`
+
+### Stage 5: AI Analysis (Claude)
 ```
-Clean Content → AWS Bedrock Claude → AI Analysis → Multiple Analysis Fields
+Article Text → AWS Bedrock Claude → Structured Analysis → Multiple Fields
 ```
-- **Service**: AWS Bedrock Claude 3.5 Sonnet
+- **External Dependency**: AWS Bedrock Claude 3.5 Sonnet
+- **Rate Limits**: Managed by AWS
 - **Analysis Types**: Bias detection, motivation analysis, sentiment scoring
 - **Storage**: Raw responses in `field_ai_raw_response`, parsed data in specific fields
 
-### Stage 5: Analytics Aggregation
+### Stage 6: Analytics Aggregation
 ```
 Individual Article Data → Batch Processing → Aggregated Statistics → Dashboard
 ```
 - **Frequency**: Real-time for new articles, batch for historical analysis
 - **Output**: Public analytics dashboard with comprehensive metrics
 
-## News Source Population System
+## External Dependencies
 
-### Query Logic and Database Handling
+### Required External Services
+
+#### 1. Diffbot API
+- **Purpose**: Content extraction and article analysis
+- **Endpoints Used**:
+  - List API: `https://api.diffbot.com/v3/analyze?url=https://cnn.com/politics`
+  - Article API: `https://api.diffbot.com/v3/article?url=<article_url>`
+- **Authentication**: API token in URL parameter
+- **Rate Limits**: Self-imposed 13-second delays
+- **Failure Handling**: Store "Scraped data unavailable." placeholder
+
+#### 2. AWS Bedrock (Claude AI)
+- **Purpose**: Article analysis and bias detection
+- **Model**: Claude 3.5 Sonnet
+- **Authentication**: AWS credentials
+- **Rate Limits**: Managed by AWS service
+- **Failure Handling**: Skip AI analysis, log errors
+
+#### 3. Feed Sources
+- **CNN Politics Feed**: Via Diffbot integration
+- **Processing**: Automated import via Drupal Feeds module
+- **Frequency**: Configurable (currently 6-hour intervals)
+
+### Service Architecture Dependencies
+
+#### Internal Drupal Services
+- `news_extractor.scraping`: Content extraction (Sensors)
+- `news_extractor.ai_processing`: AI analysis (Processors) 
+- `news_extractor.data_processing`: Field updates (Levers)
+- `news_extractor.extraction`: Orchestration (Coordinator)
+
+#### External API Integration Points
+- **Diffbot Integration**: Handle API failures gracefully
+- **AWS Integration**: Manage authentication and rate limits
+- **Feed Processing**: Support multiple feed types and sources
+
+## News Source Population System### Query Logic and Database Handling
 
 #### NULL vs Empty String Handling
 Drupal stores empty fields as `NULL` in the database, not empty strings. All queries use proper NULL handling:
