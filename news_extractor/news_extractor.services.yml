@@ -1,0 +1,31 @@
+services:
+  # Scraping Service - Sensors: Data gathering from external sources
+  news_extractor.scraping:
+    class: Drupal\news_extractor\Service\ScrapingService
+    arguments: 
+      - '@http_client'
+      - '@config.factory'
+      - '@logger.factory'
+      - '@state'
+
+  # AI Processing Service - Processors: Data transformation and analysis
+  news_extractor.ai_processing:
+    class: Drupal\news_extractor\Service\AIProcessingService
+    arguments:
+      - '@logger.factory'
+
+  # Data Processing Service - Levers: Actions taken based on processed data
+  news_extractor.data_processing:
+    class: Drupal\news_extractor\Service\DataProcessingService
+    arguments:
+      - '@entity_type.manager'
+      - '@logger.factory'
+
+  # Main orchestrator service - Coordinates all three services
+  news_extractor.extraction:
+    class: Drupal\news_extractor\Service\NewsExtractionService
+    arguments:
+      - '@news_extractor.scraping'
+      - '@news_extractor.ai_processing' 
+      - '@news_extractor.data_processing'
+      - '@logger.factory'

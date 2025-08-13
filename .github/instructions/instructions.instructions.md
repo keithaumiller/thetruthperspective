@@ -31,6 +31,11 @@ Always highlight which file is recomended to update.
 
 When generating code, always assume the code is being written for the production server.
 
+When deciding architecture categorize functions into:
+Sensors: data gathering
+Processors: data transformation and analysis
+Levers: actions taken based on processed data
+
 Always assume we are troubleshooting on the production server
 all curl testing functions should assume they need to run against the production URL:
 https://thetruthperspective.org
