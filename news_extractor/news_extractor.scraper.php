@@ -73,9 +73,9 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           $entity->set('field_bias_analysis', $structured_data['bias_analysis']);
         }
         
-        // Sentiment score (list_string field format)
+        // Sentiment score (text field format)
         if (isset($structured_data['sentiment_score']) && $entity->hasField('field_article_sentiment_score')) {
-          $entity->set('field_article_sentiment_score', [['value' => (string) $structured_data['sentiment_score']]]);
+          $entity->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
         }
 
         // Create simple tags for browsing (entities + motivations + metrics) BEFORE formatting
@@ -925,9 +925,9 @@ function news_extractor_reprocess_node_from_raw_response($nid) {
     $node->set('field_bias_analysis', $structured_data['bias_analysis']);
   }
   
-  // Sentiment score (list_string field format)
+  // Sentiment score (text field format)
   if (isset($structured_data['sentiment_score']) && $node->hasField('field_article_sentiment_score')) {
-    $node->set('field_article_sentiment_score', [['value' => (string) $structured_data['sentiment_score']]]);
+    $node->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
   }
   
   // Update motivation data field

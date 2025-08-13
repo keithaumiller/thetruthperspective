@@ -168,9 +168,9 @@ class DataProcessingService {
       $entity->set('field_bias_analysis', $structured_data['bias_analysis']);
     }
 
-    // Sentiment score (list_string field format)
+    // Sentiment score (text field format)
     if (isset($structured_data['sentiment_score']) && $entity->hasField('field_article_sentiment_score')) {
-      $entity->set('field_article_sentiment_score', [['value' => (string) $structured_data['sentiment_score']]]);
+      $entity->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
     }
   }
 
