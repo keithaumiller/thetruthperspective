@@ -389,6 +389,8 @@ class MetricsDataService implements MetricsDataServiceInterface {
       $query->condition('n.type', 'article');
       $query->condition('n.status', 1);
       $query->condition('ns.field_news_source_value', '', '<>');
+      $query->condition('ns.field_news_source_value', NULL, 'IS NOT NULL');
+      $query->condition('ns.field_news_source_value', 'Source Unavailable', '<>');
       $query->groupBy('ns.field_news_source_value');
       $query->orderBy('article_count', 'DESC');
       $query->range(0, 20);
