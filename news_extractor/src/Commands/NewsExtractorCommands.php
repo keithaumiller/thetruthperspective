@@ -587,7 +587,8 @@ class NewsExtractorCommands extends DrushCommands {
     $batches = array_chunk($cnn_nids, $batch_size);
     
     foreach ($batches as $batch_nids) {
-      $this->output()->writeln("Processing batch {$batch_num} ({count} articles)...", ['count' => count($batch_nids)]);
+      $count = count($batch_nids);
+      $this->output()->writeln("Processing batch {$batch_num} ({$count} articles)...");
       
       $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($batch_nids);
       $batch_updated = 0;
