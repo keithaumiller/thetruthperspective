@@ -53,6 +53,55 @@
   let chart = null;
   let sourceSelector = null;
 
+  // Color assignment function to ensure unique colors
+  function assignSourceColors(uniqueSources) {
+    const baseColors = [
+      { name: 'red', bias: '#B91C1C', credibility: '#EF4444', sentiment: '#FCA5A5' },
+      { name: 'blue', bias: '#1E3A8A', credibility: '#3B82F6', sentiment: '#93C5FD' },
+      { name: 'green', bias: '#166534', credibility: '#22C55E', sentiment: '#86EFAC' }
+    ];
+    
+    const sourceColorMap = {};
+    const usedColorIndices = new Set();
+    
+    // First pass: assign CNN to blue, Fox to red
+    uniqueSources.forEach(sourceName => {
+      if (sourceName && (sourceName.toLowerCase().includes('cnn') || sourceName === 'CNN')) {
+        sourceColorMap[sourceName] = 1; // Blue
+        usedColorIndices.add(1);
+      } else if (sourceName && (sourceName.toLowerCase().includes('fox') || sourceName === 'FOXNews.com')) {
+        sourceColorMap[sourceName] = 0; // Red
+        usedColorIndices.add(0);
+      }
+    });
+    
+    // Second pass: assign remaining sources to available colors
+    let nextColorIndex = 0;
+    uniqueSources.forEach(sourceName => {
+      if (!(sourceName in sourceColorMap)) {
+        // Find next available color
+        while (usedColorIndices.has(nextColorIndex) && nextColorIndex < 3) {
+          nextColorIndex++;
+        }
+        
+        if (nextColorIndex < 3) {
+          sourceColorMap[sourceName] = nextColorIndex;
+          usedColorIndices.add(nextColorIndex);
+          nextColorIndex++;
+        } else {
+          // Fallback if more than 3 sources (shouldn't happen in normal usage)
+          sourceColorMap[sourceName] = 2; // Default to green
+        }
+      }
+    });
+    
+    console.log('🎨 Source color assignments:', sourceColorMap);
+    console.log('🎨 Color mapping:', Object.entries(sourceColorMap).map(([source, colorIndex]) => 
+      `${source} = ${baseColors[colorIndex].name}`).join(', '));
+    
+    return { sourceColorMap, baseColors };
+  }
+
   function initializeChart(canvas, canvasId, settings) {
     try {
       // Find associated source selector
@@ -143,25 +192,28 @@
 
       console.log('Processing', data.timelineData.length, 'datasets...');
     
+      // Get unique source names from the data for color assignment
+      const uniqueSources = [...new Set(data.timelineData.map(item => {
+        let name = item.source_name;
+        if (name && name.includes(' - ')) {
+          name = name.split(' - ')[0];
+        }
+        if (name && name.toLowerCase().includes('fox')) {
+          return name.includes('.com') ? 'FOXNews.com' : 'Fox News';
+        } else if (name && name.toLowerCase().includes('cnn')) {
+          return 'CNN';
+        }
+        return name;
+      }))];
+      
+      console.log('Unique sources in chart:', uniqueSources);
+      
+      // Get color assignments for all sources
+      const { sourceColorMap, baseColors } = assignSourceColors(uniqueSources);
+    
       // Prepare datasets from timeline data - each source has 3 metrics
       const datasets = data.timelineData.map((sourceData, index) => {
         console.log(`Dataset ${index}: ${sourceData.source_name} (${sourceData.metric_type}) with ${sourceData.data ? sourceData.data.length : 0} data points`);
-        
-        // Get unique source names from the data for color assignment
-        const uniqueSources = [...new Set(data.timelineData.map(item => {
-          let name = item.source_name;
-          if (name && name.includes(' - ')) {
-            name = name.split(' - ')[0];
-          }
-          if (name && name.toLowerCase().includes('fox')) {
-            return name.includes('.com') ? 'FOXNews.com' : 'Fox News';
-          } else if (name && name.toLowerCase().includes('cnn')) {
-            return 'CNN';
-          }
-          return name;
-        }))];
-        
-        console.log('Unique sources in chart:', uniqueSources);
         
         // Get the source name and metric type
         let sourceName = sourceData.source_name;
@@ -179,43 +231,9 @@
           sourceName = 'CNN';
         }
         
-        // Positional color assignment: Red, Blue, Green
-        // Base color schemes for the three positions
-        const baseColors = [
-          { name: 'red', bias: '#B91C1C', credibility: '#EF4444', sentiment: '#FCA5A5' },
-          { name: 'blue', bias: '#1E3A8A', credibility: '#3B82F6', sentiment: '#93C5FD' },
-          { name: 'green', bias: '#166534', credibility: '#22C55E', sentiment: '#86EFAC' }
-        ];
-        
-        let colorScheme;
-        
-        // Special rules: CNN=Blue, Fox=Red, then assign remaining by position
-        if (sourceName && (sourceName.toLowerCase().includes('cnn') || sourceName === 'CNN')) {
-          colorScheme = baseColors[1]; // CNN is always blue (index 1)
-        } else if (sourceName && (sourceName.toLowerCase().includes('fox') || sourceName === 'FOXNews.com')) {
-          colorScheme = baseColors[0]; // Fox is always red (index 0)
-        } else {
-          // For other sources, assign by position in unique sources array
-          const sourceIndex = uniqueSources.indexOf(sourceName);
-          let colorIndex;
-          
-          // Determine which color slot this source gets
-          if (uniqueSources.includes('CNN') && uniqueSources.includes('FOXNews.com')) {
-            // Both CNN and Fox present, third source gets green
-            colorIndex = 2;
-          } else if (uniqueSources.includes('CNN')) {
-            // CNN present (takes blue), assign red or green to others
-            colorIndex = sourceIndex === 0 && sourceName !== 'CNN' ? 0 : 2;
-          } else if (uniqueSources.includes('FOXNews.com')) {
-            // Fox present (takes red), assign blue or green to others
-            colorIndex = sourceIndex === 1 && sourceName !== 'FOXNews.com' ? 1 : 2;
-          } else {
-            // Neither CNN nor Fox present, assign by position: Red, Blue, Green
-            colorIndex = Math.min(sourceIndex, 2);
-          }
-          
-          colorScheme = baseColors[colorIndex];
-        }
+        // Get color scheme for this source
+        const colorIndex = sourceColorMap[sourceName] || 2; // Default to green if not found
+        const colorScheme = baseColors[colorIndex];
         
         // Get color for this metric type
         const color = colorScheme[metricType] || '#6B7280';
@@ -385,8 +403,8 @@
       console.warn('⚠️ No timeline data available for source IDs:', missingSourceIds);
     }
 
-    // Update chart datasets with positional color scheme
-    // Get unique source names for positional color assignment
+    // Update chart datasets with unique color assignment
+    // Get unique source names for color assignment
     const uniqueSelectedSources = [...new Set(filteredData.map(item => {
       let name = item.source_name;
       if (name && name.includes(' - ')) {
@@ -402,12 +420,8 @@
     
     console.log('Unique selected sources for coloring:', uniqueSelectedSources);
     
-    // Base color schemes: Red, Blue, Green (positional assignment)
-    const baseColors = [
-      { name: 'red', bias: '#B91C1C', credibility: '#EF4444', sentiment: '#FCA5A5' },
-      { name: 'blue', bias: '#1E3A8A', credibility: '#3B82F6', sentiment: '#93C5FD' },
-      { name: 'green', bias: '#166534', credibility: '#22C55E', sentiment: '#86EFAC' }
-    ];
+    // Get color assignments for selected sources
+    const { sourceColorMap, baseColors } = assignSourceColors(uniqueSelectedSources);
 
     chart.data.datasets = filteredData.map((sourceData, index) => {
       // Get the source name and metric type
@@ -426,36 +440,9 @@
         sourceName = 'CNN';
       }
       
-      // Determine color scheme based on source priority and position
-      let colorScheme;
-      
-      // Special rules: CNN=Blue, Fox=Red, then assign remaining by position
-      if (sourceName && (sourceName.toLowerCase().includes('cnn') || sourceName === 'CNN')) {
-        colorScheme = baseColors[1]; // CNN is always blue (index 1)
-      } else if (sourceName && (sourceName.toLowerCase().includes('fox') || sourceName === 'FOXNews.com')) {
-        colorScheme = baseColors[0]; // Fox is always red (index 0)
-      } else {
-        // For other sources, assign by position in unique sources array
-        const sourceIndex = uniqueSelectedSources.indexOf(sourceName);
-        let colorIndex;
-        
-        // Determine which color slot this source gets
-        if (uniqueSelectedSources.includes('CNN') && uniqueSelectedSources.includes('FOXNews.com')) {
-          // Both CNN and Fox present, third source gets green
-          colorIndex = 2;
-        } else if (uniqueSelectedSources.includes('CNN')) {
-          // CNN present (takes blue), assign red or green to others
-          colorIndex = sourceIndex === 0 && sourceName !== 'CNN' ? 0 : 2;
-        } else if (uniqueSelectedSources.includes('FOXNews.com')) {
-          // Fox present (takes red), assign blue or green to others
-          colorIndex = sourceIndex === 1 && sourceName !== 'FOXNews.com' ? 1 : 2;
-        } else {
-          // Neither CNN nor Fox present, assign by position: Red, Blue, Green
-          colorIndex = Math.min(sourceIndex, 2);
-        }
-        
-        colorScheme = baseColors[colorIndex];
-      }
+      // Get color scheme for this source
+      const colorIndex = sourceColorMap[sourceName] || 2; // Default to green if not found
+      const colorScheme = baseColors[colorIndex];
       
       // Get color for this metric type
       const color = colorScheme[metricType] || '#6B7280';
