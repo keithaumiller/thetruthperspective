@@ -165,9 +165,23 @@ class ChartDataService implements ChartDataServiceInterface {
       }
 
       // Format data for Chart.js
+      $top_sources = $this->metricsDataService->getTopNewsSources($options['limit']);
+      
+      // Debug logging
+      \Drupal::logger('newsmotivationmetrics')->info('ChartDataService: top_sources query returned @count sources with limit @limit', [
+        '@count' => count($top_sources),
+        '@limit' => $options['limit'],
+      ]);
+      
+      if (!empty($top_sources)) {
+        \Drupal::logger('newsmotivationmetrics')->info('ChartDataService: first source is @source', [
+          '@source' => $top_sources[0]['source_name'] ?? 'unknown',
+        ]);
+      }
+      
       return [
         'timeline_data' => $timeline_data,
-        'top_sources' => $this->metricsDataService->getTopNewsSources($options['limit']),
+        'top_sources' => $top_sources,
         'debug_info' => $this->getChartDebugInfo(),
       ];
 
