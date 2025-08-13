@@ -500,10 +500,8 @@
     }
 
     // Update chart datasets with unique color assignment
-    // Get unique source names for color assignment
-    const uniqueSelectedSources = [...new Set(filteredData.map(item => {
-      return normalizeSourceName(item.source_name);
-    }))];
+    // Get unique source names for color assignment (use ORIGINAL names, not normalized)
+    const uniqueSelectedSources = [...new Set(filteredData.map(item => item.source_name))];
     
     console.log('Unique selected sources for coloring:', uniqueSelectedSources);
     
