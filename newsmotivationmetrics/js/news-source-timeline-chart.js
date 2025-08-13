@@ -12,7 +12,6 @@
   }
 
   console.log('=== Chart Script Loaded Successfully ===');
-
   console.log('Environment check:');
   console.log('- Drupal available:', typeof Drupal !== 'undefined');
   console.log('- jQuery available:', typeof $ !== 'undefined');
@@ -53,8 +52,49 @@
   let chart = null;
   let sourceSelector = null;
 
-  // Color assignment function to ensure unique colors
-  function assignSourceColors(uniqueSources) {
+    // Helper function to normalize source names
+  function normalizeSourceName(sourceName) {
+    if (!sourceName) return sourceName;
+    
+    // Clean up source name - remove extra info after ' - '
+    if (sourceName.includes(' - ')) {
+      sourceName = sourceName.split(' - ')[0];
+    }
+    
+    // Normalize Fox News variations: foxnews.com = foxnews = fox
+    if (sourceName.toLowerCase().includes('fox')) {
+      return 'Fox News'; // Standardize all Fox variations to 'Fox News'
+    }
+    
+    // Normalize CNN variations
+    if (sourceName.toLowerCase().includes('cnn')) {
+      return 'CNN'; // Standardize all CNN variations to 'CNN'
+    }
+    
+    return sourceName;
+  }
+
+  // Helper function to check if source is Fox News
+  function isFoxNews(sourceName) {
+    return sourceName && sourceName.toLowerCase().includes('fox');
+  }
+
+  // Helper function to check if source is CNN
+  function isCNN(sourceName) {
+    return sourceName && sourceName.toLowerCase().includes('cnn');
+  }
+
+  // Function to assign colors to sources based on strict rules
+  function assignSourceColors(selectedSources) {
+    // Normalize all source names first
+    const normalizedSources = selectedSources.map(source => normalizeSourceName(source));
+    
+    // Limit to maximum 3 sources
+    if (normalizedSources.length > 3) {
+      console.warn('Too many sources selected, limiting to first 3');
+      normalizedSources = normalizedSources.slice(0, 3);
+    }
+    
     const baseColors = [
       { name: 'red', bias: '#B91C1C', credibility: '#EF4444', sentiment: '#FCA5A5' },
       { name: 'blue', bias: '#1E3A8A', credibility: '#3B82F6', sentiment: '#93C5FD' },
@@ -62,43 +102,89 @@
     ];
     
     const sourceColorMap = {};
-    const usedColorIndices = new Set();
     
-    // First pass: assign CNN to blue, Fox to red
-    uniqueSources.forEach(sourceName => {
-      if (sourceName && (sourceName.toLowerCase().includes('cnn') || sourceName === 'CNN')) {
-        sourceColorMap[sourceName] = 1; // Blue
-        usedColorIndices.add(1);
-      } else if (sourceName && (sourceName.toLowerCase().includes('fox') || sourceName === 'FOXNews.com')) {
-        sourceColorMap[sourceName] = 0; // Red
-        usedColorIndices.add(0);
-      }
-    });
-    
-    // Second pass: assign remaining sources to available colors
-    let nextColorIndex = 0;
-    uniqueSources.forEach(sourceName => {
-      if (!(sourceName in sourceColorMap)) {
-        // Find next available color
-        while (usedColorIndices.has(nextColorIndex) && nextColorIndex < 3) {
-          nextColorIndex++;
-        }
-        
-        if (nextColorIndex < 3) {
-          sourceColorMap[sourceName] = nextColorIndex;
-          usedColorIndices.add(nextColorIndex);
-          nextColorIndex++;
+    // Map original sources to their normalized versions for color assignment
+    selectedSources.forEach((originalSource, index) => {
+      const normalizedSource = normalizedSources[index];
+      
+      // Rules based on number of selections
+      if (normalizedSources.length === 1) {
+        // Single selection: Blue unless it's Fox News (then Red)
+        if (isFoxNews(normalizedSource)) {
+          sourceColorMap[originalSource] = 0; // red
         } else {
-          // Fallback if more than 3 sources (shouldn't happen in normal usage)
-          sourceColorMap[sourceName] = 2; // Default to green
+          sourceColorMap[originalSource] = 1; // blue
         }
+      } 
+      else if (normalizedSources.length === 2) {
+        // Two selections: Red and Blue
+        let redAssigned = false;
+        let blueAssigned = false;
+        
+        // First pass: assign CNN to blue and Fox to red
+        normalizedSources.forEach((normSource, idx) => {
+          const origSource = selectedSources[idx];
+          if (isCNN(normSource)) {
+            sourceColorMap[origSource] = 1; // CNN gets blue
+            blueAssigned = true;
+          } else if (isFoxNews(normSource)) {
+            sourceColorMap[origSource] = 0; // Fox gets red
+            redAssigned = true;
+          }
+        });
+        
+        // Second pass: assign remaining colors to unassigned sources
+        normalizedSources.forEach((normSource, idx) => {
+          const origSource = selectedSources[idx];
+          if (!sourceColorMap.hasOwnProperty(origSource)) {
+            if (!redAssigned) {
+              sourceColorMap[origSource] = 0; // red
+              redAssigned = true;
+            } else if (!blueAssigned) {
+              sourceColorMap[origSource] = 1; // blue
+              blueAssigned = true;
+            }
+          }
+        });
+      }
+      else if (normalizedSources.length === 3) {
+        // Three selections: Red, Blue, Green
+        let redAssigned = false;
+        let blueAssigned = false;
+        let greenAssigned = false;
+        
+        // First pass: assign CNN to blue and Fox to red
+        normalizedSources.forEach((normSource, idx) => {
+          const origSource = selectedSources[idx];
+          if (isCNN(normSource)) {
+            sourceColorMap[origSource] = 1; // CNN gets blue
+            blueAssigned = true;
+          } else if (isFoxNews(normSource)) {
+            sourceColorMap[origSource] = 0; // Fox gets red
+            redAssigned = true;
+          }
+        });
+        
+        // Second pass: assign remaining colors to unassigned sources
+        normalizedSources.forEach((normSource, idx) => {
+          const origSource = selectedSources[idx];
+          if (!sourceColorMap.hasOwnProperty(origSource)) {
+            if (!redAssigned) {
+              sourceColorMap[origSource] = 0; // red
+              redAssigned = true;
+            } else if (!blueAssigned) {
+              sourceColorMap[origSource] = 1; // blue
+              blueAssigned = true;
+            } else if (!greenAssigned) {
+              sourceColorMap[origSource] = 2; // green
+              greenAssigned = true;
+            }
+          }
+        });
       }
     });
     
-    console.log('🎨 Source color assignments:', sourceColorMap);
-    console.log('🎨 Color mapping:', Object.entries(sourceColorMap).map(([source, colorIndex]) => 
-      `${source} = ${baseColors[colorIndex].name}`).join(', '));
-    
+    console.log('Color assignments:', sourceColorMap);
     return { sourceColorMap, baseColors };
   }
 
@@ -194,16 +280,7 @@
     
       // Get unique source names from the data for color assignment
       const uniqueSources = [...new Set(data.timelineData.map(item => {
-        let name = item.source_name;
-        if (name && name.includes(' - ')) {
-          name = name.split(' - ')[0];
-        }
-        if (name && name.toLowerCase().includes('fox')) {
-          return name.includes('.com') ? 'FOXNews.com' : 'Fox News';
-        } else if (name && name.toLowerCase().includes('cnn')) {
-          return 'CNN';
-        }
-        return name;
+        return normalizeSourceName(item.source_name);
       }))];
       
       console.log('Unique sources in chart:', uniqueSources);
@@ -220,16 +297,7 @@
         const metricType = sourceData.metric_type;
         
         // Clean up source name for better matching
-        if (sourceName && sourceName.includes(' - ')) {
-          sourceName = sourceName.split(' - ')[0];
-        }
-        
-        // Normalize common variations
-        if (sourceName && sourceName.toLowerCase().includes('fox')) {
-          sourceName = sourceName.includes('.com') ? 'FOXNews.com' : 'Fox News';
-        } else if (sourceName && sourceName.toLowerCase().includes('cnn')) {
-          sourceName = 'CNN';
-        }
+        sourceName = normalizeSourceName(sourceName);
         
         // Get color scheme for this source
         const colorIndex = sourceColorMap[sourceName] || 2; // Default to green if not found
@@ -348,9 +416,38 @@
   }
 
   function setupEventListeners(canvasId) {
-    // Source selector change event
+    // Source selector change event with 3-selection limit
     if (sourceSelector) {
-      sourceSelector.addEventListener('change', updateChart);
+      sourceSelector.addEventListener('change', function(event) {
+        const selectedOptions = Array.from(sourceSelector.selectedOptions);
+        
+        // Enforce maximum 3 selections
+        if (selectedOptions.length > 3) {
+          console.log('Maximum 3 sources allowed, deselecting excess selections');
+          
+          // Keep only the first 3 selections
+          Array.from(sourceSelector.options).forEach((option, index) => {
+            option.selected = false;
+          });
+          
+          // Re-select only the first 3
+          for (let i = 0; i < Math.min(3, selectedOptions.length); i++) {
+            selectedOptions[i].selected = true;
+          }
+          
+          // Show warning message
+          const statusElement = document.querySelector('[id*="chart-status"]');
+          if (statusElement) {
+            statusElement.textContent = '⚠️ Maximum 3 sources allowed - excess selections removed';
+            setTimeout(() => {
+              updateChart(); // Update chart after warning
+            }, 1000);
+            return;
+          }
+        }
+        
+        updateChart();
+      });
     }
 
     // Reset button
@@ -406,16 +503,7 @@
     // Update chart datasets with unique color assignment
     // Get unique source names for color assignment
     const uniqueSelectedSources = [...new Set(filteredData.map(item => {
-      let name = item.source_name;
-      if (name && name.includes(' - ')) {
-        name = name.split(' - ')[0];
-      }
-      if (name && name.toLowerCase().includes('fox')) {
-        return name.includes('.com') ? 'FOXNews.com' : 'Fox News';
-      } else if (name && name.toLowerCase().includes('cnn')) {
-        return 'CNN';
-      }
-      return name;
+      return normalizeSourceName(item.source_name);
     }))];
     
     console.log('Unique selected sources for coloring:', uniqueSelectedSources);
@@ -429,16 +517,7 @@
       const metricType = sourceData.metric_type;
       
       // Clean up source name for better matching
-      if (sourceName && sourceName.includes(' - ')) {
-        sourceName = sourceName.split(' - ')[0];
-      }
-      
-      // Normalize common variations
-      if (sourceName && sourceName.toLowerCase().includes('fox')) {
-        sourceName = sourceName.includes('.com') ? 'FOXNews.com' : 'Fox News';
-      } else if (sourceName && sourceName.toLowerCase().includes('cnn')) {
-        sourceName = 'CNN';
-      }
+      sourceName = normalizeSourceName(sourceName);
       
       // Get color scheme for this source
       const colorIndex = sourceColorMap[sourceName] || 2; // Default to green if not found
