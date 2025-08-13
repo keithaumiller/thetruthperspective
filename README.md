@@ -86,13 +86,14 @@ Automated job search and application processing system (development framework).
 - ✅ **Error Handling**: Comprehensive logging and graceful degradation
 - ✅ **API Integration**: Stable Diffbot and AWS Bedrock connectivity
 
-## 🔧 Drush Command Suite
+## 🔧 Comprehensive Drush Command Suite
 
 ### News Extractor Commands
 
-#### Statistics and Monitoring
+#### Statistics and Analysis
 ```bash
-drush ne:stats                    # Comprehensive field statistics
+drush ne:stats                    # Comprehensive field statistics and debug info
+drush ne:summary                  # Processing status summary with recommendations
 drush news-extractor:source-stats # Full alias
 ```
 **Output**: Field existence, data availability, processing opportunities

@@ -99,8 +99,34 @@ Articles are automatically processed when:
 - Articles are created with `field_original_url`
 
 ### Manual Processing
-Use Drush commands for manual operations:
+Use Drush commands for manual operations and maintenance:
 
+#### Comprehensive Statistics and Analysis
+```bash
+# Get detailed field statistics and debug information
+drush ne:stats                    # Shows field existence, data availability
+drush news-extractor:source-stats # Full alias
+
+# Get processing summary with recommendations
+drush ne:summary                  # Overview with next steps
+drush news-extractor:summary      # Full alias
+```
+
+#### News Source Population (Primary Tasks)
+```bash
+# Process from JSON data (most reliable method)
+drush ne:pop-sources              # Default batch size (100)
+drush ne:pop-sources 50           # Custom batch size
+drush ne:pop-sources --all        # Process all articles in one run
+drush news-extractor:populate-sources  # Full alias
+
+# Process from URLs (fallback method)
+drush ne:pop-url                  # Default batch size (50)
+drush ne:pop-url 25               # Custom batch size
+drush news-extractor:populate-sources-url  # Full alias
+```
+
+#### Standard Processing
 ```bash
 # Process recent articles
 drush news-extractor:process
