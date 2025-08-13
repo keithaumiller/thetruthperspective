@@ -72,7 +72,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
 
     // Get extended sources for selector (top 20 sources)
     $extended_sources = $this->chartDataService->getNewsSourceTimelineChartData([
-      'limit' => 20,
+      'limit' => 50, // Increase to show more sources in selector
       'days_back' => $options['days_back'],
     ]);
 
@@ -124,7 +124,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
 
     // Chart controls (if enabled)
     if ($options['show_controls']) {
-      $build['controls'] = $this->buildChartControls($chart_data['top_sources'], $options['canvas_id']);
+      $build['controls'] = $this->buildChartControls($extended_sources, $options['canvas_id']);
     }
 
     // Chart canvas
@@ -202,15 +202,15 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
   /**
    * Build chart controls section.
    *
-   * @param array $top_sources
-   *   Array of top sources data.
+   * @param array $extended_sources_data
+   *   Array of extended sources data including top_sources.
    * @param string $canvas_id
    *   The canvas element ID.
    *
    * @return array
    *   Render array for chart controls.
    */
-  protected function buildChartControls(array $top_sources, string $canvas_id): array {
+  protected function buildChartControls(array $extended_sources_data, string $canvas_id): array {
     $controls = [
       '#type' => 'details',
       '#title' => t('📊 Chart Controls'),
@@ -231,15 +231,16 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
     $controls['controls_container']['selector_group']['label'] = [
       '#type' => 'html_tag',
       '#tag' => 'label',
-      '#value' => t('Select News Sources (max 3):'),
+      '#value' => t('Select News Sources (showing top 50 by article count):'),
       '#attributes' => [
         'for' => $canvas_id === 'news-source-timeline-chart' ? 'source-selector' : 'source-selector-' . substr($canvas_id, -8),
         'class' => ['control-label'],
       ],
     ];
 
-    // Build source options
-    $source_options = $this->chartDataService->buildNewsSourceOptionsArray($top_sources);
+    // Build source options from extended sources (not just top 3)
+    $all_sources = !empty($extended_sources_data['top_sources']) ? $extended_sources_data['top_sources'] : [];
+    $source_options = $this->chartDataService->buildNewsSourceOptionsArray($all_sources);
 
     $controls['controls_container']['selector_group']['selector'] = [
       '#type' => 'select',
