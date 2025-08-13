@@ -81,7 +81,7 @@
                 console.warn('[DIAG] Selector element was replaced after load!');
               }
             }, 1000);
-            // Add event listeners for click, mousedown, focus
+            // Add event listeners for click, mousedown, focus with passive option
             ['click','mousedown','focus'].forEach(evt => {
               selector.addEventListener(evt, function(e) {
                 console.log(`[DIAG] Selector event: ${evt}`, {
@@ -95,15 +95,15 @@
                   selectedOptions: Array.from(selector.selectedOptions).map(o => o.value),
                   optionsCount: selector.options.length
                 });
-              });
+              }, { passive: true });
             });
-            // Log selection after change
+            // Log selection after change with passive listener
             selector.addEventListener('change', function(e) {
               console.log('[DIAG] Selector change event', {
                 selectedOptions: Array.from(selector.selectedOptions).map(o => o.value),
                 optionsCount: selector.options.length
               });
-            });
+            }, { passive: true });
             // Check if truly multi-select
             if (!selector.multiple || selector.size <= 1) {
               // Add visible persistent warning above selector
@@ -389,7 +389,7 @@
         resetBtn.addEventListener('click', function() {
           console.log('Reset chart button clicked');
           self.resetChart();
-        });
+        }, { passive: true });
       }
 
       // Clear chart button
@@ -398,7 +398,7 @@
         clearBtn.addEventListener('click', function() {
           console.log('Clear chart button clicked');
           self.clearChart();
-        });
+        }, { passive: true });
       }
 
       // Term selector change (if present)

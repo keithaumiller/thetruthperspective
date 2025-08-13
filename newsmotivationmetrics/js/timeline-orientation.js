@@ -1,21 +1,20 @@
 /**
- * News Motivation Timeline Chart Orientation Handler
+ * Timeline Chart Orientation Handler
  * Prevents chart rendering in portrait mode and handles re-initialization in landscape
- * Specifically designed for news motivation tracking timeline charts
  */
 
 (function (Drupal, once) {
   'use strict';
 
-  Drupal.behaviors.newsMotivationTimelineOrientation = {
+  Drupal.behaviors.timelineChartOrientation = {
     attach: function (context, settings) {
       // Only run on mobile devices
       if (!this.isMobileDevice()) {
         return;
       }
 
-      once('news-motivation-timeline-orientation', '.news-motivation-timeline-section', context).forEach((element) => {
-        this.initNewsMotivationTimelineOrientationHandler(element);
+      once('timeline-orientation', '.taxonomy-timeline-section', context).forEach((element) => {
+        this.initTimelineOrientationHandler(element);
       });
     },
 
@@ -23,7 +22,7 @@
       return window.innerWidth <= 768;
     },
 
-    initNewsMotivationTimelineOrientationHandler: function (timelineSection) {
+    initTimelineOrientationHandler: function (timelineSection) {
       const self = this;
       const canvas = timelineSection.querySelector('canvas');
       
@@ -133,11 +132,11 @@
       
       // Fallback: try to reinitialize using existing Drupal behaviors
       setTimeout(() => {
-        if (!canvas.chart && Drupal.behaviors.newsMotivationTimelineChart) {
+        if (!canvas.chart && Drupal.behaviors.taxonomyTimelineBlocks) {
           // Re-run the chart behavior on this specific element
-          const context = timelineSection;
+          const context = { timelineSection };
           const settings = Drupal.settings || drupalSettings;
-          Drupal.behaviors.newsMotivationTimelineChart.attach(context, settings);
+          Drupal.behaviors.taxonomyTimelineBlocks.attach(context, settings);
         }
       }, 200);
     },
