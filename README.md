@@ -86,31 +86,63 @@ Automated job search and application processing system (development framework).
 - ✅ **Error Handling**: Comprehensive logging and graceful degradation
 - ✅ **API Integration**: Stable Diffbot and AWS Bedrock connectivity
 
-## 🔧 Drush Command Suite
+## 🔧 Comprehensive Drush Command Suite
 
 ### News Extractor Commands
 
-#### Statistics and Monitoring
+#### Statistics and Analysis
 ```bash
-drush ne:stats                    # Comprehensive field statistics
-drush news-extractor:source-stats # Full alias
+drush ne:stats                    # Comprehensive field statistics and debug info
+drush ne:summary                  # Processing status summary with recommendations
+drush news-extractor:source-stats # Full alias for statistics
+drush news-extractor:summary      # Full alias for summary
 ```
-**Output**: Field existence, data availability, processing opportunities
+**Output**: Field existence, data availability, processing opportunities, and next steps
 
-#### Bulk Processing
+#### Bulk Processing (News Source Population)
 ```bash
-drush ne:pop-sources             # Process articles from JSON data (primary)
-drush ne:pop-url                 # Process articles from URLs (fallback)
+drush ne:pop-sources             # Process articles from JSON data (primary method)
+drush ne:pop-url                 # Process articles from URLs (fallback method)
+drush news-extractor:populate-sources        # Full alias for JSON processing
+drush news-extractor:populate-sources-url    # Full alias for URL processing
 ```
 **Options**: 
-- `--batch_size=N`: Custom batch size (default: 50/25)
-- `--all`: Process all articles in one run
+- `--batch_size=N`: Custom batch size (default: 100 for JSON, 50 for URL)
+- `--all`: Process all articles in one run (JSON only)
+
+#### Data Cleanup and Maintenance
+```bash
+drush ne:fix-json                # Fix articles with invalid JSON using URL fallback
+drush ne:clean                   # Standardize news source names (CNN variants)
+drush news-extractor:fix-invalid-json       # Full alias for JSON fixes
+drush news-extractor:clean-sources          # Full alias for source cleanup
+```
+**Options**:
+- `--dry-run`: Show what would be changed without making changes (clean command)
+- `--batch_size=N`: Custom batch size for processing
 
 #### Testing and Debugging
 ```bash
 drush ne:test https://example.com  # Test extraction for specific URL
+drush news-extractor:test-extraction https://example.com  # Full alias
 ```
-**Output**: Detailed extraction results and source mapping
+**Output**: Detailed extraction results, URL parsing, and source mapping
+
+### News Motivation Metrics Commands
+
+#### Cache Management
+```bash
+drush newsmotivationmetrics:refresh-cache    # Update cached statistics
+drush newsmotivationmetrics:performance-report  # Weekly performance metrics
+```
+
+### AI Conversation Commands
+
+#### System Testing
+```bash
+drush ai-conversation:test       # Test AI API connection
+drush config:get ai_conversation.settings   # Check configuration
+```
 
 ## Technical Architecture
 

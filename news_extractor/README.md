@@ -99,34 +99,73 @@ Articles are automatically processed when:
 - Articles are created with `field_original_url`
 
 ### Manual Processing
-Use Drush commands for manual operations:
+Use Drush commands for manual operations and maintenance:
 
+#### Comprehensive Statistics and Analysis
 ```bash
-# Process recent articles
-drush news-extractor:process
+# Get detailed field statistics and debug information
+drush ne:stats                    # Shows field existence, data availability
+drush news-extractor:source-stats # Full alias
 
-# Bulk process with options
-drush news-extractor:bulk-process --limit=50 --type=full
-
-# Process only scraping (no AI analysis)
-drush news-extractor:bulk-process --type=scrape_only
-
-# Process only AI analysis (articles already scraped)
-drush news-extractor:bulk-process --type=analyze_only
-
-# Reprocess articles (re-run AI analysis)
-drush news-extractor:bulk-process --type=reprocess
-
-# Check processing status
-drush news-extractor:status
+# Get processing summary with recommendations  
+drush ne:summary                  # Overview with next steps
+drush news-extractor:summary      # Full alias
 ```
 
-### Processing Types
+#### News Source Population (Primary Tasks)
+```bash
+# Process from JSON data (most reliable method)
+drush ne:pop-sources              # Default batch size (100)
+drush ne:pop-sources 50           # Custom batch size
+drush ne:pop-sources --all        # Process all articles in one run
+drush news-extractor:populate-sources  # Full alias
 
-**Full Processing** (`full`): Complete pipeline from URL to analyzed article
-**Scrape Only** (`scrape_only`): Diffbot extraction only, no AI analysis
-**Analyze Only** (`analyze_only`): AI analysis on already scraped articles
-**Reprocess** (`reprocess`): Re-run AI analysis on articles with existing data
+# Process from URLs (fallback method)
+drush ne:pop-url                  # Default batch size (50)
+drush ne:pop-url 25               # Custom batch size
+drush news-extractor:populate-sources-url  # Full alias
+```
+
+#### Data Cleanup and Maintenance
+```bash
+# Fix articles with invalid JSON data
+drush ne:fix-json                 # Use URL extraction as fallback
+drush news-extractor:fix-invalid-json  # Full alias
+
+# Standardize news source names (CNN variants, etc.)
+drush ne:clean                    # Clean up source names
+drush ne:clean --dry-run          # Show changes without applying
+drush ne:clean 50                 # Custom batch size
+drush news-extractor:clean-sources  # Full alias
+```
+
+#### Testing and Debugging
+```bash
+# Test extraction for specific URLs
+drush ne:test https://cnn.com/article     # Test URL extraction
+drush news-extractor:test-extraction URL # Full alias
+```
+
+#### Example Workflow
+```bash
+# 1. Check current status
+drush ne:summary
+
+# 2. Process articles with JSON data first (most reliable)
+drush ne:pop-sources
+
+# 3. Fix any articles with invalid JSON using URL fallback
+drush ne:fix-json
+
+# 4. Process remaining articles using URL extraction
+drush ne:pop-url
+
+# 5. Clean up and standardize source names
+drush ne:clean
+
+# 6. Check final status
+drush ne:stats
+```
 
 ## API Integration
 

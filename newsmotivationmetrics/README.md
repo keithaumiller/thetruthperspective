@@ -39,7 +39,26 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 - Print-friendly chart export capabilities
 - Professional gradient styling suitable for media/academic use
 
-## Recent Updates (August 2025)
+## Recent Updates (August 13, 2025)
+
+### Data Isolation Fix for Multiple Chart Types
+Fixed critical issue with undefined labels in chart displays when multiple chart types were present on the same page:
+
+#### Root Cause Resolution
+- **Problem**: Multiple chart services (NewsMotivationTimelineChart and NewsSourceTimelineChart) were using the same `drupalSettings['newsmotivationmetrics']` key, causing data contamination
+- **Solution**: Implemented unique settings keys for data isolation:
+  - `newsmotivationmetrics` → News motivation timeline data
+  - `newsmotivationmetrics_sources` → News source timeline data
+
+#### Technical Implementation
+- **NewsSourceTimelineChartService.php**: Modified to use isolated settings key
+- **news-source-timeline-chart.js**: Updated all references to use new settings namespace
+- **Data Integrity**: Prevents motivation timeline data from polluting source chart data
+
+#### Benefits
+- **Clean Chart Displays**: Eliminates undefined labels and data contamination
+- **Scalable Architecture**: Supports multiple chart types on same page without conflicts
+- **Future-Proof Design**: Prepared for additional chart type implementations
 
 ### Timeline Component Renaming
 All timeline chart components have been renamed to be specific about their news motivation tracking purpose:
@@ -366,11 +385,17 @@ newsmotivationmetrics/
 # Update cached statistics (daily)
 drush newsmotivationmetrics:refresh-cache
 
-# Performance monitoring (weekly)
+# Performance monitoring (weekly)  
 drush newsmotivationmetrics:performance-report
 
 # Debug console health check
 curl https://thetruthperspective.org/newsmotivationmetrics/debug/chart
+
+# Clear module caches
+drush cr
+
+# Check for module errors
+drush watchdog:show --filter=newsmotivationmetrics
 ```
 
 ### Monitoring
