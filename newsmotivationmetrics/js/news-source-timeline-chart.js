@@ -71,7 +71,7 @@
       }
 
       // Get chart data from settings
-      const chartData = settings.newsmotivationmetrics_sources || {};
+      const chartData = settings.newsmotivationmetrics || {};
       
       if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
         throw new Error('No news source timeline data available');
@@ -145,71 +145,32 @@
     
       // Prepare datasets from timeline data - each source has 3 metrics
       const datasets = data.timelineData.map((sourceData, index) => {
-        console.log(`Dataset ${index}: ${sourceData.source_name} (${sourceData.metric_type}) with ${sourceData.data ? sourceData.data.length : 0} data points`);
+        console.log(`Dataset ${index}: ${sourceData.source_name} with ${sourceData.data ? sourceData.data.length : 0} data points`);
         
-        // Source-based color scheme with metric-specific shades
-        const sourceColors = {
-          'CNN': {
-            bias: '#1E3A8A',        // Dark blue for CNN bias
-            credibility: '#3B82F6', // Medium blue for CNN credibility  
-            sentiment: '#93C5FD'    // Light blue for CNN sentiment
-          },
-          'Fox News': {
-            bias: '#B91C1C',        // Dark red for Fox News bias
-            credibility: '#EF4444', // Medium red for Fox News credibility
-            sentiment: '#FCA5A5'    // Light red for Fox News sentiment
-          },
-          'FOXNews.com': {  // Handle the actual data format
-            bias: '#B91C1C',        // Dark red for Fox News bias
-            credibility: '#EF4444', // Medium red for Fox News credibility
-            sentiment: '#FCA5A5'    // Light red for Fox News sentiment
-          },
-          'Reuters': {
-            bias: '#166534',        // Dark green for Reuters bias
-            credibility: '#22C55E', // Medium green for Reuters credibility
-            sentiment: '#86EFAC'    // Light green for Reuters sentiment
-          }
+        // Different colors for different metric types
+        const colors = {
+          bias: ['#FF6B6B', '#FF9F9F', '#FFCCCC'],        // Red shades for bias
+          credibility: ['#4ECDC4', '#7DDED8', '#B3EEEC'], // Teal shades for credibility
+          sentiment: ['#45B7D1', '#78C8E0', '#ABD9EF']     // Blue shades for sentiment
         };
         
-        // Get the source name and metric type
-        let sourceName = sourceData.source_name;
-        const metricType = sourceData.metric_type;
-        
-        // Clean up source name for better matching
-        // Handle cases like "FOXNews.com - Bias Rating" -> "FOXNews.com"
-        if (sourceName && sourceName.includes(' - ')) {
-          sourceName = sourceName.split(' - ')[0];
+        let colorSet = colors.bias; // default
+        if (sourceData.metric_type === 'credibility') {
+          colorSet = colors.credibility;
+        } else if (sourceData.metric_type === 'sentiment') {
+          colorSet = colors.sentiment;
         }
         
-        // Normalize common variations
-        if (sourceName && sourceName.toLowerCase().includes('fox')) {
-          sourceName = sourceName.includes('.com') ? 'FOXNews.com' : 'Fox News';
-        } else if (sourceName && sourceName.toLowerCase().includes('cnn')) {
-          sourceName = 'CNN';
-        } else if (sourceName && sourceName.toLowerCase().includes('reuters')) {
-          sourceName = 'Reuters';
-        }
-        
-        // Determine color based on source and metric
-        let color = '#6B7280'; // Default gray if source not found
-        if (sourceColors[sourceName] && sourceColors[sourceName][metricType]) {
-          color = sourceColors[sourceName][metricType];
-        } else {
-          // Fallback color scheme for unknown sources
-          const fallbackColors = ['#6B7280', '#9CA3AF', '#D1D5DB'];
-          const fallbackIndex = index % fallbackColors.length;
-          color = fallbackColors[fallbackIndex];
-          console.warn(`Unknown source/metric combination: ${sourceName}/${metricType}, using fallback color`);
-        }
+        const colorIndex = Math.floor(index / 3) % colorSet.length;
         
         return {
-          label: `${sourceName} - ${metricType}`,
+          label: sourceData.source_name,
           data: sourceData.data ? sourceData.data.map(point => ({
             x: point.date,
             y: point.value
           })) : [],
-          borderColor: color,
-          backgroundColor: color + '20', // Add transparency for fill
+          borderColor: colorSet[colorIndex],
+          backgroundColor: colorSet[colorIndex] + '20',
           fill: false,
           tension: 0.4
         };
@@ -337,12 +298,12 @@
     console.log('📊 Updating chart with selected sources:', selectedSourceIds);
 
     // Combine timeline data from both top sources and extended sources
-    let allData = drupalSettings.newsmotivationmetrics_sources.timelineData || [];
+    let allData = drupalSettings.newsmotivationmetrics.timelineData || [];
     
     // Add extended sources data if available
-    if (drupalSettings.newsmotivationmetrics_sources.extendedSources && 
-        drupalSettings.newsmotivationmetrics_sources.extendedSources.timelineData) {
-      const extendedData = drupalSettings.newsmotivationmetrics_sources.extendedSources.timelineData;
+    if (drupalSettings.newsmotivationmetrics.extendedSources && 
+        drupalSettings.newsmotivationmetrics.extendedSources.timelineData) {
+      const extendedData = drupalSettings.newsmotivationmetrics.extendedSources.timelineData;
       console.log('📈 Found extended source data with', extendedData.length, 'datasets');
       
       // Merge extended data, avoiding duplicates
@@ -365,70 +326,31 @@
       console.warn('⚠️ No timeline data available for source IDs:', missingSourceIds);
     }
 
-    // Update chart datasets with source-based colors
-    const sourceColors = {
-      'CNN': {
-        bias: '#1E3A8A',        // Dark blue for CNN bias
-        credibility: '#3B82F6', // Medium blue for CNN credibility  
-        sentiment: '#93C5FD'    // Light blue for CNN sentiment
-      },
-      'Fox News': {
-        bias: '#B91C1C',        // Dark red for Fox News bias
-        credibility: '#EF4444', // Medium red for Fox News credibility
-        sentiment: '#FCA5A5'    // Light red for Fox News sentiment
-      },
-      'FOXNews.com': {  // Handle the actual data format
-        bias: '#B91C1C',        // Dark red for Fox News bias
-        credibility: '#EF4444', // Medium red for Fox News credibility
-        sentiment: '#FCA5A5'    // Light red for Fox News sentiment
-      },
-      'Reuters': {
-        bias: '#166534',        // Dark green for Reuters bias
-        credibility: '#22C55E', // Medium green for Reuters credibility
-        sentiment: '#86EFAC'    // Light green for Reuters sentiment
-      }
+    // Update chart datasets
+    const colors = {
+      bias: ['#FF6B6B', '#FF9F9F', '#FFCCCC'],        // Red shades for bias
+      credibility: ['#4ECDC4', '#7DDED8', '#B3EEEC'], // Teal shades for credibility
+      sentiment: ['#45B7D1', '#78C8E0', '#ABD9EF']     // Blue shades for sentiment
     };
 
     chart.data.datasets = filteredData.map((sourceData, index) => {
-      // Get the source name and metric type
-      let sourceName = sourceData.source_name;
-      const metricType = sourceData.metric_type;
-      
-      // Clean up source name for better matching
-      // Handle cases like "FOXNews.com - Bias Rating" -> "FOXNews.com"
-      if (sourceName && sourceName.includes(' - ')) {
-        sourceName = sourceName.split(' - ')[0];
+      let colorSet = colors.bias; // default
+      if (sourceData.metric_type === 'credibility') {
+        colorSet = colors.credibility;
+      } else if (sourceData.metric_type === 'sentiment') {
+        colorSet = colors.sentiment;
       }
       
-      // Normalize common variations
-      if (sourceName && sourceName.toLowerCase().includes('fox')) {
-        sourceName = sourceName.includes('.com') ? 'FOXNews.com' : 'Fox News';
-      } else if (sourceName && sourceName.toLowerCase().includes('cnn')) {
-        sourceName = 'CNN';
-      } else if (sourceName && sourceName.toLowerCase().includes('reuters')) {
-        sourceName = 'Reuters';
-      }
-      
-      // Determine color based on source and metric
-      let color = '#6B7280'; // Default gray if source not found
-      if (sourceColors[sourceName] && sourceColors[sourceName][metricType]) {
-        color = sourceColors[sourceName][metricType];
-      } else {
-        // Fallback color scheme for unknown sources
-        const fallbackColors = ['#6B7280', '#9CA3AF', '#D1D5DB'];
-        const fallbackIndex = index % fallbackColors.length;
-        color = fallbackColors[fallbackIndex];
-        console.warn(`Unknown source/metric combination: ${sourceName}/${metricType}, using fallback color`);
-      }
+      const colorIndex = Math.floor(index / 3) % colorSet.length;
 
       return {
-        label: `${sourceName} - ${metricType}`,
+        label: sourceData.source_name,
         data: sourceData.data ? sourceData.data.map(point => ({
           x: point.date,
           y: point.value
         })) : [],
-        borderColor: color,
-        backgroundColor: color + '20', // Add transparency for fill
+        borderColor: colorSet[colorIndex],
+        backgroundColor: colorSet[colorIndex] + '20',
         fill: false,
         tension: 0.4
       };

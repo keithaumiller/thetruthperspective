@@ -27,23 +27,12 @@ The Truth Perspective is an AI-powered news analysis platform built on Drupal 11
   - Comprehensive Drush command suite for maintenance
 
 #### 2. **newsmotivationmetrics** (Public Analytics Dashboard)
-- **Purpose**: Public-facing analytics and metrics visualization with multiple chart types
+- **Purpose**: Public-facing analytics and metrics visualization
 - **Key Features**:
-  - Real-time analytics dashboard with Chart.js visualizations
-  - News motivation timeline charts for trend analysis
-  - News source quality timeline charts for bias/credibility tracking
-  - **Data Isolation Architecture**: Unique settings keys prevent chart data contamination
-  - Mobile-responsive design with professional presentation
+  - Real-time analytics dashboard
+  - Chart.js visualizations
+  - Mobile-responsive design
   - Public accessibility without authentication
-
-#### Recent Critical Fix (August 13, 2025): Chart Data Isolation
-- **Problem Resolved**: Multiple chart types on same page were experiencing data contamination
-- **Root Cause**: Shared `drupalSettings['newsmotivationmetrics']` namespace causing chart data overwriting
-- **Solution Implemented**: 
-  - `drupalSettings.newsmotivationmetrics` → News motivation timeline data
-  - `drupalSettings.newsmotivationmetrics_sources` → News source quality data
-- **Files Modified**: NewsSourceTimelineChartService.php, news-source-timeline-chart.js
-- **Result**: Clean chart displays without undefined labels or mixed datasets
 
 #### 3. **ai_conversation** (AI Chat Interface)
 - **Purpose**: Interactive AI conversation system
@@ -308,169 +297,32 @@ $standardizations = [
 ];
 ```
 
-## Complete Drush Command Reference
+## Drush Command System
 
-### News Extractor Module Commands
+### Available Commands
 
-#### Statistics and Analysis Commands
+#### Statistics and Monitoring
 ```bash
-# Comprehensive field statistics with debug information
-drush ne:stats                    # Shows field existence, data availability, processing opportunities
-drush news-extractor:source-stats # Full alias for statistics
-
-# Processing summary with recommendations
-drush ne:summary                  # Overview with next steps and current status
-drush news-extractor:summary      # Full alias for summary
+drush ne:stats                    # Comprehensive field statistics
+drush news-extractor:source-stats # Alias for ne:stats
 ```
+**Output**: Field existence, data availability, processing opportunities
 
-**Output**: Field existence verification, data availability counts, processing opportunities, and actionable recommendations.
-
-#### News Source Population Commands (Primary Operations)
+#### Bulk Processing Commands
 ```bash
-# Process articles from JSON data (most reliable method)
-drush ne:pop-sources              # Default batch size (100 articles)
-drush ne:pop-sources 50           # Custom batch size
-drush ne:pop-sources --all        # Process all articles in one run
-drush news-extractor:populate-sources        # Full alias
-
-# Process articles from URLs (fallback method)
-drush ne:pop-url                  # Default batch size (50 articles)
-drush ne:pop-url 25               # Custom batch size
-drush news-extractor:populate-sources-url    # Full alias
+drush ne:pop-sources             # Process from JSON data (primary)
+drush ne:pop-url                 # Process from URLs (fallback)
 ```
+**Options**: 
+- `--batch_size=N`: Custom batch size (default: 50/25)
+- `--all`: Process all articles in one run
 
-**Processing Logic**: 
-- JSON method extracts from Diffbot `siteName` field (Priority 1)
-- URL method uses domain mapping and standardization (Priority 2)
-
-#### Data Cleanup and Maintenance Commands
+#### Testing and Debugging
 ```bash
-# Fix articles with invalid JSON data using URL extraction fallback
-drush ne:fix-json                 # Process articles with JSON but no extracted source
-drush news-extractor:fix-invalid-json  # Full alias
-
-# Standardize news source names (clean CNN variants, etc.)
-drush ne:clean                    # Apply source name standardization
-drush ne:clean --dry-run          # Show changes without applying them
-drush ne:clean 50                 # Custom batch size for processing
-drush news-extractor:clean-sources  # Full alias
+drush ne:test https://example.com  # Test extraction for specific URL
+drush news-extractor:test-extraction https://example.com  # Full alias
 ```
-
-**Standardization Examples**:
-- `CNN Politics` → `CNN`
-- `FOX News Breaking` → `Fox News`
-- `Reuters.com` → `Reuters`
-
-#### Testing and Debugging Commands
-```bash
-# Test news source extraction for specific URLs
-drush ne:test https://cnn.com/article     # Test URL extraction logic
-drush news-extractor:test-extraction URL # Full alias
-```
-
-**Output**: Detailed extraction results, URL parsing details, domain mapping, and final source assignment.
-
-#### Recommended Command Workflow
-```bash
-# 1. Check current processing status
-drush ne:summary
-
-# 2. Process articles with JSON data first (highest success rate)
-drush ne:pop-sources
-
-# 3. Fix articles with invalid JSON using URL fallback
-drush ne:fix-json
-
-# 4. Process remaining articles using URL extraction
-drush ne:pop-url
-
-# 5. Standardize all source names
-drush ne:clean
-
-# 6. Verify final results
-drush ne:stats
-```
-
-### News Motivation Metrics Module Commands
-
-#### Cache Management Commands
-```bash
-# Update cached statistics and refresh dashboard data
-drush newsmotivationmetrics:refresh-cache
-
-# Generate performance report for monitoring
-drush newsmotivationmetrics:performance-report
-
-# Check for module-specific errors
-drush watchdog:show --filter=newsmotivationmetrics
-
-# Clear all module caches
-drush cr
-```
-
-#### Debug and Testing Commands
-```bash
-# Test chart debug console (via curl)
-curl https://thetruthperspective.org/newsmotivationmetrics/debug/chart
-
-# Verify chart data processing
-curl https://thetruthperspective.org/admin/reports/news-motivation-metrics
-```
-
-### AI Conversation Module Commands
-
-#### System Testing and Configuration
-```bash
-# Test AI API connection and configuration
-drush ai-conversation:test
-
-# Check module configuration settings
-drush config:get ai_conversation.settings
-
-# View conversation-specific logs
-drush watchdog:show --type=ai_conversation
-
-# Verify database schema for conversation fields
-drush sql:query "DESCRIBE node__field_conversation_summary"
-
-# Update database schema if needed
-drush updatedb
-```
-
-### General Maintenance Commands
-
-#### System Health and Monitoring
-```bash
-# Check all enabled modules
-drush pm:list | grep -E "(news_extractor|newsmotivationmetrics|ai_conversation)"
-
-# Clear all Drupal caches
-drush cr
-
-# Check for any system errors
-drush watchdog:show --count=50
-
-# Update database schema for all modules
-drush updatedb
-
-# Rebuild cache and registry
-drush cache:rebuild
-```
-
-#### Production Monitoring Commands
-```bash
-# Monitor processing status across all modules
-drush ne:summary && drush watchdog:show --type=news_extractor --count=10
-
-# Check for performance issues
-drush newsmotivationmetrics:performance-report
-
-# Verify AI conversation functionality
-drush ai-conversation:test
-
-# System health check
-drush status
-```
+**Output**: Detailed extraction results and source mapping
 
 ### Command Implementation
 

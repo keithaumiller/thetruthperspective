@@ -368,23 +368,11 @@ drush sql:query "DESCRIBE node__field_conversation_summary"
 # Check module status
 drush pm:list | grep ai_conversation
 
-# Test AI API connection
-drush ai-conversation:test
-
-# Check configuration settings
-drush config:get ai_conversation.settings
-
-# View recent logs for troubleshooting
+# View recent logs
 drush watchdog:show --type=ai_conversation
 
-# Verify database schema
-drush sql:query "DESCRIBE node__field_conversation_summary"
-
-# Clear all caches
-drush cr
-
-# Update database schema if needed
-drush updatedb
+# Test configuration
+drush config:get ai_conversation.settings
 ```
 
 ## 🎯 Next Steps

@@ -247,7 +247,15 @@ class AIProcessingService {
           }
 
           if (isset($parsed['bias_analysis']) && !empty($parsed['bias_analysis'])) {
-            $data['bias_analysis'] = $parsed['bias_analysis'];
+            // Limit bias analysis to 999 characters to prevent database field overflow
+            $bias_analysis = $parsed['bias_analysis'];
+            if (strlen($bias_analysis) > 999) {
+              $bias_analysis = substr($bias_analysis, 0, 996) . '...';
+              $this->logger()->warning('Bias analysis truncated from @original to 999 characters', [
+                '@original' => strlen($parsed['bias_analysis']),
+              ]);
+            }
+            $data['bias_analysis'] = $bias_analysis;
           }
 
           if (isset($parsed['sentiment_score']) && is_numeric($parsed['sentiment_score'])) {
