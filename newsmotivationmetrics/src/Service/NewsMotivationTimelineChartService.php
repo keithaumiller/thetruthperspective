@@ -137,7 +137,7 @@ class NewsMotivationTimelineChartService implements NewsMotivationTimelineChartS
       'term_limit' => $config['term_limit'] ?? 10,
       'container_classes' => ['news-motivation-timeline-block', 'news-motivation-timeline-section'],
       'library' => 'newsmotivationmetrics/news-motivation-timeline',
-      'js_behavior' => 'newsMotivationTimelineBlocks',
+      'js_behavior' => 'newsMotivationTimelineChart',
       'auto_refresh' => $config['auto_refresh'] ?? FALSE,
       'refresh_interval' => $config['refresh_interval'] ?? 300,
     ];
@@ -331,7 +331,7 @@ class NewsMotivationTimelineChartService implements NewsMotivationTimelineChartS
     }
 
     // For block-based charts, organize by canvas ID
-    if ($options['js_behavior'] === 'taxonomyTimelineBlocks') {
+    if ($options['js_behavior'] === 'newsMotivationTimelineBlocks') {
       return [
         'blocks' => [
           $options['canvas_id'] => $settings + [
