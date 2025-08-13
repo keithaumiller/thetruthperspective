@@ -252,6 +252,3 @@ function news_extractor_get_processing_status($limit = 10) {
 
   return $status_reports;
 }
-
-// Include legacy functions for backward compatibility
-require_once __DIR__ . '/news_extractor.legacy.php';

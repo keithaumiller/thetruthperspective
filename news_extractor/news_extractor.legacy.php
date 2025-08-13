@@ -3,17 +3,19 @@ require_once __DIR__ . '/news_extractor.scraper.php';
 
 /**
  * @file
- * News Extractor module - Extracts full article content using Diffbot API and generates AI summaries.
+ * Legacy functions for news_extractor module.
+ * Contains helper functions preserved for backward compatibility.
  */
 
 use Drupal\node\Entity\Node;
 use Drupal\Core\Entity\EntityInterface;
 
 /**
- * Implements hook_feeds_process_alter().
- * Alter feed item data before it becomes a node.
+ * LEGACY: Implements hook_feeds_process_alter().
+ * This function has been moved to the main module file.
+ * Keeping here for reference only - DO NOT USE.
  */
-function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
+function _news_extractor_legacy_feeds_process_alter(&$feed, $item, $entity_interface) {
   // Debug: Log module version on every feed import
   \Drupal::logger('news_extractor')->info('news_extractor module version: 1.0.0 - feeds_process_alter triggered');
 
@@ -73,10 +75,11 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
 }
 
 /**
- * Implements hook_ENTITY_TYPE_insert().
- * Automatically extract full article content when a new article is created via feeds.
+ * LEGACY: Implements hook_ENTITY_TYPE_insert().
+ * This function has been moved to the main module file.
+ * Keeping here for reference only - DO NOT USE.
  */
-function news_extractor_node_insert(EntityInterface $entity) {
+function _news_extractor_legacy_node_insert(EntityInterface $entity) {
   if ($entity->bundle() !== 'article') {
     return;
   }
@@ -175,10 +178,11 @@ function news_extractor_node_insert(EntityInterface $entity) {
 }
 
 /**
- * Implements hook_ENTITY_TYPE_update().
- * Extract content when article is updated with new URL.
+ * LEGACY: Implements hook_ENTITY_TYPE_update().
+ * This function has been moved to the main module file.
+ * Keeping here for reference only - DO NOT USE.
  */
-function news_extractor_node_update(EntityInterface $entity) {
+function _news_extractor_legacy_node_update(EntityInterface $entity) {
   if ($entity->bundle() !== 'article') {
     return;
   }
@@ -211,10 +215,11 @@ function news_extractor_node_update(EntityInterface $entity) {
 }
 
 /**
- * Implements hook_cron().
- * Process any articles that might have failed extraction during cron runs.
+ * LEGACY: Implements hook_cron().
+ * This function has been moved to the main module file.
+ * Keeping here for reference only - DO NOT USE.
  */
-function news_extractor_cron() {
+function _news_extractor_legacy_cron() {
   $query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
     ->condition('field_original_url.uri', '', '<>')
