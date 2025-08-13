@@ -525,6 +525,10 @@
       // Get color for this metric type
       const color = colorScheme[metricType] || '#6B7280';
       
+      console.log(`DEBUG: ${sourceName} -> ${normalizedSourceName}`);
+      console.log(`DEBUG: sourceColorMap[${normalizedSourceName}] = ${sourceColorMap[normalizedSourceName]}`);
+      console.log(`DEBUG: colorIndex = ${colorIndex}`);
+      console.log(`DEBUG: colorScheme = ${JSON.stringify(colorScheme)}`);
       console.log(`Update color assignment for ${sourceName} -> ${normalizedSourceName} (${metricType}): ${color} (${colorScheme.name})`);
 
       return {
