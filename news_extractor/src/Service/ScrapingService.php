@@ -451,9 +451,51 @@ class ScrapingService {
     // Update publication date
     $this->updatePublicationDate($entity, $article_data);
 
+    // POST-PROCESSOR: Unpublish articles with "Scraped data unavailable"
+    $this->postProcessScrapedDataStatus($entity);
+
     $this->logger()->info('Updated metadata fields for: @title', [
       '@title' => $entity->getTitle(),
     ]);
+  }
+
+  /**
+   * Post-processor to handle articles with unavailable scraped data.
+   * 
+   * Unpublishes articles where the JSON scraped data is "Scraped data unavailable"
+   * to prevent incomplete articles from appearing in the public site.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to check and potentially unpublish.
+   */
+  protected function postProcessScrapedDataStatus(EntityInterface $entity) {
+    // Check if entity has the scraped data field
+    if (!$entity->hasField('field_json_scraped_article_data')) {
+      return;
+    }
+
+    // Get the scraped data value
+    $scraped_data = $entity->get('field_json_scraped_article_data')->value;
+    
+    // Check for "Scraped data unavailable" message
+    if (trim($scraped_data) === "Scraped data unavailable" || 
+        trim($scraped_data) === "Scraped data unavailable.") {
+      
+      // Unpublish the article
+      if ($entity->isPublished()) {
+        $entity->setUnpublished();
+        
+        $this->logger()->warning('Unpublished article with unavailable scraped data: @title (ID: @id)', [
+          '@title' => $entity->getTitle(),
+          '@id' => $entity->id(),
+        ]);
+        
+        // Set news source to indicate the issue
+        if ($entity->hasField('field_news_source')) {
+          $entity->set('field_news_source', 'Source Unavailable');
+        }
+      }
+    }
   }
 
   /**
