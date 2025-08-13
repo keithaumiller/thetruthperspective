@@ -26,111 +26,86 @@
       }
 
       // Find any canvas element with ID starting with 'news-motivation-timeline-chart'
-      let canvas = null;
-      let canvasId = null;
+      // Use once to prevent duplicate processing
+      const canvases = context.querySelectorAll ? 
+        context.querySelectorAll('canvas[id^="news-motivation-timeline-chart"]') :
+        document.querySelectorAll('canvas[id^="news-motivation-timeline-chart"]');
       
-      // First, try to find canvas in the current context
-      if (context && context.querySelector) {
-        canvas = context.querySelector('canvas[id^="news-motivation-timeline-chart"]');
-        console.log('Canvas found in context:', canvas);
-      }
+      console.log('Found', canvases.length, 'chart canvases to process');
       
-      // If not found in context, search in document
-      if (!canvas) {
-        console.log('Canvas not found in context, searching in document...');
-        canvas = document.querySelector('canvas[id^="news-motivation-timeline-chart"]');
-        console.log('Canvas found in document:', canvas);
-      }
-      
-      if (canvas) {
-        canvasId = canvas.id;
-        console.log('✅ Canvas found with ID:', canvasId);
-      } else {
-        console.log('❌ Canvas element not found anywhere in DOM');
-        
-        // Debug: List all elements with 'chart' in their ID or class
-        const chartElements = document.querySelectorAll('[id*="chart"], [class*="chart"]');
-        console.log('Chart-related elements found:', chartElements.length);
-        chartElements.forEach((el, index) => {
-          console.log(`Chart element ${index}:`, el.tagName, 'id:', el.id, 'class:', el.className);
-        });
-        
-        // Try to find chart container
-        const chartContainer = document.querySelector('.chart-container');
-        if (chartContainer) {
-          console.log('✓ Chart container found, but missing canvas element');
-          console.log('Chart container HTML:', chartContainer.innerHTML);
-        } else {
-          console.log('❌ Chart container not found either');
+      canvases.forEach((canvas) => {
+        // Skip if already processed
+        if (canvas.hasAttribute('data-chart-processed')) {
+          console.log('Skipping already processed canvas:', canvas.id);
+          return;
         }
         
-        // Update any status element we can find
-        const statusElement = document.querySelector('[id*="chart-status"]');
-        if (statusElement) {
-          statusElement.textContent = '⚠️ Chart canvas element not found. HTML structure may be incorrect.';
-        }
-        return;
-      }
+        // Mark as processed
+        canvas.setAttribute('data-chart-processed', 'true');
+        
+        const canvasId = canvas.id;
+        console.log('✅ Processing canvas with ID:', canvasId);
 
-      // Find term selector based on canvas ID
-      const selectorId = canvasId === 'news-motivation-timeline-chart' ? 'term-selector' : 'term-selector-' + canvasId.split('-').pop();
-      termSelector = document.getElementById(selectorId) || context.querySelector('#' + selectorId);
-      
-      if (!termSelector) {
-        console.log('❌ Term selector not found with ID:', selectorId);
-        // Try fallback selector
-        termSelector = document.querySelector('.term-selector') || context.querySelector('.term-selector');
-        if (termSelector) {
-          console.log('✅ Found term selector using class fallback');
+        // Find term selector based on canvas ID
+        const selectorId = canvasId === 'news-motivation-timeline-chart' ? 'term-selector' : 'term-selector-' + canvasId.split('-').pop();
+        termSelector = document.getElementById(selectorId) || context.querySelector('#' + selectorId);
+        
+        if (!termSelector) {
+          console.log('❌ Term selector not found with ID:', selectorId);
+          // Try fallback selector
+          termSelector = document.querySelector('.term-selector') || context.querySelector('.term-selector');
+          if (termSelector) {
+            console.log('✅ Found term selector using class fallback');
+          } else {
+            console.log('❌ Term selector not found at all');
+            const statusElement = document.querySelector('[id*="chart-status"]');
+            if (statusElement) {
+              statusElement.textContent = '⚠️ Term selector not found. Controls may not work.';
+            }
+            return;
+          }
         } else {
-          console.log('❌ Term selector not found at all');
+          console.log('✅ Term selector found:', termSelector);
+        }
+
+        // Check if we have the necessary data
+        if (!settings.newsmotivationmetrics) {
+          console.log('❌ Chart data not available in drupalSettings');
+          console.log('Available settings keys:', Object.keys(settings));
           const statusElement = document.querySelector('[id*="chart-status"]');
           if (statusElement) {
-            statusElement.textContent = '⚠️ Term selector not found. Controls may not work.';
+            statusElement.textContent = '⚠️ Chart data not available in drupalSettings.';
           }
           return;
         }
-      } else {
-        console.log('✅ Term selector found:', termSelector);
-      }
 
-      // Check if we have the necessary data
-      if (!settings.newsmotivationmetrics) {
-        console.log('❌ Chart data not available in drupalSettings');
-        console.log('Available settings keys:', Object.keys(settings));
-        const statusElement = document.querySelector('[id*="chart-status"]');
-        if (statusElement) {
-          statusElement.textContent = '⚠️ Chart data not available in drupalSettings.';
+        const chartData = settings.newsmotivationmetrics;
+        console.log('📊 Chart data loaded:', chartData.debugInfo);
+        console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
+
+        // Validate chart data structure
+        if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
+          console.log('❌ No timeline data available or invalid format');
+          const statusElement = document.querySelector('[id*="chart-status"]');
+          if (statusElement) {
+            statusElement.textContent = '⚠️ No timeline data available for chart display.';
+          }
+          return;
         }
-        return;
-      }
 
-      const chartData = settings.newsmotivationmetrics;
-      console.log('📊 Chart data loaded:', chartData.debugInfo);
-      console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
-
-      // Validate chart data structure
-      if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
-        console.log('❌ No timeline data available or invalid format');
-        const statusElement = document.querySelector('[id*="chart-status"]');
+        // Update debug status (find correct status element)
+        const statusId = canvasId === 'news-motivation-timeline-chart' ? 'chart-status' : 'chart-status-' + canvasId.split('-').pop();
+        const statusElement = document.getElementById(statusId) || document.querySelector('[id*="chart-status"]');
         if (statusElement) {
-          statusElement.textContent = '⚠️ No timeline data available for chart display.';
+          statusElement.textContent = '✅ Chart initialized successfully';
         }
-        return;
-      }
 
-      // Update debug status (find correct status element)
-      const statusId = canvasId === 'news-motivation-timeline-chart' ? 'chart-status' : 'chart-status-' + canvasId.split('-').pop();
-      const statusElement = document.getElementById(statusId) || document.querySelector('[id*="chart-status"]');
-      if (statusElement) {
-        statusElement.textContent = '✅ Chart initialized successfully';
-      }
+        // Initialize the chart
+        initializeChart(canvas, chartData, canvasId);
 
-      // Initialize the chart
-      initializeChart(canvas, chartData, canvasId);
-
-      // Setup event listeners
-      setupEventListeners(canvasId);
+        // Setup event listeners
+        setupEventListeners(canvasId);
+      });
     }
   };
 
@@ -154,6 +129,22 @@
       // Validate data structure
       if (!data.timelineData || !Array.isArray(data.timelineData)) {
         throw new Error('Invalid timeline data structure');
+      }
+
+      // Check if canvas already has a chart and destroy it
+      if (canvas.chart) {
+        console.log('Destroying existing chart on canvas...');
+        canvas.chart.destroy();
+        canvas.chart = null;
+      }
+      
+      // Also check Chart.js registry for any charts using this canvas
+      if (window.Chart && window.Chart.getChart) {
+        const existingChart = window.Chart.getChart(canvas);
+        if (existingChart) {
+          console.log('Destroying existing chart from Chart.js registry...');
+          existingChart.destroy();
+        }
       }
 
       console.log('Processing', data.timelineData.length, 'datasets...');
@@ -234,12 +225,12 @@
               },
               type: 'time',
               time: {
-                parser: 'YYYY-MM-DD',
-                tooltipFormat: 'MMM DD, YYYY',
+                parser: 'yyyy-MM-dd',
+                tooltipFormat: 'MMM dd, yyyy',
                 displayFormats: {
-                  day: 'MMM DD',
-                  week: 'MMM DD',
-                  month: 'MMM YYYY'
+                  day: 'MMM dd',
+                  week: 'MMM dd',
+                  month: 'MMM yyyy'
                 }
               }
             },
@@ -257,6 +248,9 @@
           }
         }
       });
+
+      // Store chart reference on canvas for future cleanup
+      canvas.chart = chart;
 
       console.log('✅ Chart initialized successfully');
       
