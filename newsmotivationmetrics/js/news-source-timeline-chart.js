@@ -172,13 +172,16 @@
     
       // Get unique source names from the data for color assignment
       const uniqueSources = [...new Set(data.timelineData.map(item => {
-        return normalizeSourceName(item.source_name);
+        // Extract base source name from dataset names like "FOXNews.com - Bias Rating"
+        const sourceName = item.source_name;
+        const baseName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
+        return baseName;
       }))];
       
       console.log('Unique sources in chart:', uniqueSources);
       
-      // Get color assignments for all sources
-      const { sourceColorMap, baseColors, originalToNormalized } = assignSourceColors(uniqueSources);
+      // Get color assignments for all sources (simple rotation)
+      const { sourceColorMap, baseColors } = assignSourceColors(uniqueSources);
     
       // Prepare datasets from timeline data - each source has 3 metrics
       const datasets = data.timelineData.map((sourceData, index) => {
@@ -188,20 +191,20 @@
         let sourceName = sourceData.source_name;
         const metricType = sourceData.metric_type;
         
-        // Normalize source name for color lookup
-        const normalizedSourceName = normalizeSourceName(sourceName);
+        // Extract base source name from dataset names like "FOXNews.com - Bias Rating"
+        const baseSourceName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
         
-        // Get color scheme for this source using normalized name
-        const colorIndex = sourceColorMap[normalizedSourceName] || 2; // Default to green if not found
+        // Get color scheme for this source using simple lookup
+        const colorIndex = sourceColorMap[baseSourceName] || (index % 3); // Default to rotation if not found
         const colorScheme = baseColors[colorIndex];
         
         // Get color for this metric type
         const color = colorScheme[metricType] || '#6B7280';
         
-        console.log(`Color assignment for ${sourceName} -> ${normalizedSourceName} (${metricType}): ${color} (${colorScheme.name})`)
+        console.log(`Simple color assignment for ${sourceName} -> ${baseSourceName} (${metricType}): ${color} (${colorScheme.name})`)
         
         return {
-          label: `${normalizedSourceName} - ${metricType}`,
+          label: `${baseSourceName} - ${metricType}`,
           data: sourceData.data ? sourceData.data.map(point => ({
             x: point.date,
             y: point.value
