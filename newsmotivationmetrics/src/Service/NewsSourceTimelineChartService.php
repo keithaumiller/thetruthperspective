@@ -118,7 +118,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
     $build['description'] = [
       '#type' => 'html_tag',
       '#tag' => 'p',
-      '#value' => 'This chart shows credibility scores, bias ratings, and sentiment trends by news source over the past ' . $options['days_back'] . ' days.',
+      '#value' => 'This chart shows credibility scores, bias ratings, and sentiment trends for the top news sources (by article count) over the past ' . $options['days_back'] . ' days. Colors: CNN=Blue, Fox=Red, third source=Green.',
       '#attributes' => ['class' => ['chart-description']],
     ];
 
@@ -252,13 +252,15 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
         'id' => $canvas_id === 'news-source-timeline-chart' ? 'source-selector' : 'source-selector-' . substr($canvas_id, -8),
         'class' => ['form-select', 'source-selector'],
         'data-chart-id' => $canvas_id,
+        'multiple' => 'multiple', // Force native multi-select attribute
+        'size' => min(count($source_options), 8), // Ensure visible height for multiselect
       ],
     ];
 
     $controls['controls_container']['help_text'] = [
       '#type' => 'html_tag',
       '#tag' => 'div',
-      '#value' => '💡 Each source shows 3 trend lines: Credibility Score, Bias Rating, and Sentiment Score. Use Ctrl+Click to select multiple sources.',
+      '#value' => '💡 Each source shows 3 trend lines: Credibility Score, Bias Rating, and Sentiment Score. Colors: CNN=Blue, Fox=Red, others assigned Red/Blue/Green by position. Use Ctrl+Click to select multiple sources.',
       '#attributes' => ['class' => ['help-text', 'text-muted', 'small']],
     ];
 
