@@ -58,7 +58,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
       'show_title' => TRUE,
       'chart_height' => 400,
       'days_back' => 30,
-      'source_limit' => 5, // Fewer sources since each has 3 metrics
+      'source_limit' => 3, // Fewer sources since each has 3 metrics
       'container_classes' => ['news-source-timeline-section'],
       'library' => 'newsmotivationmetrics/news-source-timeline',
       'js_behavior' => 'newsSourceTimelineChart',
@@ -231,7 +231,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
     $controls['controls_container']['selector_group']['label'] = [
       '#type' => 'html_tag',
       '#tag' => 'label',
-      '#value' => t('Select News Sources (max 5):'),
+      '#value' => t('Select News Sources (max 3):'),
       '#attributes' => [
         'for' => $canvas_id === 'news-source-timeline-chart' ? 'source-selector' : 'source-selector-' . substr($canvas_id, -8),
         'class' => ['control-label'],

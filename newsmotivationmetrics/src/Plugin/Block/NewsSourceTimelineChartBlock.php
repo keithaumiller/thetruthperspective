@@ -71,7 +71,7 @@ class NewsSourceTimelineChartBlock extends BlockBase implements ContainerFactory
       'show_title' => TRUE,
       'chart_height' => 400,
       'days_back' => 30,
-      'source_limit' => 5,
+      'source_limit' => 3,
       'container_classes' => ['news-source-timeline-section'],
       'library' => 'newsmotivationmetrics/news-source-timeline',
       'js_behavior' => 'newsSourceTimelineChart',

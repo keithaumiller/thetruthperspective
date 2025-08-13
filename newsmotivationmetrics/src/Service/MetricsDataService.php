@@ -551,7 +551,8 @@ class MetricsDataService implements MetricsDataServiceInterface {
         ->condition('n.created', $start_date->getTimestamp(), '>=')
         ->condition('n.created', $end_date->getTimestamp(), '<=')
         ->condition('ns.field_news_source_value', '', '<>') // Only articles with news source
-        ->condition('ns.field_news_source_value', NULL, 'IS NOT NULL');
+        ->condition('ns.field_news_source_value', NULL, 'IS NOT NULL')
+        ->condition('ns.field_news_source_value', 'Source Unavailable', '<>'); // Exclude unavailable sources
       
       // Filter by specific sources if provided
       if (!empty($options['source_ids'])) {
@@ -715,6 +716,7 @@ class MetricsDataService implements MetricsDataServiceInterface {
         ->condition('n.status', 1)
         ->condition('ns.field_news_source_value', '', '<>')
         ->condition('ns.field_news_source_value', NULL, 'IS NOT NULL')
+        ->condition('ns.field_news_source_value', 'Source Unavailable', '<>')
         ->groupBy('ns.field_news_source_value')
         ->orderBy('article_count', 'DESC')
         ->range(0, $limit);
