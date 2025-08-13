@@ -9,11 +9,11 @@ use Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartSe
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Provides a 'News Motivation Timeline Chart' Block.
+ * Provides a 'News Motivation Timeline Chart (Configurable)' Block.
  *
  * @Block(
  *   id = "news_motivation_timeline_chart",
- *   admin_label = @Translation("News Motivation Timeline Chart"),
+ *   admin_label = @Translation("News Motivation Timeline Chart (Configurable)"),
  *   category = @Translation("News Motivation Metrics"),
  * )
  */
