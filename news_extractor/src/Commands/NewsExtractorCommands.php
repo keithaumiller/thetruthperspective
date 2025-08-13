@@ -446,6 +446,193 @@ class NewsExtractorCommands extends DrushCommands {
   }
 
   /**
+   * Clean up news source field data to standardize CNN variants.
+   *
+   * @param int $batch_size
+   *   Number of articles to process per batch. Defaults to 100.
+   * @param array $options
+   *   Additional options.
+   *
+   * @command news-extractor:clean-sources
+   * @aliases ne:clean
+   * @option batch_size Number of articles to process per batch
+   * @option dry-run Show what would be changed without making changes
+   * @usage news-extractor:clean-sources
+   *   Clean up news sources in batches of 100
+   * @usage news-extractor:clean-sources --dry-run
+   *   Show what would be changed without making changes
+   * @usage news-extractor:clean-sources 50
+   *   Clean up news sources in batches of 50
+   */
+  public function cleanNewsSources($batch_size = 100, array $options = ['dry-run' => FALSE]) {
+    
+    $dry_run = $options['dry-run'];
+    $action = $dry_run ? 'Analyzing' : 'Cleaning up';
+    
+    $this->output()->writeln("🧹 {$action} news source field data...");
+    
+    if ($dry_run) {
+      $this->output()->writeln("🔍 <info>DRY RUN MODE - No changes will be made</info>");
+    }
+    
+    // Get data processing service
+    /** @var \Drupal\news_extractor\Service\DataProcessingService $data_service */
+    $data_service = \Drupal::service('news_extractor.data_processing');
+    
+    // Find articles with news sources that need cleaning
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_news_source', '', '<>')
+      ->accessCheck(FALSE);
+    
+    $total_count = $query->count()->execute();
+    
+    if ($total_count == 0) {
+      $this->output()->writeln('No articles found with news sources.');
+      return;
+    }
+    
+    $this->output()->writeln("Found {$total_count} articles with news sources.");
+    
+    // Find CNN variants specifically
+    $cnn_patterns = [
+      'CNN - Politics',
+      'CNN - Money', 
+      'CNN Money',
+      'CNN Politics',
+      'CNN Business',
+      'CNN Health',
+      'CNN Travel',
+      'CNN Style',
+      'CNN Sport',
+      'CNN Entertainment'
+    ];
+    
+    $cnn_counts = [];
+    $total_cnn_variants = 0;
+    
+    foreach ($cnn_patterns as $pattern) {
+      $count = \Drupal::entityQuery('node')
+        ->condition('type', 'article')
+        ->condition('field_news_source', $pattern)
+        ->accessCheck(FALSE)
+        ->count()
+        ->execute();
+      
+      if ($count > 0) {
+        $cnn_counts[$pattern] = $count;
+        $total_cnn_variants += $count;
+      }
+    }
+    
+    // Also check for other CNN variants with LIKE
+    $other_cnn_query = \Drupal::database()->select('node__field_news_source', 'ns')
+      ->fields('ns', ['field_news_source_value'])
+      ->condition('ns.field_news_source_value', 'CNN%', 'LIKE')
+      ->condition('ns.field_news_source_value', 'CNN', '<>')
+      ->distinct();
+    
+    $other_cnn_variants = $other_cnn_query->execute()->fetchCol();
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("📊 <info>CNN Variants Analysis:</info>");
+    
+    if (!empty($cnn_counts)) {
+      foreach ($cnn_counts as $variant => $count) {
+        $this->output()->writeln("  {$variant}: {$count} articles");
+      }
+    }
+    
+    if (!empty($other_cnn_variants)) {
+      $this->output()->writeln("  <info>Other CNN variants found:</info>");
+      foreach ($other_cnn_variants as $variant) {
+        $count = \Drupal::entityQuery('node')
+          ->condition('type', 'article')
+          ->condition('field_news_source', $variant)
+          ->accessCheck(FALSE)
+          ->count()
+          ->execute();
+        $this->output()->writeln("    {$variant}: {$count} articles");
+        $total_cnn_variants += $count;
+      }
+    }
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("🎯 <info>Total CNN variants to standardize: {$total_cnn_variants}</info>");
+    
+    if ($dry_run) {
+      $this->output()->writeln("");
+      $this->output()->writeln("💡 Run without --dry-run to make these changes:");
+      $this->output()->writeln("   drush ne:clean");
+      return;
+    }
+    
+    if ($total_cnn_variants == 0) {
+      $this->output()->writeln("✅ No CNN variants found that need cleaning.");
+      return;
+    }
+    
+    // Process articles in batches
+    $total_updated = 0;
+    $batch_num = 1;
+    
+    // Get all articles with CNN variants
+    $cnn_query = \Drupal::database()->select('node__field_news_source', 'ns')
+      ->fields('ns', ['entity_id'])
+      ->condition('ns.field_news_source_value', 'CNN%', 'LIKE')
+      ->condition('ns.field_news_source_value', 'CNN', '<>');
+    
+    $cnn_nids = $cnn_query->execute()->fetchCol();
+    
+    $batches = array_chunk($cnn_nids, $batch_size);
+    
+    foreach ($batches as $batch_nids) {
+      $this->output()->writeln("Processing batch {$batch_num} ({count} articles)...", ['count' => count($batch_nids)]);
+      
+      $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($batch_nids);
+      $batch_updated = 0;
+      
+      foreach ($nodes as $node) {
+        $current_source = $node->get('field_news_source')->value;
+        
+        // Use the data processing service to clean the source
+        $reflection = new \ReflectionClass($data_service);
+        $method = $reflection->getMethod('cleanNewsSource');
+        $method->setAccessible(true);
+        $cleaned_source = $method->invoke($data_service, $current_source);
+        
+        if ($cleaned_source !== $current_source) {
+          $node->set('field_news_source', $cleaned_source);
+          $node->save();
+          $batch_updated++;
+          $total_updated++;
+          
+          $this->output()->writeln("  ✅ {$current_source} → {$cleaned_source} (Article {$node->id()})");
+        }
+      }
+      
+      if ($batch_updated > 0) {
+        $this->output()->writeln("  📝 Updated {$batch_updated} articles in batch {$batch_num}");
+        $batch_num++;
+        sleep(1); // Brief pause between batches
+      }
+    }
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("🎉 Completed! Updated {$total_updated} articles total.");
+    
+    // Show final counts
+    $final_cnn_count = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_news_source', 'CNN')
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    
+    $this->output()->writeln("📊 Final result: {$final_cnn_count} articles now have 'CNN' as their source.");
+  }
+
+  /**
    * Show processing summary and recommendations.
    *
    * @command news-extractor:summary

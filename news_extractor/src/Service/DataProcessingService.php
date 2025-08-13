@@ -595,10 +595,23 @@ class DataProcessingService {
   protected function cleanNewsSource($source) {
     $source = trim($source);
 
+    // Handle CNN variants first - normalize all CNN sub-brands to just "CNN"
+    if (preg_match('/^CNN\s*[-–—]\s*/i', $source) || 
+        preg_match('/^CNN\s+/i', $source) ||
+        stripos($source, 'CNN Money') !== false ||
+        stripos($source, 'CNN Politics') !== false ||
+        stripos($source, 'CNN Business') !== false ||
+        stripos($source, 'CNN Health') !== false ||
+        stripos($source, 'CNN Travel') !== false ||
+        stripos($source, 'CNN Style') !== false ||
+        stripos($source, 'CNN Sport') !== false ||
+        stripos($source, 'CNN Entertainment') !== false) {
+      return 'CNN';
+    }
+
     // Common source name mappings
     $source_map = [
       'CNN.com' => 'CNN',
-      'CNN Politics' => 'CNN Politics',
       'Fox News' => 'Fox News',
       'Reuters.com' => 'Reuters',
       'AP News' => 'Associated Press',
