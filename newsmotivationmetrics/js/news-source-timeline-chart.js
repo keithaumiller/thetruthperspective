@@ -103,89 +103,88 @@
     
     const sourceColorMap = {};
     
-    // Map original sources to their normalized versions for color assignment
+    // Create mapping from original to normalized names
+    const originalToNormalized = {};
     selectedSources.forEach((originalSource, index) => {
       const normalizedSource = normalizedSources[index];
-      
-      // Rules based on number of selections
-      if (normalizedSources.length === 1) {
-        // Single selection: Blue unless it's Fox News (then Red)
-        if (isFoxNews(normalizedSource)) {
-          sourceColorMap[originalSource] = 0; // red
-        } else {
-          sourceColorMap[originalSource] = 1; // blue
-        }
-      } 
-      else if (normalizedSources.length === 2) {
-        // Two selections: Red and Blue
-        let redAssigned = false;
-        let blueAssigned = false;
-        
-        // First pass: assign CNN to blue and Fox to red
-        normalizedSources.forEach((normSource, idx) => {
-          const origSource = selectedSources[idx];
-          if (isCNN(normSource)) {
-            sourceColorMap[origSource] = 1; // CNN gets blue
-            blueAssigned = true;
-          } else if (isFoxNews(normSource)) {
-            sourceColorMap[origSource] = 0; // Fox gets red
-            redAssigned = true;
-          }
-        });
-        
-        // Second pass: assign remaining colors to unassigned sources
-        normalizedSources.forEach((normSource, idx) => {
-          const origSource = selectedSources[idx];
-          if (!sourceColorMap.hasOwnProperty(origSource)) {
-            if (!redAssigned) {
-              sourceColorMap[origSource] = 0; // red
-              redAssigned = true;
-            } else if (!blueAssigned) {
-              sourceColorMap[origSource] = 1; // blue
-              blueAssigned = true;
-            }
-          }
-        });
-      }
-      else if (normalizedSources.length === 3) {
-        // Three selections: Red, Blue, Green
-        let redAssigned = false;
-        let blueAssigned = false;
-        let greenAssigned = false;
-        
-        // First pass: assign CNN to blue and Fox to red
-        normalizedSources.forEach((normSource, idx) => {
-          const origSource = selectedSources[idx];
-          if (isCNN(normSource)) {
-            sourceColorMap[origSource] = 1; // CNN gets blue
-            blueAssigned = true;
-          } else if (isFoxNews(normSource)) {
-            sourceColorMap[origSource] = 0; // Fox gets red
-            redAssigned = true;
-          }
-        });
-        
-        // Second pass: assign remaining colors to unassigned sources
-        normalizedSources.forEach((normSource, idx) => {
-          const origSource = selectedSources[idx];
-          if (!sourceColorMap.hasOwnProperty(origSource)) {
-            if (!redAssigned) {
-              sourceColorMap[origSource] = 0; // red
-              redAssigned = true;
-            } else if (!blueAssigned) {
-              sourceColorMap[origSource] = 1; // blue
-              blueAssigned = true;
-            } else if (!greenAssigned) {
-              sourceColorMap[origSource] = 2; // green
-              greenAssigned = true;
-            }
-          }
-        });
-      }
+      originalToNormalized[originalSource] = normalizedSource;
     });
     
-    console.log('Color assignments:', sourceColorMap);
-    return { sourceColorMap, baseColors };
+    // Rules based on number of selections
+    if (normalizedSources.length === 1) {
+      const normalizedSource = normalizedSources[0];
+      // Single selection: Blue unless it's Fox News (then Red)
+      if (isFoxNews(normalizedSource)) {
+        sourceColorMap[normalizedSource] = 0; // red
+      } else {
+        sourceColorMap[normalizedSource] = 1; // blue
+      }
+    } 
+    else if (normalizedSources.length === 2) {
+      // Two selections: Red and Blue
+      let redAssigned = false;
+      let blueAssigned = false;
+      
+      // First pass: assign CNN to blue and Fox to red
+      normalizedSources.forEach((normalizedSource) => {
+        if (isCNN(normalizedSource)) {
+          sourceColorMap[normalizedSource] = 1; // CNN gets blue
+          blueAssigned = true;
+        } else if (isFoxNews(normalizedSource)) {
+          sourceColorMap[normalizedSource] = 0; // Fox gets red
+          redAssigned = true;
+        }
+      });
+      
+      // Second pass: assign remaining colors to unassigned sources
+      normalizedSources.forEach((normalizedSource) => {
+        if (!sourceColorMap.hasOwnProperty(normalizedSource)) {
+          if (!redAssigned) {
+            sourceColorMap[normalizedSource] = 0; // red
+            redAssigned = true;
+          } else if (!blueAssigned) {
+            sourceColorMap[normalizedSource] = 1; // blue
+            blueAssigned = true;
+          }
+        }
+      });
+    }
+    else if (normalizedSources.length === 3) {
+      // Three selections: Red, Blue, Green
+      let redAssigned = false;
+      let blueAssigned = false;
+      let greenAssigned = false;
+      
+      // First pass: assign CNN to blue and Fox to red
+      normalizedSources.forEach((normalizedSource) => {
+        if (isCNN(normalizedSource)) {
+          sourceColorMap[normalizedSource] = 1; // CNN gets blue
+          blueAssigned = true;
+        } else if (isFoxNews(normalizedSource)) {
+          sourceColorMap[normalizedSource] = 0; // Fox gets red
+          redAssigned = true;
+        }
+      });
+      
+      // Second pass: assign remaining colors to unassigned sources
+      normalizedSources.forEach((normalizedSource) => {
+        if (!sourceColorMap.hasOwnProperty(normalizedSource)) {
+          if (!redAssigned) {
+            sourceColorMap[normalizedSource] = 0; // red
+            redAssigned = true;
+          } else if (!blueAssigned) {
+            sourceColorMap[normalizedSource] = 1; // blue
+            blueAssigned = true;
+          } else if (!greenAssigned) {
+            sourceColorMap[normalizedSource] = 2; // green
+            greenAssigned = true;
+          }
+        }
+      });
+    }
+    
+    console.log('Color assignments (normalized names):', sourceColorMap);
+    return { sourceColorMap, baseColors, originalToNormalized };
   }
 
   function initializeChart(canvas, canvasId, settings) {
@@ -286,7 +285,7 @@
       console.log('Unique sources in chart:', uniqueSources);
       
       // Get color assignments for all sources
-      const { sourceColorMap, baseColors } = assignSourceColors(uniqueSources);
+      const { sourceColorMap, baseColors, originalToNormalized } = assignSourceColors(uniqueSources);
     
       // Prepare datasets from timeline data - each source has 3 metrics
       const datasets = data.timelineData.map((sourceData, index) => {
@@ -296,20 +295,20 @@
         let sourceName = sourceData.source_name;
         const metricType = sourceData.metric_type;
         
-        // Clean up source name for better matching
-        sourceName = normalizeSourceName(sourceName);
+        // Normalize source name for color lookup
+        const normalizedSourceName = normalizeSourceName(sourceName);
         
-        // Get color scheme for this source
-        const colorIndex = sourceColorMap[sourceName] || 2; // Default to green if not found
+        // Get color scheme for this source using normalized name
+        const colorIndex = sourceColorMap[normalizedSourceName] || 2; // Default to green if not found
         const colorScheme = baseColors[colorIndex];
         
         // Get color for this metric type
         const color = colorScheme[metricType] || '#6B7280';
         
-        console.log(`Color assignment for ${sourceName} (${metricType}): ${color} (${colorScheme.name})`)
+        console.log(`Color assignment for ${sourceName} -> ${normalizedSourceName} (${metricType}): ${color} (${colorScheme.name})`)
         
         return {
-          label: `${sourceName} - ${metricType}`,
+          label: `${normalizedSourceName} - ${metricType}`,
           data: sourceData.data ? sourceData.data.map(point => ({
             x: point.date,
             y: point.value
@@ -509,27 +508,27 @@
     console.log('Unique selected sources for coloring:', uniqueSelectedSources);
     
     // Get color assignments for selected sources
-    const { sourceColorMap, baseColors } = assignSourceColors(uniqueSelectedSources);
+    const { sourceColorMap, baseColors, originalToNormalized } = assignSourceColors(uniqueSelectedSources);
 
     chart.data.datasets = filteredData.map((sourceData, index) => {
       // Get the source name and metric type
       let sourceName = sourceData.source_name;
       const metricType = sourceData.metric_type;
       
-      // Clean up source name for better matching
-      sourceName = normalizeSourceName(sourceName);
+      // Normalize source name for color lookup
+      const normalizedSourceName = normalizeSourceName(sourceName);
       
-      // Get color scheme for this source
-      const colorIndex = sourceColorMap[sourceName] || 2; // Default to green if not found
+      // Get color scheme for this source using normalized name
+      const colorIndex = sourceColorMap[normalizedSourceName] || 2; // Default to green if not found
       const colorScheme = baseColors[colorIndex];
       
       // Get color for this metric type
       const color = colorScheme[metricType] || '#6B7280';
       
-      console.log(`Update color assignment for ${sourceName} (${metricType}): ${color} (${colorScheme.name})`);
+      console.log(`Update color assignment for ${sourceName} -> ${normalizedSourceName} (${metricType}): ${color} (${colorScheme.name})`);
 
       return {
-        label: `${sourceName} - ${metricType}`,
+        label: `${normalizedSourceName} - ${metricType}`,
         data: sourceData.data ? sourceData.data.map(point => ({
           x: point.date,
           y: point.value
