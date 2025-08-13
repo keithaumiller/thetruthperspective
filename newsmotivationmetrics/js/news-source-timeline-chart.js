@@ -54,11 +54,26 @@
 
   // Function to assign colors to sources based on strict rules
   function assignSourceColors(selectedSources) {
-    // Simple color rotation - just assign colors in order: red, blue, green
+    // 9-color scheme: 3 shades per source (Dark, Medium, Light)
     const baseColors = [
-      { name: 'red', bias: '#B91C1C', credibility: '#EF4444', sentiment: '#FCA5A5' },
-      { name: 'blue', bias: '#1E3A8A', credibility: '#3B82F6', sentiment: '#93C5FD' },
-      { name: 'green', bias: '#166534', credibility: '#22C55E', sentiment: '#86EFAC' }
+      { 
+        name: 'red', 
+        bias: '#7F1D1D',        // Dark Red
+        credibility: '#DC2626',  // Red  
+        sentiment: '#FCA5A5'     // Light Red
+      },
+      { 
+        name: 'blue', 
+        bias: '#1E3A8A',        // Dark Blue
+        credibility: '#3B82F6',  // Blue
+        sentiment: '#93C5FD'     // Light Blue
+      },
+      { 
+        name: 'green', 
+        bias: '#14532D',        // Dark Green
+        credibility: '#16A34A',  // Green
+        sentiment: '#86EFAC'     // Light Green
+      }
     ];
     
     const sourceColorMap = {};
@@ -71,7 +86,7 @@
       sourceColorMap[source] = colorIndex;
     });
     
-    console.log('Simple color assignments:', sourceColorMap);
+    console.log('Color assignments (9-color scheme):', sourceColorMap);
     
     return {
       sourceColorMap,
@@ -134,6 +149,11 @@
 
       createChart(canvas, chartData);
       setupEventListeners(canvasId);
+      
+      // Set default selection to top 3 sources (highest article count)
+      if (sourceSelector) {
+        resetToTopSources();
+      }
 
     } catch (error) {
       console.error('❌ Chart initialization error:', error);

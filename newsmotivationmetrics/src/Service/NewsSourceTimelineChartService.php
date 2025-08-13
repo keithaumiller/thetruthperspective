@@ -118,7 +118,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
     $build['description'] = [
       '#type' => 'html_tag',
       '#tag' => 'p',
-      '#value' => 'This chart shows credibility scores, bias ratings, and sentiment trends for the top news sources (by article count) over the past ' . $options['days_back'] . ' days. Colors: CNN=Blue, Fox=Red, third source=Green.',
+      '#value' => 'This chart shows credibility scores, bias ratings, and sentiment trends for the top news sources (by article count) over the past ' . $options['days_back'] . ' days. Colors are assigned by selection order: 1st source=Red shades, 2nd source=Blue shades, 3rd source=Green shades.',
       '#attributes' => ['class' => ['chart-description']],
     ];
 
