@@ -215,7 +215,7 @@
         const baseSourceName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
         
         // Get color scheme for this source using simple lookup
-        const colorIndex = sourceColorMap[baseSourceName] || (index % 3); // Default to rotation if not found
+        const colorIndex = sourceColorMap[baseSourceName] !== undefined ? sourceColorMap[baseSourceName] : 0; // Default to first color family if not found
         const colorScheme = baseColors[colorIndex];
         
         // Get color for this metric type
@@ -438,7 +438,7 @@
       const baseSourceName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
       
       // Get color scheme for this source using simple lookup
-      const colorIndex = sourceColorMap[baseSourceName] || (index % 3); // Default to rotation if not found
+      const colorIndex = sourceColorMap[baseSourceName] !== undefined ? sourceColorMap[baseSourceName] : 0; // Default to first color family if not found
       const colorScheme = baseColors[colorIndex];
       
       // Get color for this metric type
