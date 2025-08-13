@@ -133,11 +133,11 @@
       
       // Fallback: try to reinitialize using existing Drupal behaviors
       setTimeout(() => {
-        if (!canvas.chart && Drupal.behaviors.taxonomyTimelineBlocks) {
+        if (!canvas.chart && Drupal.behaviors.newsMotivationTimelineChart) {
           // Re-run the chart behavior on this specific element
-          const context = { timelineSection };
+          const context = timelineSection;
           const settings = Drupal.settings || drupalSettings;
-          Drupal.behaviors.taxonomyTimelineBlocks.attach(context, settings);
+          Drupal.behaviors.newsMotivationTimelineChart.attach(context, settings);
         }
       }, 200);
     },

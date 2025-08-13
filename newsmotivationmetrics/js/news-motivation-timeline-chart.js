@@ -15,6 +15,16 @@
       console.log('Context element:', context);
       console.log('Settings keys:', Object.keys(settings));
 
+      // Check for Chart.js availability
+      if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js library not loaded');
+        const statusElement = document.querySelector('[id*="chart-status"]');
+        if (statusElement) {
+          statusElement.textContent = '⚠️ Chart.js library not loaded. Please check library dependencies.';
+        }
+        return;
+      }
+
       // Find any canvas element with ID starting with 'news-motivation-timeline-chart'
       let canvas = null;
       let canvasId = null;
@@ -42,14 +52,14 @@
         const chartElements = document.querySelectorAll('[id*="chart"], [class*="chart"]');
         console.log('Chart-related elements found:', chartElements.length);
         chartElements.forEach((el, index) => {
-          console.log(`Chart element ${index}:`, el.tagName, ' ', el.className);
+          console.log(`Chart element ${index}:`, el.tagName, 'id:', el.id, 'class:', el.className);
         });
         
         // Try to find chart container
         const chartContainer = document.querySelector('.chart-container');
         if (chartContainer) {
           console.log('✓ Chart container found, but missing canvas element');
-          console.log('❌ Cannot proceed without canvas element');
+          console.log('Chart container HTML:', chartContainer.innerHTML);
         } else {
           console.log('❌ Chart container not found either');
         }
@@ -87,15 +97,27 @@
       // Check if we have the necessary data
       if (!settings.newsmotivationmetrics) {
         console.log('❌ Chart data not available in drupalSettings');
+        console.log('Available settings keys:', Object.keys(settings));
         const statusElement = document.querySelector('[id*="chart-status"]');
         if (statusElement) {
-          statusElement.textContent = '⚠️ Chart data not available.';
+          statusElement.textContent = '⚠️ Chart data not available in drupalSettings.';
         }
         return;
       }
 
       const chartData = settings.newsmotivationmetrics;
       console.log('📊 Chart data loaded:', chartData.debugInfo);
+      console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
+
+      // Validate chart data structure
+      if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
+        console.log('❌ No timeline data available or invalid format');
+        const statusElement = document.querySelector('[id*="chart-status"]');
+        if (statusElement) {
+          statusElement.textContent = '⚠️ No timeline data available for chart display.';
+        }
+        return;
+      }
 
       // Update debug status (find correct status element)
       const statusId = canvasId === 'news-motivation-timeline-chart' ? 'chart-status' : 'chart-status-' + canvasId.split('-').pop();
@@ -114,108 +136,146 @@
 
   function initializeChart(canvas, data, canvasId) {
     console.log('🎯 Initializing Chart.js...');
+    console.log('Canvas element:', canvas);
+    console.log('Canvas ID:', canvasId);
+    console.log('Data structure:', data);
     
     if (chart) {
+      console.log('Destroying existing chart...');
       chart.destroy();
     }
 
-    const ctx = canvas.getContext('2d');
-    
-    // Prepare datasets from timeline data
-    const datasets = data.timelineData.map((termData, index) => {
-      const colors = [
-        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
-        '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
-      ];
+    try {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Cannot get 2D context from canvas');
+      }
       
-      return {
-        label: termData.term_name,
-        data: termData.data.map(point => ({
-          x: point.date,
-          y: point.count
-        })),
-        borderColor: colors[index % colors.length],
-        backgroundColor: colors[index % colors.length] + '20',
-        fill: false,
-        tension: 0.4
-      };
-    });
+      // Validate data structure
+      if (!data.timelineData || !Array.isArray(data.timelineData)) {
+        throw new Error('Invalid timeline data structure');
+      }
 
-    // Get date labels from the first dataset
-    const labels = data.timelineData.length > 0 ? data.timelineData[0].data.map(point => point.date) : [];
+      console.log('Processing', data.timelineData.length, 'datasets...');
+    
+      // Prepare datasets from timeline data
+      const datasets = data.timelineData.map((termData, index) => {
+        console.log(`Dataset ${index}: ${termData.term_name} with ${termData.data ? termData.data.length : 0} data points`);
+        
+        const colors = [
+          '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+          '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
+        ];
+        
+        return {
+          label: termData.term_name,
+          data: termData.data ? termData.data.map(point => ({
+            x: point.date,
+            y: point.count
+          })) : [],
+          borderColor: colors[index % colors.length],
+          backgroundColor: colors[index % colors.length] + '20',
+          fill: false,
+          tension: 0.4
+        };
+      });
 
-    chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: datasets
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false,
+      // Get date labels from the first dataset
+      const labels = data.timelineData.length > 0 && data.timelineData[0].data ? 
+        data.timelineData[0].data.map(point => point.date) : [];
+
+      console.log('Chart labels:', labels.slice(0, 5), '... (showing first 5)');
+      console.log('Chart datasets:', datasets.length, 'total datasets');
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: datasets
         },
-        plugins: {
-          title: {
-            display: true,
-            text: 'Topic Mentions Over Time (Last 90 Days)',
-            font: {
-              size: 16
-            }
-          },
-          legend: {
-            position: 'top',
-            labels: {
-              usePointStyle: true,
-              padding: 20
-            }
-          },
-          tooltip: {
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
             mode: 'index',
             intersect: false,
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            titleColor: 'white',
-            bodyColor: 'white',
-            borderColor: 'rgba(255,255,255,0.2)',
-            borderWidth: 1
-          }
-        },
-        scales: {
-          x: {
-            display: true,
+          },
+          plugins: {
             title: {
               display: true,
-              text: 'Date'
-            },
-            type: 'time',
-            time: {
-              parser: 'YYYY-MM-DD',
-              tooltipFormat: 'MMM DD, YYYY',
-              displayFormats: {
-                day: 'MMM DD',
-                week: 'MMM DD',
-                month: 'MMM YYYY'
+              text: 'Topic Mentions Over Time (Last 90 Days)',
+              font: {
+                size: 16
               }
+            },
+            legend: {
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleColor: 'white',
+              bodyColor: 'white',
+              borderColor: 'rgba(255,255,255,0.2)',
+              borderWidth: 1
             }
           },
-          y: {
-            display: true,
-            title: {
+          scales: {
+            x: {
               display: true,
-              text: 'Article Count'
+              title: {
+                display: true,
+                text: 'Date'
+              },
+              type: 'time',
+              time: {
+                parser: 'YYYY-MM-DD',
+                tooltipFormat: 'MMM DD, YYYY',
+                displayFormats: {
+                  day: 'MMM DD',
+                  week: 'MMM DD',
+                  month: 'MMM YYYY'
+                }
+              }
             },
-            beginAtZero: true,
-            ticks: {
-              stepSize: 1
+            y: {
+              display: true,
+              title: {
+                display: true,
+                text: 'Article Count'
+              },
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1
+              }
             }
           }
         }
-      }
-    });
+      });
 
-    console.log('✅ Chart initialized successfully');
+      console.log('✅ Chart initialized successfully');
+      
+      // Update status element with success message
+      const statusId = canvasId === 'news-motivation-timeline-chart' ? 'chart-status' : 'chart-status-' + canvasId.split('-').pop();
+      const statusElement = document.getElementById(statusId) || document.querySelector('[id*="chart-status"]');
+      if (statusElement) {
+        statusElement.textContent = '✅ Chart loaded with ' + datasets.length + ' trend lines';
+      }
+      
+    } catch (error) {
+      console.error('❌ Chart initialization failed:', error);
+      
+      // Update status element with error message
+      const statusElement = document.querySelector('[id*="chart-status"]');
+      if (statusElement) {
+        statusElement.textContent = '⚠️ Chart initialization failed: ' + error.message;
+      }
+    }
   }
 
   function setupEventListeners(canvasId) {
