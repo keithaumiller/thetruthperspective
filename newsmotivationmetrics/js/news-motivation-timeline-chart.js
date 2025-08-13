@@ -80,10 +80,23 @@
         }
 
         const chartData = settings.newsmotivationmetrics;
-        console.log('📊 Chart data loaded:', chartData.debugInfo);
+        console.log('📊 Chart data loaded:', {
+          dataPoints: chartData.timelineData ? chartData.timelineData.length : 0,
+          termCount: chartData.topTerms ? chartData.topTerms.length : 0,
+          timestamp: Math.floor(Date.now() / 1000),
+          date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          php_version: chartData.debugInfo?.php_version || 'unknown',
+          extendedTermsAvailable: chartData.extendedTerms ? 'Yes' : 'No',
+          extendedTermsCount: chartData.extendedTerms?.timelineData?.length || 0
+        });
         console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
-
-        // Validate chart data structure
+        
+        // Log extended terms availability
+        if (chartData.extendedTerms) {
+          console.log('📈 Extended terms available:', chartData.extendedTerms.timelineData?.length || 0, 'additional terms');
+        } else {
+          console.log('⚠️ No extended terms data found');
+        }        // Validate chart data structure
         if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
           console.log('❌ No timeline data available or invalid format');
           const statusElement = document.querySelector('[id*="chart-status"]');
@@ -299,9 +312,34 @@
     const selectedTermIds = Array.from(termSelector.selectedOptions).map(option => parseInt(option.value));
     console.log('📊 Updating chart with selected terms:', selectedTermIds);
 
+    // Combine timeline data from both top terms and extended terms
+    let allData = drupalSettings.newsmotivationmetrics.timelineData || [];
+    
+    // Add extended terms data if available
+    if (drupalSettings.newsmotivationmetrics.extendedTerms && 
+        drupalSettings.newsmotivationmetrics.extendedTerms.timelineData) {
+      const extendedData = drupalSettings.newsmotivationmetrics.extendedTerms.timelineData;
+      console.log('📈 Found extended timeline data with', extendedData.length, 'terms');
+      
+      // Merge extended data, avoiding duplicates
+      const existingTermIds = new Set(allData.map(item => parseInt(item.term_id)));
+      const newExtendedData = extendedData.filter(item => !existingTermIds.has(parseInt(item.term_id)));
+      allData = [...allData, ...newExtendedData];
+      
+      console.log('📊 Total available timeline data:', allData.length, 'terms');
+    }
+
     // Filter datasets based on selected terms
-    const allData = drupalSettings.newsmotivationmetrics.timelineData;
     const filteredData = allData.filter(termData => selectedTermIds.includes(parseInt(termData.term_id)));
+    
+    console.log('🎯 Found timeline data for', filteredData.length, 'of', selectedTermIds.length, 'selected terms');
+
+    // Warn about terms without timeline data
+    const foundTermIds = new Set(filteredData.map(item => parseInt(item.term_id)));
+    const missingTermIds = selectedTermIds.filter(id => !foundTermIds.has(id));
+    if (missingTermIds.length > 0) {
+      console.warn('⚠️ No timeline data available for term IDs:', missingTermIds);
+    }
 
     // Update chart datasets
     const colors = [
@@ -311,10 +349,10 @@
 
     chart.data.datasets = filteredData.map((termData, index) => ({
       label: termData.term_name,
-      data: termData.data.map(point => ({
+      data: termData.data ? termData.data.map(point => ({
         x: point.date,
         y: point.count
-      })),
+      })) : [],
       borderColor: colors[index % colors.length],
       backgroundColor: colors[index % colors.length] + '20',
       fill: false,
@@ -322,6 +360,16 @@
     }));
 
     chart.update();
+    
+    // Update status message
+    const statusElement = document.querySelector('[id*="chart-status"]');
+    if (statusElement) {
+      let message = `📊 Chart updated with ${filteredData.length} trend lines`;
+      if (missingTermIds.length > 0) {
+        message += ` (${missingTermIds.length} terms have no timeline data)`;
+      }
+      statusElement.textContent = message;
+    }
   }
 
   function resetToTop10() {
