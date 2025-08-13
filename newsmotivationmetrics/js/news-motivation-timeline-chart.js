@@ -15,24 +15,28 @@
       console.log('Context element:', context);
       console.log('Settings keys:', Object.keys(settings));
 
-      // Try multiple approaches to find the canvas element
+      // Find any canvas element with ID starting with 'news-motivation-timeline-chart'
       let canvas = null;
+      let canvasId = null;
       
       // First, try to find canvas in the current context
       if (context && context.querySelector) {
-        canvas = context.querySelector('#news-motivation-timeline-chart');
+        canvas = context.querySelector('canvas[id^="news-motivation-timeline-chart"]');
         console.log('Canvas found in context:', canvas);
       }
       
       // If not found in context, search in document
       if (!canvas) {
         console.log('Canvas not found in context, searching in document...');
-        canvas = document.getElementById('news-motivation-timeline-chart');
+        canvas = document.querySelector('canvas[id^="news-motivation-timeline-chart"]');
         console.log('Canvas found in document:', canvas);
       }
       
-      if (!canvas) {
-        console.log('❌ Canvas element #news-motivation-timeline-chart not found anywhere in DOM');
+      if (canvas) {
+        canvasId = canvas.id;
+        console.log('✅ Canvas found with ID:', canvasId);
+      } else {
+        console.log('❌ Canvas element not found anywhere in DOM');
         
         // Debug: List all elements with 'chart' in their ID or class
         const chartElements = document.querySelectorAll('[id*="chart"], [class*="chart"]');
@@ -45,59 +49,70 @@
         const chartContainer = document.querySelector('.chart-container');
         if (chartContainer) {
           console.log('✓ Chart container found, but missing canvas element');
-          
-          // Dynamically create the canvas element if container exists but canvas doesn't
-          console.log('🔧 Creating canvas element dynamically...');
-          const newCanvas = document.createElement('canvas');
-          newCanvas.id = 'news-motivation-timeline-chart';
-          newCanvas.width = 800;
-          newCanvas.height = 400;
-          newCanvas.style.maxWidth = '100%';
-          newCanvas.style.height = 'auto';
-          chartContainer.appendChild(newCanvas);
-          canvas = newCanvas;
-          console.log('✅ Canvas element created and added to DOM');
+          console.log('❌ Cannot proceed without canvas element');
         } else {
           console.log('❌ Chart container not found either');
-          document.getElementById('chart-status').textContent = '⚠️ Chart canvas element not found. HTML structure may be incorrect.';
-          return;
         }
-      }
-
-      // Find term selector
-      termSelector = document.getElementById('term-selector') || context.querySelector('#term-selector');
-      if (!termSelector) {
-        console.log('❌ Term selector not found');
-        document.getElementById('chart-status').textContent = '⚠️ Term selector not found. Controls may not work.';
+        
+        // Update any status element we can find
+        const statusElement = document.querySelector('[id*="chart-status"]');
+        if (statusElement) {
+          statusElement.textContent = '⚠️ Chart canvas element not found. HTML structure may be incorrect.';
+        }
         return;
       }
 
-      console.log('✅ Canvas found:', canvas);
-      console.log('✅ Term selector found:', termSelector);
+      // Find term selector based on canvas ID
+      const selectorId = canvasId === 'news-motivation-timeline-chart' ? 'term-selector' : 'term-selector-' + canvasId.split('-').pop();
+      termSelector = document.getElementById(selectorId) || context.querySelector('#' + selectorId);
+      
+      if (!termSelector) {
+        console.log('❌ Term selector not found with ID:', selectorId);
+        // Try fallback selector
+        termSelector = document.querySelector('.term-selector') || context.querySelector('.term-selector');
+        if (termSelector) {
+          console.log('✅ Found term selector using class fallback');
+        } else {
+          console.log('❌ Term selector not found at all');
+          const statusElement = document.querySelector('[id*="chart-status"]');
+          if (statusElement) {
+            statusElement.textContent = '⚠️ Term selector not found. Controls may not work.';
+          }
+          return;
+        }
+      } else {
+        console.log('✅ Term selector found:', termSelector);
+      }
 
       // Check if we have the necessary data
       if (!settings.newsmotivationmetrics) {
         console.log('❌ Chart data not available in drupalSettings');
-        document.getElementById('chart-status').textContent = '⚠️ Chart data not available.';
+        const statusElement = document.querySelector('[id*="chart-status"]');
+        if (statusElement) {
+          statusElement.textContent = '⚠️ Chart data not available.';
+        }
         return;
       }
 
       const chartData = settings.newsmotivationmetrics;
       console.log('📊 Chart data loaded:', chartData.debugInfo);
 
-      // Update debug status
-      document.getElementById('chart-status').textContent = '✅ Chart initialized successfully';
-      document.getElementById('chart-data-status').textContent = `Data loaded: ${chartData.debugInfo.termCount} terms, ${chartData.debugInfo.dataPoints} data series`;
+      // Update debug status (find correct status element)
+      const statusId = canvasId === 'news-motivation-timeline-chart' ? 'chart-status' : 'chart-status-' + canvasId.split('-').pop();
+      const statusElement = document.getElementById(statusId) || document.querySelector('[id*="chart-status"]');
+      if (statusElement) {
+        statusElement.textContent = '✅ Chart initialized successfully';
+      }
 
       // Initialize the chart
-      initializeChart(canvas, chartData);
+      initializeChart(canvas, chartData, canvasId);
 
       // Setup event listeners
-      setupEventListeners();
+      setupEventListeners(canvasId);
     }
   };
 
-  function initializeChart(canvas, data) {
+  function initializeChart(canvas, data, canvasId) {
     console.log('🎯 Initializing Chart.js...');
     
     if (chart) {
@@ -203,20 +218,22 @@
     console.log('✅ Chart initialized successfully');
   }
 
-  function setupEventListeners() {
+  function setupEventListeners(canvasId) {
     // Term selector change event
     if (termSelector) {
       termSelector.addEventListener('change', updateChart);
     }
 
     // Reset button
-    const resetButton = document.getElementById('reset-chart');
+    const resetId = canvasId === 'news-motivation-timeline-chart' ? 'reset-chart' : 'reset-chart-' + canvasId.split('-').pop();
+    const resetButton = document.getElementById(resetId) || document.querySelector('[id*="reset-chart"]');
     if (resetButton) {
       resetButton.addEventListener('click', resetToTop10);
     }
 
     // Clear button
-    const clearButton = document.getElementById('clear-chart');
+    const clearId = canvasId === 'news-motivation-timeline-chart' ? 'clear-chart' : 'clear-chart-' + canvasId.split('-').pop();
+    const clearButton = document.getElementById(clearId) || document.querySelector('[id*="clear-chart"]');
     if (clearButton) {
       clearButton.addEventListener('click', clearAllTerms);
     }
