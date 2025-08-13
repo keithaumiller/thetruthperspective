@@ -1,14 +1,14 @@
 (function (Drupal, drupalSettings) {
   'use strict';
 
-  console.log('=== Taxonomy Timeline Chart Script Loading ===');
+  console.log('=== News Motivation Timeline Chart Script Loading ===');
   console.log('Drupal object:', typeof Drupal);
   console.log('drupalSettings object:', typeof drupalSettings);
 
   let chart = null;
   let termSelector = null;
 
-  Drupal.behaviors.taxonomyTimelineChart = {
+  Drupal.behaviors.newsMotivationTimelineChart = {
     attach: function (context, settings) {
       console.log('=== Drupal Behavior Attach Called ===');
       console.log('Context type:', typeof context);
@@ -20,19 +20,19 @@
       
       // First, try to find canvas in the current context
       if (context && context.querySelector) {
-        canvas = context.querySelector('#taxonomy-timeline-chart');
+        canvas = context.querySelector('#news-motivation-timeline-chart');
         console.log('Canvas found in context:', canvas);
       }
       
       // If not found in context, search in document
       if (!canvas) {
         console.log('Canvas not found in context, searching in document...');
-        canvas = document.getElementById('taxonomy-timeline-chart');
+        canvas = document.getElementById('news-motivation-timeline-chart');
         console.log('Canvas found in document:', canvas);
       }
       
       if (!canvas) {
-        console.log('❌ Canvas element #taxonomy-timeline-chart not found anywhere in DOM');
+        console.log('❌ Canvas element #news-motivation-timeline-chart not found anywhere in DOM');
         
         // Debug: List all elements with 'chart' in their ID or class
         const chartElements = document.querySelectorAll('[id*="chart"], [class*="chart"]');
@@ -49,7 +49,7 @@
           // Dynamically create the canvas element if container exists but canvas doesn't
           console.log('🔧 Creating canvas element dynamically...');
           const newCanvas = document.createElement('canvas');
-          newCanvas.id = 'taxonomy-timeline-chart';
+          newCanvas.id = 'news-motivation-timeline-chart';
           newCanvas.width = 800;
           newCanvas.height = 400;
           newCanvas.style.maxWidth = '100%';

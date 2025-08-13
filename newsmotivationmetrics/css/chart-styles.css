@@ -4,7 +4,7 @@
  */
 
 /* === FULL-WIDTH LAYOUT SUPPORT === */
-.taxonomy-timeline-section,
+.news-motivation-timeline-section,
 .news-metrics-header,
 .metrics-overview-sections {
   background: #fff;
@@ -17,7 +17,7 @@
 }
 
 /* Ensure content doesn't touch edges on very wide screens */
-.taxonomy-timeline-section,
+.news-motivation-timeline-section,
 .news-metrics-header,
 .metrics-overview-sections {
   max-width: 1400px;
@@ -26,10 +26,10 @@
 }
 
 /* Full-width override when specifically applied */
-.metrics-fullwidth-page .taxonomy-timeline-section,
+.metrics-fullwidth-page .news-motivation-timeline-section,
 .metrics-fullwidth-page .news-metrics-header,
 .metrics-fullwidth-page .metrics-overview-sections,
-.page--metrics-fullwidth .taxonomy-timeline-section,
+.page--metrics-fullwidth .news-motivation-timeline-section,
 .page--metrics-fullwidth .news-metrics-header,
 .page--metrics-fullwidth .metrics-overview-sections {
   max-width: none;
@@ -217,7 +217,7 @@
 
 /* === RESPONSIVE DESIGN === */
 @media (max-width: 768px) {
-  .taxonomy-timeline-section,
+  .news-motivation-timeline-section,
   .news-metrics-header,
   .metrics-overview-sections {
     margin: 10px 0;
@@ -300,7 +300,7 @@
     display: none;
   }
   
-  .taxonomy-timeline-section {
+  .news-motivation-timeline-section {
     box-shadow: none;
     border: 1px solid #ddd;
   }
@@ -315,7 +315,7 @@
 /* Portrait mode handling with JavaScript-controlled visibility */
 @media (max-width: 768px) and (orientation: portrait) {
   /* When JavaScript adds portrait-mode class, enhance the styling */
-  .taxonomy-timeline-section.portrait-mode .chart-container {
+  .news-motivation-timeline-section.portrait-mode .chart-container {
     position: relative;
     min-height: 200px;
     display: flex;
@@ -326,7 +326,7 @@
     border-radius: 8px;
   }
   
-  .taxonomy-timeline-section.portrait-mode .chart-container::before {
+  .news-motivation-timeline-section.portrait-mode .chart-container::before {
     content: '📱↻\A\ASwitch to landscape mode to view the timeline chart\A\ARotate your device for the best chart viewing experience';
     white-space: pre-line;
     text-align: center;
@@ -338,11 +338,11 @@
   }
   
   /* Fallback for when JavaScript hasn't loaded yet */
-  .taxonomy-timeline-section:not(.portrait-mode) .chart-container canvas {
+  .news-motivation-timeline-section:not(.portrait-mode) .chart-container canvas {
     display: none;
   }
   
-  .taxonomy-timeline-section:not(.portrait-mode) .chart-container {
+  .news-motivation-timeline-section:not(.portrait-mode) .chart-container {
     position: relative;
     min-height: 200px;
     display: flex;
@@ -353,7 +353,7 @@
     border-radius: 8px;
   }
   
-  .taxonomy-timeline-section:not(.portrait-mode) .chart-container::before {
+  .news-motivation-timeline-section:not(.portrait-mode) .chart-container::before {
     content: '📱↻\A\ASwitch to landscape mode to view the timeline chart\A\ARotate your device for the best chart viewing experience';
     white-space: pre-line;
     text-align: center;
@@ -365,12 +365,12 @@
   }
   
   /* Hide controls in portrait mode regardless */
-  .taxonomy-timeline-section .chart-controls-section {
+  .news-motivation-timeline-section .chart-controls-section {
     display: none;
   }
   
   /* Keep the chart title visible */
-  .taxonomy-timeline-section .chart-section-title {
+  .news-motivation-timeline-section .chart-section-title {
     display: block;
     color: #495057;
     margin-bottom: 20px;
@@ -379,19 +379,19 @@
 
 /* Ensure everything is visible in landscape */
 @media (max-width: 768px) and (orientation: landscape) {
-  .taxonomy-timeline-section .chart-container canvas {
+  .news-motivation-timeline-section .chart-container canvas {
     display: block !important;
   }
   
-  .taxonomy-timeline-section .chart-controls-section {
+  .news-motivation-timeline-section .chart-controls-section {
     display: block !important;
   }
   
-  .taxonomy-timeline-section .chart-container::before {
+  .news-motivation-timeline-section .chart-container::before {
     display: none !important;
   }
   
-  .taxonomy-timeline-section.portrait-mode .chart-container::before {
+  .news-motivation-timeline-section.portrait-mode .chart-container::before {
     display: none !important;
   }
 }

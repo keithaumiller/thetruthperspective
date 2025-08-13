@@ -5,28 +5,28 @@ namespace Drupal\newsmotivationmetrics\Plugin\Block;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface;
+use Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface;
 
 /**
- * Provides a 'Timeline Chart' Block.
+ * Provides a 'News Motivation Timeline Chart' Block.
  *
  * @Block(
- *   id = "timeline_chart_block",
- *   admin_label = @Translation("Timeline Chart"),
+ *   id = "news_motivation_timeline_chart_block",
+ *   admin_label = @Translation("News Motivation Timeline Chart"),
  *   category = @Translation("News Motivation Metrics"),
  * )
  */
-class TimelineChartBlock extends BlockBase implements ContainerFactoryPluginInterface {
+class NewsMotivationTimelineChartBlock extends BlockBase implements ContainerFactoryPluginInterface {
 
   /**
-   * The timeline chart service.
+   * The news motivation timeline chart service.
    *
-   * @var \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface
+   * @var \Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface
    */
-  protected $timelineChartService;
+  protected $newsMotivationTimelineChartService;
 
   /**
-   * Constructs a new TimelineChartBlock instance.
+   * Constructs a new NewsMotivationTimelineChartBlock instance.
    *
    * @param array $configuration
    *   The plugin configuration.
@@ -34,17 +34,17 @@ class TimelineChartBlock extends BlockBase implements ContainerFactoryPluginInte
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
-   * @param \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface $timeline_chart_service
-   *   The timeline chart service.
+   * @param \Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface $news_motivation_timeline_chart_service
+   *   The news motivation timeline chart service.
    */
   public function __construct(
     array $configuration,
     $plugin_id,
     $plugin_definition,
-    TimelineChartServiceInterface $timeline_chart_service
+    NewsMotivationTimelineChartServiceInterface $news_motivation_timeline_chart_service
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->timelineChartService = $timeline_chart_service;
+    $this->newsMotivationTimelineChartService = $news_motivation_timeline_chart_service;
   }
 
   /**
@@ -55,7 +55,7 @@ class TimelineChartBlock extends BlockBase implements ContainerFactoryPluginInte
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('newsmotivationmetrics.timeline_chart_service')
+      $container->get('newsmotivationmetrics.news_motivation_timeline_chart_service')
     );
   }
 
@@ -63,18 +63,18 @@ class TimelineChartBlock extends BlockBase implements ContainerFactoryPluginInte
    * {@inheritdoc}
    */
   public function build() {
-    return $this->timelineChartService->buildTimelineChart([
-      'canvas_id' => 'taxonomy-timeline-chart',
-      'title' => '📈 Topic Trends Over Time',
+    return $this->newsMotivationTimelineChartService->buildNewsMotivationTimelineChart([
+      'canvas_id' => 'news-motivation-timeline-chart',
+      'title' => '📈 News Motivation Trends Over Time',
       'show_controls' => TRUE,
       'show_legend' => TRUE,
       'show_title' => TRUE,
       'chart_height' => 400,
       'days_back' => 30,
       'term_limit' => 10,
-      'container_classes' => ['taxonomy-timeline-section'],
-      'library' => 'newsmotivationmetrics/chart-js',
-      'js_behavior' => 'taxonomyTimelineChart',
+      'container_classes' => ['news-motivation-timeline-section'],
+      'library' => 'newsmotivationmetrics/news-motivation-timeline',
+      'js_behavior' => 'newsMotivationTimelineChart',
     ]);
   }
 

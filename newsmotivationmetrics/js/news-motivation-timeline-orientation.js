@@ -1,20 +1,21 @@
 /**
- * Timeline Chart Orientation Handler
+ * News Motivation Timeline Chart Orientation Handler
  * Prevents chart rendering in portrait mode and handles re-initialization in landscape
+ * Specifically designed for news motivation tracking timeline charts
  */
 
 (function (Drupal, once) {
   'use strict';
 
-  Drupal.behaviors.timelineChartOrientation = {
+  Drupal.behaviors.newsMotivationTimelineOrientation = {
     attach: function (context, settings) {
       // Only run on mobile devices
       if (!this.isMobileDevice()) {
         return;
       }
 
-      once('timeline-orientation', '.taxonomy-timeline-section', context).forEach((element) => {
-        this.initTimelineOrientationHandler(element);
+      once('news-motivation-timeline-orientation', '.news-motivation-timeline-section', context).forEach((element) => {
+        this.initNewsMotivationTimelineOrientationHandler(element);
       });
     },
 
@@ -22,7 +23,7 @@
       return window.innerWidth <= 768;
     },
 
-    initTimelineOrientationHandler: function (timelineSection) {
+    initNewsMotivationTimelineOrientationHandler: function (timelineSection) {
       const self = this;
       const canvas = timelineSection.querySelector('canvas');
       

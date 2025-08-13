@@ -3,15 +3,17 @@
 namespace Drupal\newsmotivationmetrics\Service\Interface;
 
 /**
- * Interface for timeline chart service.
+ * Interface for news motivation timeline chart service.
  * 
- * Provides shared timeline chart construction capabilities for
- * both dashboard pages and configurable blocks.
+ * Provides shared news motivation timeline chart construction capabilities for
+ * both dashboard pages and configurable blocks. This interface specifically
+ * handles timeline charts that display motivation analysis trends over time
+ * for news articles analyzed by The Truth Perspective platform.
  */
-interface TimelineChartServiceInterface {
+interface NewsMotivationTimelineChartServiceInterface {
 
   /**
-   * Build a complete timeline chart render array.
+   * Build a complete news motivation timeline chart render array.
    *
    * @param array $options
    *   Chart configuration options including:
@@ -30,10 +32,10 @@ interface TimelineChartServiceInterface {
    * @return array
    *   Complete render array with chart, controls, and settings.
    */
-  public function buildTimelineChart(array $options = []): array;
+  public function buildNewsMotivationTimelineChart(array $options = []): array;
 
   /**
-   * Build timeline chart specifically for block implementation.
+   * Build news motivation timeline chart specifically for block implementation.
    *
    * @param array $config
    *   Block configuration array with:
@@ -49,6 +51,6 @@ interface TimelineChartServiceInterface {
    * @return array
    *   Block-optimized chart render array.
    */
-  public function buildTimelineBlock(array $config = []): array;
+  public function buildNewsMotivationTimelineBlock(array $config = []): array;
 
 }

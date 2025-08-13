@@ -18,7 +18,7 @@
    */
   Drupal.behaviors.newsMotivationMetricsChart = {
     attach: function (context, settings) {
-      once('taxonomy-timeline-chart', 'body', context).forEach(function () {
+      once('news-motivation-timeline-chart', 'body', context).forEach(function () {
         console.log('=== News Motivation Metrics Chart Behavior v1.0.1 (Aug 8) ===');
         console.log('Settings:', settings.newsmotivationmetrics);
 
@@ -160,10 +160,10 @@
       console.log('Date adapter status:', dateAdapterStatus);
 
       // Validate canvas element with enhanced debugging
-      const canvas = document.getElementById('taxonomy-timeline-chart');
+      const canvas = document.getElementById('news-motivation-timeline-chart');
       if (!canvas) {
         console.log('Canvas element not found - DOM elements:');
-        console.log('timeline sections:', document.querySelectorAll('.taxonomy-timeline-section').length);
+        console.log('timeline sections:', document.querySelectorAll('.news-motivation-timeline-section').length);
         console.log('all canvas elements:', document.querySelectorAll('canvas').length);
         console.log('chart containers:', document.querySelectorAll('.chart-container').length);
         self.updateStatus('Canvas element not found - chart not available on this page', 'error');
@@ -192,7 +192,7 @@
      */
     initializeTimelineChart: function(timelineData) {
       const self = this;
-      const canvas = document.getElementById('taxonomy-timeline-chart');
+      const canvas = document.getElementById('news-motivation-timeline-chart');
       
       if (!canvas) {
         self.updateStatus('Canvas element not found', 'error');
@@ -439,7 +439,7 @@
      * Add chart resize controls to the chart container.
      */
     addResizeControls: function() {
-      const chartContainer = document.querySelector('.taxonomy-timeline-section .chart-container');
+      const chartContainer = document.querySelector('.news-motivation-timeline-section .chart-container');
       if (!chartContainer) {
         console.log('Chart container not found for resize controls');
         return;
@@ -488,7 +488,7 @@
       resizeControls.appendChild(fullscreenBtn);
 
       // Insert before canvas
-      const canvas = chartContainer.querySelector('#taxonomy-timeline-chart');
+      const canvas = chartContainer.querySelector('#news-motivation-timeline-chart');
       if (canvas) {
         chartContainer.insertBefore(resizeControls, canvas);
       } else {
@@ -502,7 +502,7 @@
      * Resize the chart with new dimensions.
      */
     resizeChart: function(height, aspectRatio) {
-      const canvas = document.getElementById('taxonomy-timeline-chart');
+      const canvas = document.getElementById('news-motivation-timeline-chart');
       if (!canvas || !currentChart) {
         console.log('Cannot resize: canvas or chart not available');
         return;
@@ -528,7 +528,7 @@
      * Toggle fullscreen mode for the chart.
      */
     toggleFullscreen: function() {
-      const chartSection = document.querySelector('.taxonomy-timeline-section');
+      const chartSection = document.querySelector('.news-motivation-timeline-section');
       if (!chartSection) return;
 
       const isFullscreen = chartSection.classList.contains('chart-fullscreen');
@@ -785,7 +785,7 @@
       // Reset canvas container
       const container = document.querySelector('.chart-container');
       if (container) {
-        const canvas = container.querySelector('#taxonomy-timeline-chart');
+        const canvas = container.querySelector('#news-motivation-timeline-chart');
         if (canvas) {
           const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, canvas.width, canvas.height);

@@ -20,17 +20,17 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 - **Temporal Processing Analytics**: Time-based processing metrics and trends
 - **Sentiment Distribution Analysis**: Positive/negative/neutral sentiment breakdown
 - **Entity Recognition Metrics**: People, organizations, and locations tracking
-- **Timeline Chart**: Interactive visualization of taxonomy trends over time
+- **News Motivation Timeline Chart**: Interactive visualization of news motivation trends over time
 - **Recent Activity**: 7-day and 30-day processing activity metrics
 - **Analysis Quality**: AI response depth and classification quality metrics
 - **About Section**: Mission, methodology, and transparency information
 
 ### Data Visualization
-- Timeline charts showing term frequency trends
-- Comparative analysis between different motivation categories
-- Entity recognition patterns (people, organizations, locations)
+- News motivation timeline charts showing motivation trend analysis over time
+- Comparative analysis between different news motivation categories  
+- Entity recognition patterns (people, organizations, locations) in news coverage
 - Article volume and processing statistics
-- Temporal narrative analysis
+- Temporal narrative analysis for news motivation tracking
 
 ### Professional Public Interface
 - SEO-optimized structure for discoverability
@@ -39,7 +39,50 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 - Print-friendly chart export capabilities
 - Professional gradient styling suitable for media/academic use
 
+## Recent Updates (August 2025)
+
+### Timeline Component Renaming
+All timeline chart components have been renamed to be specific about their news motivation tracking purpose:
+
+#### Component Name Changes
+- **JavaScript Files**:
+  - `taxonomy-timeline-chart.js` → `news-motivation-timeline-chart.js`
+  - `timeline-orientation.js` → `news-motivation-timeline-orientation.js`
+
+- **PHP Service Classes**:
+  - `TimelineChartService` → `NewsMotivationTimelineChartService`
+  - `TimelineChartServiceInterface` → `NewsMotivationTimelineChartServiceInterface`
+
+- **Block Plugin Classes**:
+  - `TaxonomyTimelineBlock` → `NewsMotivationTimelineBlock` 
+  - `TimelineChartBlock` → `NewsMotivationTimelineChartBlock`
+
+- **Service Registry**:
+  - `newsmotivationmetrics.timeline_chart_service` → `newsmotivationmetrics.news_motivation_timeline_chart_service`
+
+#### Identifier Updates
+- **Canvas IDs**: `taxonomy-timeline-chart` → `news-motivation-timeline-chart`
+- **CSS Classes**: `taxonomy-timeline-section` → `news-motivation-timeline-section`
+- **JavaScript Behaviors**: `taxonomyTimelineChart` → `newsMotivationTimelineChart`
+- **Library Names**: New `news-motivation-timeline` library for dedicated functionality
+
+#### Purpose and Benefits
+This renaming provides clear semantic separation for when additional timeline chart types are introduced in the future. The components now explicitly identify themselves as designed for **news motivation tracking analysis**, making the codebase more maintainable and self-documenting.
+
 ## Architecture
+
+### Service Layer (Updated)
+- **NewsMotivationTimelineChartService**: Centralized service for building news motivation timeline chart components
+- **ChartDataService**: Aggregates and processes timeline data for news motivation visualization
+- **DashboardBuilderService**: Coordinates multiple chart components and dashboard sections
+- **MetricsDataService**: Core data processing and aggregation for analytics
+- **TimelineService**: Backend data processing specifically for news motivation timeline analysis
+
+### Component Structure
+- **Block Plugins**: `NewsMotivationTimelineBlock`, `NewsMotivationTimelineChartBlock` 
+- **Service Interfaces**: `NewsMotivationTimelineChartServiceInterface` for dependency injection
+- **JavaScript Libraries**: `news-motivation-timeline` library with dedicated chart behaviors
+- **Template System**: News motivation specific templates for proper rendering
 
 ### Route Structure
 - **Legacy Route**: `/metrics` - DISABLED (redirects to front page)
@@ -111,16 +154,16 @@ Navigate to the **front page** to view the public analytics dashboard displayed 
 - **Admin Interface**: Individual settings for each dashboard component
 
 ### Chart Interactions
-- **Multi-select controls**: Choose multiple terms to compare trends
-- **Time filtering**: Select date ranges for focused analysis
-- **Export options**: Print-friendly views for reports
-- **Responsive design**: Optimized for mobile and desktop viewing
+- **Multi-select controls**: Choose multiple news motivation terms to compare trends
+- **Time filtering**: Select date ranges for focused news motivation analysis
+- **Export options**: Print-friendly views for news motivation trend reports
+- **Responsive design**: Optimized for mobile and desktop viewing of motivation charts
 
 ### Data Interpretation
-- **Frequency trends**: Shows how often specific motivations appear over time
-- **Comparative analysis**: Identify correlations between different motivation types
-- **Entity tracking**: Monitor coverage patterns of specific people/organizations
-- **Narrative evolution**: Track how story themes develop over time
+- **News Motivation Frequency trends**: Shows how often specific news motivations appear over time
+- **Comparative analysis**: Identify correlations between different news motivation types
+- **Entity tracking**: Monitor coverage patterns of specific people/organizations in news
+- **Narrative evolution**: Track how news motivation themes develop over time periods
 
 ## Technical Implementation
 
@@ -141,17 +184,20 @@ The module uses Drupal's `hook_preprocess_page()` to move content from the stand
 - Caching layer for frequently accessed aggregated data
 
 ### JavaScript Integration
-- Chart.js integration for dynamic data visualization
-- AJAX-powered chart updates without page reloads
-- Responsive chart resizing for mobile devices
-- Loading states and error handling for API calls
+- **News Motivation Timeline Charts**: Chart.js integration for dynamic news motivation data visualization
+- **AJAX-powered updates**: Chart updates without page reloads for news motivation data
+- **Responsive chart resizing**: Mobile-optimized news motivation timeline displays
+- **Loading states and error handling**: Robust API calls for news motivation data
+- **Dedicated Libraries**: `news-motivation-timeline` library with specific behaviors:
+  - `newsMotivationTimelineChart`: Main chart initialization and interaction
+  - `newsMotivationTimelineOrientation`: Mobile orientation handling for charts
 
 ## API Structure
 
 ### Internal Endpoints
-- **Chart data API**: Provides aggregated timeline data
-- **Term frequency API**: Returns usage statistics for taxonomy terms
-- **Export API**: Generates data for external analysis tools
+- **News motivation chart data API**: Provides aggregated timeline data for news motivation trends
+- **Motivation term frequency API**: Returns usage statistics for news motivation taxonomy terms
+- **Export API**: Generates news motivation data for external analysis tools
 
 ### Data Format
 ```json
@@ -160,16 +206,22 @@ The module uses Drupal's `hook_preprocess_page()` to move content from the stand
     "labels": ["2024-01", "2024-02", "..."],
     "datasets": [
       {
-        "label": "Political Motivation",
+        "label": "Political News Motivation",
         "data": [15, 23, 18, "..."],
         "borderColor": "#667eea"
+      },
+      {
+        "label": "Economic News Motivation", 
+        "data": [12, 19, 25, "..."],
+        "borderColor": "#f093fb"
       }
     ]
   },
   "metadata": {
     "total_articles": 1250,
     "date_range": "2024-01-01 to 2024-12-31",
-    "last_updated": "2024-12-15T10:30:00Z"
+    "last_updated": "2024-12-15T10:30:00Z",
+    "chart_type": "news_motivation_timeline"
   }
 }
 ```
@@ -189,10 +241,10 @@ The module uses Drupal's `hook_preprocess_page()` to move content from the stand
 - Implement custom aggregation algorithms
 
 ### Chart Configuration
-- Modify chart types (line, bar, area charts)
-- Adjust time granularity (daily, weekly, monthly)
-- Add custom data filtering options
-- Implement additional visualization types
+- **News motivation chart types**: Line, bar, area charts for motivation trend visualization
+- **Time granularity**: Daily, weekly, monthly views for news motivation analysis
+- **Custom data filtering**: Filter by news motivation categories, entities, or date ranges
+- **Multiple chart support**: Prepare architecture for additional timeline visualizations beyond news motivation tracking
 
 ## Troubleshooting
 
@@ -200,21 +252,22 @@ The module uses Drupal's `hook_preprocess_page()` to move content from the stand
 
 #### Dashboard Not Loading
 - Verify `news_extractor` module is enabled and has processed articles
-- Check that taxonomy vocabularies exist and have terms
-- Ensure JavaScript is enabled in browser
+- Check that news motivation taxonomy vocabularies exist and have terms
+- Ensure JavaScript is enabled in browser and `news-motivation-timeline` library loads
 - Clear Drupal caches: `drush cr`
+- Verify news motivation timeline chart service is properly registered
 
 #### Performance Issues
-- Verify database indexing on date and taxonomy fields
-- Check for large dataset queries without proper limits
-- Monitor memory usage during chart rendering
-- Consider enabling additional caching layers
+- Verify database indexing on date and news motivation taxonomy fields
+- Check for large dataset queries without proper limits in news motivation processing
+- Monitor memory usage during news motivation chart rendering
+- Consider enabling additional caching layers for motivation data aggregation
 
 #### Styling Problems
-- Clear browser cache and check for CSS conflicts
-- Verify Chart.js library is loading correctly
-- Check responsive design across different devices
-- Validate CSS syntax and media query breakpoints
+- Clear browser cache and check for CSS conflicts with news motivation timeline styles
+- Verify Chart.js library is loading correctly for news motivation charts
+- Check responsive design across different devices for motivation timeline display
+- Validate CSS syntax and media query breakpoints for news motivation timeline sections
 
 ### Debug Commands
 ```bash
@@ -234,10 +287,35 @@ drush sql:query "DESCRIBE taxonomy_term_field_data"
 ## Development
 
 ### Code Organization
-- **Module file**: Core hooks and preprocessing logic
-- **Controller**: Route handling and data processing
-- **CSS**: Comprehensive styling for all components
-- **JavaScript**: Chart initialization and interaction handling
+- **Module file**: Core hooks and preprocessing logic for news motivation analytics
+- **Service Layer**: NewsMotivationTimelineChartService and related interfaces
+- **Controller**: Route handling and news motivation data processing
+- **CSS**: Comprehensive styling for news motivation timeline components
+- **JavaScript**: News motivation chart initialization and interaction handling
+
+### File Structure
+```
+newsmotivationmetrics/
+├── src/
+│   ├── Service/
+│   │   ├── NewsMotivationTimelineChartService.php
+│   │   └── Interface/
+│   │       └── NewsMotivationTimelineChartServiceInterface.php
+│   └── Plugin/Block/
+│       ├── NewsMotivationTimelineBlock.php
+│       └── NewsMotivationTimelineChartBlock.php
+├── js/
+│   ├── news-motivation-timeline-chart.js
+│   ├── news-motivation-timeline-orientation.js
+│   └── chart-behavior.js
+├── css/
+│   ├── chart-styles.css (with news-motivation-timeline-section classes)
+│   └── fullwidth-override.css
+├── templates/
+│   ├── block--news-motivation-timeline-chart.html.twig
+│   └── block--olivero-newsmotivationtimelinechart.html.twig
+└── newsmotivationmetrics.libraries.yml (with news-motivation-timeline library)
+```
 
 ### Testing
 - Test with datasets of various sizes (100, 1000, 10000+ articles)

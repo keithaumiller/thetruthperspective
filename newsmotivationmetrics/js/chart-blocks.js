@@ -15,7 +15,7 @@
   Drupal.behaviors.taxonomyTimelineBlocks = {
     attach: function (context, settings) {
       // Process each timeline block separately
-      once('taxonomy-timeline-blocks', '.taxonomy-timeline-block', context).forEach(function (blockElement) {
+      once('news-motivation-timeline-blocks', '.news-motivation-timeline-block', context).forEach(function (blockElement) {
         const blockSettings = settings.newsmotivationmetrics?.blocks;
         if (!blockSettings) {
           console.log('No block settings found');
@@ -23,7 +23,7 @@
         }
 
         // Find canvas in this block
-        const canvas = blockElement.querySelector('canvas[id^="taxonomy-timeline-chart-"]');
+        const canvas = blockElement.querySelector('canvas[id^="news-motivation-timeline-chart-"]');
         if (!canvas) {
           console.log('No canvas found in block');
           return;
@@ -249,7 +249,7 @@
      */
     setupBlockEventListeners: function(canvas, blockData, chartInstance) {
       const canvasId = canvas.id;
-      const blockElement = canvas.closest('.taxonomy-timeline-block');
+      const blockElement = canvas.closest('.news-motivation-timeline-block');
       
       if (!blockElement) return;
 
@@ -311,7 +311,7 @@
      */
     updateBlockChartFromSelector: function(canvas, blockData, chartInstance) {
       const canvasId = canvas.id;
-      const blockElement = canvas.closest('.taxonomy-timeline-block');
+      const blockElement = canvas.closest('.news-motivation-timeline-block');
       const selector = blockElement.querySelector(`.term-selector[data-canvas-id="${canvasId}"]`);
       
       if (!selector) return;
@@ -351,7 +351,7 @@
      */
     updateBlockStatus: function(canvas, message, type = 'info') {
       const canvasId = canvas.id;
-      const blockElement = canvas.closest('.taxonomy-timeline-block');
+      const blockElement = canvas.closest('.news-motivation-timeline-block');
       
       // Try multiple possible status element selectors
       let statusElement = blockElement.querySelector('#chart-status');

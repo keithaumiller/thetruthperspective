@@ -7,7 +7,7 @@ use Drupal\Core\Render\RendererInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\DashboardBuilderServiceInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface;
-use Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface;
+use Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface;
 
 /**
  * Service for building dashboard render arrays.
@@ -32,11 +32,11 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
   protected $metricsDataService;
 
   /**
-   * The timeline chart service.
+   * The news motivation timeline chart service.
    *
-   * @var \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface
+   * @var \Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface
    */
-  protected $timelineChartService;
+  protected $newsMotivationTimelineChartService;
 
   /**
    * The renderer service.
@@ -59,8 +59,8 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
    *   The chart data service.
    * @param \Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface $metrics_data_service
    *   The metrics data service.
-   * @param \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface $timeline_chart_service
-   *   The timeline chart service.
+   * @param \Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface $news_motivation_timeline_chart_service
+   *   The news motivation timeline chart service.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The renderer service.
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
@@ -69,13 +69,13 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
   public function __construct(
     ChartDataServiceInterface $chart_data_service,
     MetricsDataServiceInterface $metrics_data_service,
-    TimelineChartServiceInterface $timeline_chart_service,
+    NewsMotivationTimelineChartServiceInterface $news_motivation_timeline_chart_service,
     RendererInterface $renderer,
     LoggerChannelFactoryInterface $logger_factory
   ) {
     $this->chartDataService = $chart_data_service;
     $this->metricsDataService = $metrics_data_service;
-    $this->timelineChartService = $timeline_chart_service;
+    $this->newsMotivationTimelineChartService = $news_motivation_timeline_chart_service;
     $this->renderer = $renderer;
     $this->logger = $logger_factory->get('newsmotivationmetrics');
   }
@@ -92,18 +92,18 @@ class DashboardBuilderService implements DashboardBuilderServiceInterface {
     $build['header'] = $this->buildDashboardHeader();
     
     // Timeline chart section - now using shared service
-    $build['timeline'] = $this->timelineChartService->buildTimelineChart([
-      'canvas_id' => 'taxonomy-timeline-chart',
-      'title' => '📈 Topic Trends Over Time',
+    $build['timeline'] = $this->newsMotivationTimelineChartService->buildNewsMotivationTimelineChart([
+      'canvas_id' => 'news-motivation-timeline-chart',
+      'title' => '📈 News Motivation Trends Over Time',
       'show_controls' => TRUE,
       'show_legend' => TRUE,
       'show_title' => TRUE,
       'chart_height' => 400,
       'days_back' => 30,
       'term_limit' => 10,
-      'container_classes' => ['taxonomy-timeline-section'],
-      'library' => 'newsmotivationmetrics/chart-js',
-      'js_behavior' => 'taxonomyTimelineChart',
+      'container_classes' => ['news-motivation-timeline-section'],
+      'library' => 'newsmotivationmetrics/news-motivation-timeline',
+      'js_behavior' => 'newsMotivationTimelineChart',
     ]);
     
     // Metrics overview

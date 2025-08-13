@@ -4,15 +4,16 @@ namespace Drupal\newsmotivationmetrics\Service;
 
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface;
-use Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface;
+use Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface;
 
 /**
- * Service for building timeline chart render arrays.
+ * Service for building news motivation timeline chart render arrays.
  * 
- * Centralizes timeline chart construction logic to eliminate duplication
- * between dashboard pages and block implementations.
+ * Centralizes news motivation timeline chart construction logic to eliminate duplication
+ * between dashboard pages and block implementations. This service specifically handles
+ * timeline charts that display motivation analysis trends over time for news articles.
  */
-class TimelineChartService implements TimelineChartServiceInterface {
+class NewsMotivationTimelineChartService implements NewsMotivationTimelineChartServiceInterface {
 
   /**
    * The chart data service.
@@ -47,20 +48,20 @@ class TimelineChartService implements TimelineChartServiceInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildTimelineChart(array $options = []): array {
+  public function buildNewsMotivationTimelineChart(array $options = []): array {
     // Set default options
     $options = $options + [
-      'canvas_id' => 'taxonomy-timeline-chart',
-      'title' => 'Topic Trends Over Time',
+      'canvas_id' => 'news-motivation-timeline-chart',
+      'title' => 'News Motivation Trends Over Time',
       'show_controls' => TRUE,
       'show_legend' => TRUE,
       'show_title' => TRUE,
       'chart_height' => 400,
       'days_back' => 30,
       'term_limit' => 10,
-      'container_classes' => ['taxonomy-timeline-section'],
-      'library' => 'newsmotivationmetrics/chart-js',
-      'js_behavior' => 'taxonomyTimelineChart',
+      'container_classes' => ['news-motivation-timeline-section'],
+      'library' => 'newsmotivationmetrics/news-motivation-timeline',
+      'js_behavior' => 'newsMotivationTimelineChart',
     ];
 
     // Get chart data
@@ -123,25 +124,25 @@ class TimelineChartService implements TimelineChartServiceInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildTimelineBlock(array $config = []): array {
+  public function buildNewsMotivationTimelineBlock(array $config = []): array {
     // Convert block config to chart options
     $options = [
-      'canvas_id' => 'taxonomy-timeline-chart-' . substr(md5(serialize($config)), 0, 8),
-      'title' => $config['chart_title'] ?? 'Topic Trends Over Time',
+      'canvas_id' => 'news-motivation-timeline-chart-' . substr(md5(serialize($config)), 0, 8),
+      'title' => $config['chart_title'] ?? 'News Motivation Trends Over Time',
       'show_controls' => $config['show_controls'] ?? TRUE,
       'show_legend' => $config['show_legend'] ?? TRUE,
       'show_title' => !empty($config['chart_title']),
       'chart_height' => min($config['chart_height'] ?? 400, 500),
       'days_back' => $config['days_back'] ?? 30,
       'term_limit' => $config['term_limit'] ?? 10,
-      'container_classes' => ['taxonomy-timeline-block', 'taxonomy-timeline-section'],
-      'library' => 'newsmotivationmetrics/chart-blocks',
-      'js_behavior' => 'taxonomyTimelineBlocks',
+      'container_classes' => ['news-motivation-timeline-block', 'news-motivation-timeline-section'],
+      'library' => 'newsmotivationmetrics/news-motivation-timeline',
+      'js_behavior' => 'newsMotivationTimelineBlocks',
       'auto_refresh' => $config['auto_refresh'] ?? FALSE,
       'refresh_interval' => $config['refresh_interval'] ?? 300,
     ];
 
-    return $this->buildTimelineChart($options);
+    return $this->buildNewsMotivationTimelineChart($options);
   }
 
   /**
@@ -177,7 +178,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#type' => 'html_tag',
       '#tag' => 'label',
       '#value' => t('Select Terms (max 10):'),
-      '#attributes' => ['for' => $canvas_id === 'taxonomy-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id)],
+      '#attributes' => ['for' => $canvas_id === 'news-motivation-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id)],
     ];
 
     $controls['controls_container']['selector_group']['selector'] = [
@@ -187,7 +188,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#default_value' => array_slice(array_column($top_terms, 'tid'), 0, 10),
       '#attributes' => [
         'class' => ['term-selector'],
-        'id' => $canvas_id === 'taxonomy-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id),
+        'id' => $canvas_id === 'news-motivation-timeline-chart' ? 'term-selector' : 'term-selector-' . $this->getUniqueId($canvas_id),
         'size' => 12, // Increased size to show more options
         'data-canvas-id' => $canvas_id,
         'data-max-selections' => 10,
@@ -207,7 +208,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#tag' => 'button',
       '#value' => t('Reset to Top 10'),
       '#attributes' => [
-        'id' => $canvas_id === 'taxonomy-timeline-chart' ? 'reset-chart' : 'reset-chart-' . $unique_id,
+        'id' => $canvas_id === 'news-motivation-timeline-chart' ? 'reset-chart' : 'reset-chart-' . $unique_id,
         'class' => ['btn', 'btn-secondary', 'chart-reset-btn'],
         'type' => 'button',
         'data-canvas-id' => $canvas_id,
@@ -219,7 +220,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#tag' => 'button',
       '#value' => t('Clear All'),
       '#attributes' => [
-        'id' => $canvas_id === 'taxonomy-timeline-chart' ? 'clear-chart' : 'clear-chart-' . $unique_id,
+        'id' => $canvas_id === 'news-motivation-timeline-chart' ? 'clear-chart' : 'clear-chart-' . $unique_id,
         'class' => ['btn', 'btn-outline', 'chart-clear-btn'],
         'type' => 'button',
         'data-canvas-id' => $canvas_id,
@@ -293,7 +294,7 @@ class TimelineChartService implements TimelineChartServiceInterface {
       '#tag' => 'div',
       '#value' => 'Chart ready',
       '#attributes' => [
-        'id' => $options['canvas_id'] === 'taxonomy-timeline-chart' ? 'chart-status' : 'chart-status-' . $this->getUniqueId($options['canvas_id']),
+        'id' => $options['canvas_id'] === 'news-motivation-timeline-chart' ? 'chart-status' : 'chart-status-' . $this->getUniqueId($options['canvas_id']),
         'class' => ['chart-status', 'info'],
       ],
     ];

@@ -100,7 +100,7 @@ class MetricsController extends ControllerBase {
     $sentiment_content = $sentiment_block->build();
     
     // Create timeline chart block (using existing working implementation)
-    $timeline_block = $block_manager->createInstance('taxonomy_timeline_chart', []);
+    $timeline_block = $block_manager->createInstance('news_motivation_timeline_chart', []);
     $timeline_content = $timeline_block->build();
     
     // Create entity recognition metrics block

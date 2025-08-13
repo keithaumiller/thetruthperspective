@@ -5,29 +5,29 @@ namespace Drupal\newsmotivationmetrics\Plugin\Block;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface;
+use Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Provides a 'Taxonomy Timeline Chart' Block.
+ * Provides a 'News Motivation Timeline Chart' Block.
  *
  * @Block(
- *   id = "taxonomy_timeline_chart",
- *   admin_label = @Translation("Taxonomy Timeline Chart"),
+ *   id = "news_motivation_timeline_chart",
+ *   admin_label = @Translation("News Motivation Timeline Chart"),
  *   category = @Translation("News Motivation Metrics"),
  * )
  */
-class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginInterface {
+class NewsMotivationTimelineBlock extends BlockBase implements ContainerFactoryPluginInterface {
 
   /**
-   * The timeline chart service.
+   * The news motivation timeline chart service.
    *
-   * @var \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface
+   * @var \Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface
    */
-  protected $timelineChartService;
+  protected $newsMotivationTimelineChartService;
 
   /**
-   * Constructs a new TaxonomyTimelineBlock.
+   * Constructs a new NewsMotivationTimelineBlock.
    *
    * @param array $configuration
    *   The plugin configuration.
@@ -35,17 +35,17 @@ class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginI
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
-   * @param \Drupal\newsmotivationmetrics\Service\Interface\TimelineChartServiceInterface $timeline_chart_service
-   *   The timeline chart service.
+   * @param \Drupal\newsmotivationmetrics\Service\Interface\NewsMotivationTimelineChartServiceInterface $news_motivation_timeline_chart_service
+   *   The news motivation timeline chart service.
    */
   public function __construct(
     array $configuration,
     $plugin_id,
     $plugin_definition,
-    TimelineChartServiceInterface $timeline_chart_service
+    NewsMotivationTimelineChartServiceInterface $news_motivation_timeline_chart_service
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->timelineChartService = $timeline_chart_service;
+    $this->newsMotivationTimelineChartService = $news_motivation_timeline_chart_service;
   }
 
   /**
@@ -56,7 +56,7 @@ class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginI
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('newsmotivationmetrics.timeline_chart_service')
+      $container->get('newsmotivationmetrics.news_motivation_timeline_chart_service')
     );
   }
 
@@ -212,7 +212,7 @@ class TaxonomyTimelineBlock extends BlockBase implements ContainerFactoryPluginI
     $config = $this->getConfiguration();
     
     // Use the shared timeline chart service
-    return $this->timelineChartService->buildTimelineBlock($config);
+    return $this->newsMotivationTimelineChartService->buildNewsMotivationTimelineBlock($config);
   }
 
   /**

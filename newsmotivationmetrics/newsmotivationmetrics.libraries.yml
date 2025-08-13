@@ -110,7 +110,23 @@ chart-blocks:
     js/chart.umd.js: { weight: -10 }
     js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
     js/chart-blocks.js: { weight: -8 }
-    js/timeline-orientation.js: { weight: -7 }
+    js/news-motivation-timeline-orientation.js: { weight: -7 }
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/once
+    - core/drupalSettings
+
+news-motivation-timeline:
+  version: 1.x
+  css:
+    theme:
+      css/chart-styles.css: {}
+  js:
+    js/chart.umd.js: { weight: -10 }
+    js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
+    js/news-motivation-timeline-chart.js: { weight: -8 }
+    js/news-motivation-timeline-orientation.js: { weight: -7 }
   dependencies:
     - core/drupal
     - core/jquery
