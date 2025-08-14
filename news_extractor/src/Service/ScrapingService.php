@@ -203,7 +203,7 @@ class ScrapingService {
    *   TRUE if URL should be processed, FALSE otherwise.
    */
   public function isValidArticleUrl($url) {
-    // Check blocked domains
+    // Check blocked domains only
     $blocked_domains = [
       'comparecards.com',
       'fool.com',
@@ -216,52 +216,8 @@ class ScrapingService {
       }
     }
 
-    // Enhanced patterns for better filtering
-    $skip_patterns = [
-      '/\/ads?\//i' => 'advertisements',
-      '/\/advertisement/i' => 'advertisement pages',
-      '/\/sponsored/i' => 'sponsored content',
-      '/\/podcast/i' => 'podcast pages',
-      '/\/video/i' => 'video content',
-      '/\/gallery/i' => 'image galleries',
-      '/financial.*markets/i' => 'financial markets',
-      '/stock.*price/i' => 'stock prices',
-      '/\.pdf$/i' => 'PDF files',
-      '/\/audio\//i' => 'audio content',
-      '/\/interactive\//i' => 'interactive content',
-      '/\/live-news\//i' => 'live news feeds',
-      '/\/live-tv\//i' => 'live TV content',
-      '/\/newsletters?\//i' => 'newsletter content',
-      '/\/weather\//i' => 'weather content',
-      '/\/specials\//i' => 'special content',
-      '/\/coupons?\//i' => 'coupon content',
-      '/\/profiles?\//i' => 'profile pages',
-    ];
-
-    foreach ($skip_patterns as $pattern => $description) {
-      if (preg_match($pattern, $url)) {
-        $this->logger()->info('Skipping @description: @url', [
-          '@description' => $description,
-          '@url' => $url,
-        ]);
-        return FALSE;
-      }
-    }
-
-    // Article patterns that indicate valid news content
-    $article_patterns = ['/politics/', '/world/', '/us/', '/national/', '/international/', '/breaking/', '/news/'];
-    foreach ($article_patterns as $pattern) {
-      if (strpos($url, $pattern) !== FALSE) {
-        return TRUE;
-      }
-    }
-
-    // Check for common article URL patterns
-    if (preg_match('/\/(index\.html?|story\.html?)$/i', $url) || preg_match('/\/\d{4}\/\d{2}\/\d{2}\//', $url)) {
-      return TRUE;
-    }
-
-    return TRUE; // Default to processing if no exclusion patterns match
+    // Allow all other URLs to be processed
+    return TRUE;
   }
 
   /**
