@@ -37,8 +37,6 @@ Drupal root      : /var/www/html/drupal
 
 
 Skip giving "Immediate Fix:" solutions
-Instead, focus on the fix for the codebase.
-Code is tested on the server, not locally in the workspace.
 Always generate the commit and push commands for the code changes after changes are generated and applied to the workspace. Do not include curl commands or testing commands just commit and push commands
 Always highlight which file is recomended to update.
 Always include the ARCHITECTURE.md and README.md files in the context.
@@ -53,6 +51,10 @@ Levers: actions taken based on processed data
 Always assume we are troubleshooting on the production server
 all curl testing functions should assume they need to run against the production URL:
 https://thetruthperspective.org
+
+Do not SSH out or create debug php files to be deployed to the server.
+I will copy and paste any command lines required.
+Remember to sudo into www-data when appropriate
 
 
 # The Truth Perspective Platform - AI Coding Instructions

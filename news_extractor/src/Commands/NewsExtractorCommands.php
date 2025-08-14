@@ -1355,4 +1355,90 @@ class NewsExtractorCommands extends DrushCommands {
     }
   }
 
+  /**
+   * Test post-processor on a specific node.
+   *
+   * @param string $nid
+   *   The node ID to test.
+   *
+   * @command news-extractor:test-postprocessor
+   * @aliases ne:test-pp
+   * @usage drush ne:test-pp 3016
+   *   Test post-processor on node 3016.
+   */
+  public function testPostProcessor($nid) {
+    $this->output()->writeln("🔍 Testing post-processor on node {$nid}...");
+    
+    // Load the node
+    $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
+    
+    if (!$node) {
+      $this->output()->writeln("❌ Node {$nid} not found.");
+      return;
+    }
+    
+    $this->output()->writeln("📄 Node: " . $node->getTitle());
+    $this->output()->writeln("📊 Current Status: " . ($node->isPublished() ? 'PUBLISHED' : 'UNPUBLISHED'));
+    
+    // Check motivation analysis field
+    if ($node->hasField('field_motivation_analysis')) {
+      $motivation_analysis = $node->get('field_motivation_analysis')->value;
+      $format = $node->get('field_motivation_analysis')->format;
+      
+      $this->output()->writeln("🧠 Motivation Analysis Content:");
+      $this->output()->writeln("   Value: '{$motivation_analysis}'");
+      $this->output()->writeln("   Format: {$format}");
+      $this->output()->writeln("   Length: " . strlen($motivation_analysis));
+      
+      // Test the conditions
+      $contains_pending = strpos($motivation_analysis, 'Analysis is Pending') !== false;
+      $contains_html_pending = strpos($motivation_analysis, '<p>Analysis is Pending.</p>') !== false;
+      $contains_no_data = strpos($motivation_analysis, 'No analysis data available') !== false;
+      $contains_html_no_data = strpos($motivation_analysis, '<p>No analysis data available.</p>') !== false;
+      
+      $this->output()->writeln("🔍 Condition Tests:");
+      $this->output()->writeln("   Contains 'Analysis is Pending': " . ($contains_pending ? 'YES' : 'NO'));
+      $this->output()->writeln("   Contains '<p>Analysis is Pending.</p>': " . ($contains_html_pending ? 'YES' : 'NO'));
+      $this->output()->writeln("   Contains 'No analysis data available': " . ($contains_no_data ? 'YES' : 'NO'));
+      $this->output()->writeln("   Contains '<p>No analysis data available.</p>': " . ($contains_html_no_data ? 'YES' : 'NO'));
+      
+      $should_unpublish = !empty($motivation_analysis) && 
+          ($contains_pending || $contains_html_pending || $contains_no_data || $contains_html_no_data);
+      
+      $this->output()->writeln("⚖️ Should be unpublished: " . ($should_unpublish ? 'YES' : 'NO'));
+      
+      // Test the actual post-processor
+      $this->output()->writeln("");
+      $this->output()->writeln("🔧 Running post-processor...");
+      
+      $data_processing_service = \Drupal::service('news_extractor.data_processing');
+      $original_status = $node->isPublished();
+      
+      // Use reflection to access the protected method
+      $reflection = new \ReflectionClass($data_processing_service);
+      $method = $reflection->getMethod('postProcessPublishingStatus');
+      $method->setAccessible(true);
+      $method->invoke($data_processing_service, $node);
+      
+      $new_status = $node->isPublished();
+      $status_changed = $original_status !== $new_status;
+      
+      $this->output()->writeln("📊 Status after post-processor: " . ($new_status ? 'PUBLISHED' : 'UNPUBLISHED'));
+      $this->output()->writeln("🔄 Status changed: " . ($status_changed ? 'YES' : 'NO'));
+      
+      if ($status_changed) {
+        $this->output()->writeln("💾 Saving node...");
+        $node->save();
+        $this->output()->writeln("✅ Node saved!");
+        
+        // Show updated analysis field
+        $updated_analysis = $node->get('field_motivation_analysis')->value;
+        $this->output()->writeln("🔄 Updated analysis field: '{$updated_analysis}'");
+      }
+      
+    } else {
+      $this->output()->writeln("❌ Node does not have field_motivation_analysis field.");
+    }
+  }
+
 }
