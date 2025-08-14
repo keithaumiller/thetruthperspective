@@ -1194,4 +1194,81 @@ class NewsExtractorCommands extends DrushCommands {
     return false;
   }
 
+  /**
+   * Reprocess articles to ensure taxonomy terms are created for news sources.
+   *
+   * @param int $limit
+   *   Number of articles to reprocess. Defaults to 20.
+   *
+   * @command news-extractor:ensure-source-taxonomy
+   * @aliases ne:est
+   * @option limit Number of articles to reprocess
+   * @usage news-extractor:ensure-source-taxonomy
+   *   Reprocess 20 articles to ensure news source taxonomy terms exist
+   * @usage news-extractor:ensure-source-taxonomy --limit=50
+   *   Reprocess 50 articles to ensure news source taxonomy terms exist
+   */
+  public function ensureSourceTaxonomy($limit = 20, array $options = ['limit' => 20]) {
+    $limit = $options['limit'] ?? $limit;
+    
+    $this->output()->writeln("🔄 Reprocessing {$limit} articles to ensure news source taxonomy terms...");
+    
+    // Find articles that have news sources but might need taxonomy term creation
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('status', 1)
+      ->condition('field_news_source', '', '<>')
+      ->condition('field_news_source', 'Source Unavailable', '<>')
+      ->isNotNull('field_news_source')
+      ->range(0, $limit)
+      ->sort('created', 'DESC')
+      ->accessCheck(FALSE);
+    
+    $nids = $query->execute();
+    
+    if (empty($nids)) {
+      $this->output()->writeln("❌ No articles with news sources found.");
+      return;
+    }
+    
+    $this->output()->writeln("Found " . count($nids) . " articles with news sources to reprocess...");
+    
+    /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
+    $extraction_service = \Drupal::service('news_extractor.extraction');
+    
+    $processed_count = 0;
+    $success_count = 0;
+    
+    foreach ($nids as $nid) {
+      $node = \Drupal\node\Entity\Node::load($nid);
+      if (!$node) {
+        continue;
+      }
+      
+      $news_source = $node->get('field_news_source')->value;
+      $this->output()->writeln("Processing: {$node->getTitle()} (Source: {$news_source})");
+      
+      try {
+        // Reprocess the article to trigger taxonomy creation
+        $success = $extraction_service->reprocessArticle($node);
+        
+        if ($success) {
+          $success_count++;
+          $this->output()->writeln("  ✅ Successfully reprocessed");
+        } else {
+          $this->output()->writeln("  ❌ Failed to reprocess");
+        }
+      }
+      catch (\Exception $e) {
+        $this->output()->writeln("  ❌ Error: " . $e->getMessage());
+      }
+      
+      $processed_count++;
+    }
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("✅ Completed! Processed {$processed_count} articles, {$success_count} successful.");
+    $this->output()->writeln("Check the logs for detailed taxonomy term creation information.");
+  }
+
 }

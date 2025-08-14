@@ -21,7 +21,6 @@ Zend Engine v4.3.6, Copyright (c) Zend Technologies
 
 ubuntu@ip-172-16-4-59:/var/www/html/drupal$ drush status
 Drupal version   : 11.2.2
-Site URI         : http://default
 DB driver        : mysql
 DB hostname      : localhost
 DB port          : 3306
@@ -44,7 +43,7 @@ Always generate the commit and push commands for the code changes after changes 
 Always highlight which file is recomended to update.
 Always include the ARCHITECTURE.md and README.md files in the context.
 
-When generating code, always assume the code is being written for the production server.
+When generating code, always assume the code is being written for the production server and validate which process flow it should be getting done in and where in that process flow is appropriate. If unsure, pause and ask where it should be and make suggestions.
 
 When deciding architecture categorize functions into:
 Sensors: data gathering

@@ -250,7 +250,16 @@ class DataProcessingService {
           '@source' => $news_source,
           '@title' => $entity->getTitle(),
         ]);
+      } else {
+        $this->logger()->info('News source field empty or unavailable for: @title (value: "@value")', [
+          '@title' => $entity->getTitle(),
+          '@value' => $news_source ?: 'NULL',
+        ]);
       }
+    } else {
+      $this->logger()->info('Entity does not have field_news_source field for: @title', [
+        '@title' => $entity->getTitle(),
+      ]);
     }
 
     return array_unique($tags);
@@ -274,6 +283,10 @@ class DataProcessingService {
 
     if (!empty($terms)) {
       $term = reset($terms);
+      $this->logger()->info('Found existing taxonomy term for "@tag_name": TID @tid', [
+        '@tag_name' => $tag_name,
+        '@tid' => $term->id(),
+      ]);
       return $term->id();
     }
 
@@ -283,6 +296,12 @@ class DataProcessingService {
         'vid' => 'tags',
       ]);
       $term->save();
+      
+      $this->logger()->info('Created new taxonomy term for "@tag_name": TID @tid', [
+        '@tag_name' => $tag_name,
+        '@tid' => $term->id(),
+      ]);
+      
       return $term->id();
     }
     catch (\Exception $e) {
