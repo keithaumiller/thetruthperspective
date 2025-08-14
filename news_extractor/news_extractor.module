@@ -354,19 +354,36 @@ function news_extractor_cron() {
   $logger->info('Step 1: Checking published articles for post-processor conditions');
   
   // Find published articles that might need to be unpublished
+  // First, get articles with "Analysis is Pending" specifically
+  $pending_query = \Drupal::database()->select('node_field_data', 'n');
+  $pending_query->leftJoin('node__field_motivation_analysis', 'ma', 'n.nid = ma.entity_id');
+  $pending_query->fields('n', ['nid']);
+  $pending_query->condition('n.type', 'article');
+  $pending_query->condition('n.status', 1); // Only published articles
+  $pending_query->condition('ma.field_motivation_analysis_value', '%Analysis is Pending%', 'LIKE');
+  $pending_nids = $pending_query->execute()->fetchCol();
+  
+  $logger->info('Found @count published articles with "Analysis is Pending" content', ['@count' => count($pending_nids)]);
+  
+  // Also get general published articles (but limit these)
   $published_query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
     ->condition('status', 1) // Only published articles
     ->accessCheck(FALSE);
   
-  $published_nids = $published_query->execute();
-  $stats['published_checked'] = count($published_nids);
+  $all_published_nids = $published_query->execute();
   
-  $logger->info('Found @count published articles to check for post-processor conditions', ['@count' => $stats['published_checked']]);
+  // Combine and deduplicate: prioritize pending articles, then add others up to limit
+  $combined_nids = array_unique(array_merge($pending_nids, array_slice($all_published_nids, 0, 50 - count($pending_nids))));
+  $stats['published_checked'] = count($combined_nids);
+  
+  $logger->info('Checking @count total published articles (@pending with pending analysis + others)', [
+    '@count' => count($combined_nids),
+    '@pending' => count($pending_nids)
+  ]);
 
-  // Check published articles for unpublishing conditions (limit to 50 per run)
-  $check_limit = min(50, count($published_nids));
-  $published_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple(array_slice($published_nids, 0, $check_limit));
+  // Check published articles for unpublishing conditions
+  $published_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($combined_nids);
   
   foreach ($published_nodes as $node) {
     try {
