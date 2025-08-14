@@ -733,4 +733,321 @@ class NewsExtractorCommands extends DrushCommands {
     }
   }
 
+  /**
+   * Process recent articles through the complete pipeline.
+   *
+   * @command news-extractor:process
+   * @aliases ne:process
+   * @usage news-extractor:process
+   *   Process recent articles that need scraping or AI analysis
+   */
+  public function processArticles() {
+    $this->output()->writeln("🚀 Processing recent articles...");
+    
+    /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
+    $extraction_service = \Drupal::service('news_extractor.extraction');
+    
+    // Find articles that need processing (have URL but no JSON data)
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('field_original_url.uri', '', '<>')
+      ->group()
+        ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
+        ->condition('field_json_scraped_article_data', '', '=')
+        ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
+      ->groupOperator('OR')
+      ->range(0, 10)
+      ->sort('created', 'DESC')
+      ->accessCheck(FALSE);
+    
+    $nids = $query->execute();
+    
+    if (empty($nids)) {
+      $this->output()->writeln("✅ No recent articles need processing.");
+      return;
+    }
+    
+    $this->output()->writeln("Found " . count($nids) . " articles to process...");
+    
+    $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($nids);
+    $processed = 0;
+    
+    foreach ($nodes as $node) {
+      $this->output()->writeln("Processing: " . $node->getTitle());
+      
+      try {
+        $extraction_service->processArticle($node);
+        $processed++;
+        $this->output()->writeln("  ✅ Completed");
+      } catch (\Exception $e) {
+        $this->output()->writeln("  ❌ Failed: " . $e->getMessage());
+      }
+      
+      // Brief pause between articles
+      sleep(2);
+    }
+    
+    $this->output()->writeln("🎉 Processed {$processed} articles successfully.");
+  }
+
+  /**
+   * Bulk process articles with various options.
+   *
+   * @param array $options
+   *   Processing options.
+   *
+   * @command news-extractor:bulk-process
+   * @aliases ne:bulk
+   * @option limit Number of articles to process (default: 50)
+   * @option type Processing type: full, scrape_only, analyze_only, reprocess
+   * @option node-id Process specific node ID
+   * @usage news-extractor:bulk-process --limit=50 --type=full
+   *   Full processing pipeline for 50 articles
+   * @usage news-extractor:bulk-process --type=scrape_only
+   *   Only Diffbot scraping, no AI analysis
+   * @usage news-extractor:bulk-process --type=analyze_only
+   *   Only AI analysis for already scraped articles
+   * @usage news-extractor:bulk-process --type=reprocess --node-id=2941
+   *   Reprocess specific article with failed scraping
+   */
+  public function bulkProcess(array $options = ['limit' => 50, 'type' => 'full', 'node-id' => NULL]) {
+    $limit = $options['limit'];
+    $type = $options['type'];
+    $node_id = $options['node-id'];
+    
+    /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
+    $extraction_service = \Drupal::service('news_extractor.extraction');
+    
+    $this->output()->writeln("🔧 Bulk processing articles (type: {$type})...");
+    
+    // Handle specific node processing
+    if ($node_id) {
+      $node = \Drupal::entityTypeManager()->getStorage('node')->load($node_id);
+      if (!$node) {
+        $this->output()->writeln("❌ Node {$node_id} not found.");
+        return;
+      }
+      
+      $this->output()->writeln("Processing specific node: {$node_id} - " . $node->getTitle());
+      
+      try {
+        switch ($type) {
+          case 'scrape_only':
+            $this->reprocessFailedScraping($node);
+            break;
+          case 'analyze_only':
+            $extraction_service->processAIAnalysis($node);
+            break;
+          case 'reprocess':
+          case 'full':
+          default:
+            $extraction_service->processArticle($node);
+            break;
+        }
+        $this->output()->writeln("✅ Successfully processed node {$node_id}");
+      } catch (\Exception $e) {
+        $this->output()->writeln("❌ Failed to process node {$node_id}: " . $e->getMessage());
+      }
+      return;
+    }
+    
+    // Bulk processing based on type
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->accessCheck(FALSE)
+      ->range(0, $limit)
+      ->sort('created', 'DESC');
+    
+    switch ($type) {
+      case 'scrape_only':
+        // Articles with URLs but no/failed JSON data
+        $query->condition('field_original_url.uri', '', '<>')
+          ->group()
+            ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
+            ->condition('field_json_scraped_article_data', '', '=')
+            ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
+          ->groupOperator('OR');
+        break;
+        
+      case 'analyze_only':
+        // Articles with good JSON data but no AI analysis
+        $query->condition('field_json_scraped_article_data', '', '<>')
+          ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '<>')
+          ->group()
+            ->condition('field_ai_raw_response', NULL, 'IS NULL')
+            ->condition('field_ai_raw_response', '', '=')
+          ->groupOperator('OR');
+        break;
+        
+      case 'reprocess':
+        // Articles with failed scraping data
+        $query->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=');
+        break;
+        
+      case 'full':
+      default:
+        // Articles that need any kind of processing
+        $query->condition('field_original_url.uri', '', '<>')
+          ->group()
+            ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
+            ->condition('field_json_scraped_article_data', '', '=')
+            ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
+            ->condition('field_ai_raw_response', NULL, 'IS NULL')
+            ->condition('field_ai_raw_response', '', '=')
+          ->groupOperator('OR');
+        break;
+    }
+    
+    $nids = $query->execute();
+    
+    if (empty($nids)) {
+      $this->output()->writeln("✅ No articles found for processing type: {$type}");
+      return;
+    }
+    
+    $this->output()->writeln("Found " . count($nids) . " articles for {$type} processing...");
+    
+    $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($nids);
+    $processed = 0;
+    $failed = 0;
+    
+    foreach ($nodes as $node) {
+      $this->output()->writeln("Processing: " . $node->getTitle() . " (ID: " . $node->id() . ")");
+      
+      try {
+        switch ($type) {
+          case 'scrape_only':
+            $this->reprocessFailedScraping($node);
+            break;
+          case 'analyze_only':
+            $extraction_service->processAIAnalysis($node);
+            break;
+          case 'reprocess':
+          case 'full':
+          default:
+            $extraction_service->processArticle($node);
+            break;
+        }
+        $processed++;
+        $this->output()->writeln("  ✅ Completed");
+      } catch (\Exception $e) {
+        $failed++;
+        $this->output()->writeln("  ❌ Failed: " . $e->getMessage());
+        \Drupal::logger('news_extractor')->error('Bulk processing failed for node @nid: @error', [
+          '@nid' => $node->id(),
+          '@error' => $e->getMessage(),
+        ]);
+      }
+      
+      // Brief pause between articles to avoid rate limits
+      sleep(3);
+    }
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("🎉 Bulk processing completed!");
+    $this->output()->writeln("  ✅ Successfully processed: {$processed}");
+    $this->output()->writeln("  ❌ Failed: {$failed}");
+  }
+
+  /**
+   * Check processing status of articles.
+   *
+   * @param array $options
+   *   Status options.
+   *
+   * @command news-extractor:status
+   * @aliases ne:status
+   * @option limit Number of recent articles to check (default: 10)
+   * @usage news-extractor:status --limit=20
+   *   Check status of 20 most recent articles
+   */
+  public function checkStatus(array $options = ['limit' => 10]) {
+    $limit = $options['limit'];
+    
+    $this->output()->writeln("📊 Article Processing Status (Last {$limit} articles)");
+    $this->output()->writeln("=============================================");
+    
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->range(0, $limit)
+      ->sort('created', 'DESC')
+      ->accessCheck(FALSE);
+    
+    $nids = $query->execute();
+    
+    if (empty($nids)) {
+      $this->output()->writeln("No articles found.");
+      return;
+    }
+    
+    $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($nids);
+    
+    foreach ($nodes as $node) {
+      $this->output()->writeln("");
+      $this->output()->writeln("📰 Article: " . $node->getTitle());
+      $this->output()->writeln("   ID: " . $node->id());
+      $this->output()->writeln("   Created: " . date('Y-m-d H:i:s', $node->getCreatedTime()));
+      
+      // Check URL
+      $url = $node->hasField('field_original_url') && !$node->get('field_original_url')->isEmpty() 
+        ? $node->get('field_original_url')->uri : 'None';
+      $this->output()->writeln("   URL: " . $url);
+      
+      // Check news source
+      $source = $node->hasField('field_news_source') && !$node->get('field_news_source')->isEmpty()
+        ? $node->get('field_news_source')->value : 'None';
+      $this->output()->writeln("   Source: " . $source);
+      
+      // Check JSON data status
+      $json_status = "❌ None";
+      if ($node->hasField('field_json_scraped_article_data') && !$node->get('field_json_scraped_article_data')->isEmpty()) {
+        $json_value = $node->get('field_json_scraped_article_data')->value;
+        if ($json_value === 'Scraped data unavailable.') {
+          $json_status = "⚠️  Failed";
+        } else {
+          $json_status = "✅ Available";
+        }
+      }
+      $this->output()->writeln("   Scraped Data: " . $json_status);
+      
+      // Check AI analysis status
+      $ai_status = "❌ None";
+      if ($node->hasField('field_ai_raw_response') && !$node->get('field_ai_raw_response')->isEmpty()) {
+        $ai_status = "✅ Available";
+      }
+      $this->output()->writeln("   AI Analysis: " . $ai_status);
+      
+      // Overall status
+      $overall = "🔴 Needs Processing";
+      if ($json_status === "✅ Available" && $ai_status === "✅ Available") {
+        $overall = "🟢 Complete";
+      } elseif ($json_status === "✅ Available") {
+        $overall = "🟡 Needs AI Analysis";
+      } elseif ($json_status === "⚠️  Failed") {
+        $overall = "🔴 Failed Scraping";
+      }
+      $this->output()->writeln("   Status: " . $overall);
+    }
+  }
+
+  /**
+   * Helper method to reprocess failed scraping for a specific node.
+   */
+  private function reprocessFailedScraping($node) {
+    /** @var \Drupal\news_extractor\Service\ScrapingService $scraping_service */
+    $scraping_service = \Drupal::service('news_extractor.scraping');
+    
+    if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
+      throw new \Exception("No URL available for scraping");
+    }
+    
+    $url = $node->get('field_original_url')->uri;
+    $this->output()->writeln("  🔄 Re-scraping URL: " . $url);
+    
+    // Re-run Diffbot scraping
+    $scraping_service->scrapeArticle($node);
+    
+    $this->output()->writeln("  ✅ Scraping completed");
+  }
+
 }
