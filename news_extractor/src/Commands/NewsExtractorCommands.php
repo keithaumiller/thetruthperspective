@@ -1219,7 +1219,7 @@ class NewsExtractorCommands extends DrushCommands {
       ->condition('status', 1)
       ->condition('field_news_source', '', '<>')
       ->condition('field_news_source', 'Source Unavailable', '<>')
-      ->isNotNull('field_news_source')
+      ->exists('field_news_source')
       ->range(0, $limit)
       ->sort('created', 'DESC')
       ->accessCheck(FALSE);
