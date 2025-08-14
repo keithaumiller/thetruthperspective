@@ -851,24 +851,33 @@ class DataProcessingService {
 
     $motivation_analysis = $entity->get('field_motivation_analysis')->value;
     
-    // Unpublish if analysis contains pending indicators
+    // Unpublish if analysis contains pending indicators (handle both HTML and plain text versions)
     if (!empty($motivation_analysis) && 
         (strpos($motivation_analysis, 'Analysis is Pending') !== false ||
-         strpos($motivation_analysis, 'No analysis data available') !== false)) {
+         strpos($motivation_analysis, 'No analysis data available') !== false ||
+         strpos($motivation_analysis, '<p>Analysis is Pending.</p>') !== false ||
+         strpos($motivation_analysis, '<p>No analysis data available.</p>') !== false)) {
       
       // Unpublish the article
       if ($entity->isPublished()) {
         $entity->setUnpublished();
         
-        $this->logger()->warning('Unpublished article with pending motivation analysis: @title (ID: @id)', [
+        $this->logger()->warning('POST-PROCESSOR: Unpublished article with pending motivation analysis: @title (ID: @id) - Content: @content', [
           '@title' => $entity->getTitle(),
           '@id' => $entity->id(),
+          '@content' => substr($motivation_analysis, 0, 100) . '...',
         ]);
         
-        // Update the analysis field to reflect the action taken
+        // Update the analysis field to reflect the action taken (handle both HTML and plain text)
         if (strpos($motivation_analysis, 'Analysis is Pending') !== false) {
+          $updated_content = str_replace('Analysis is Pending', 'Unpublished - Analysis Pending', $motivation_analysis);
           $entity->set('field_motivation_analysis', [
-            'value' => str_replace('Analysis is Pending', 'Unpublished - Analysis Pending', $motivation_analysis),
+            'value' => $updated_content,
+            'format' => $entity->get('field_motivation_analysis')->format ?: 'basic_html',
+          ]);
+        } elseif (strpos($motivation_analysis, '<p>Analysis is Pending.</p>') !== false) {
+          $entity->set('field_motivation_analysis', [
+            'value' => '<p>Unpublished - Analysis Pending.</p>',
             'format' => $entity->get('field_motivation_analysis')->format ?: 'basic_html',
           ]);
         } else {
@@ -904,12 +913,14 @@ class DataProcessingService {
       
       $motivation_analysis = $entity->get('field_motivation_analysis')->value;
       
-      // Consider analysis successful if it exists and doesn't contain failure indicators
+      // Consider analysis successful if it exists and doesn't contain failure indicators (handle HTML versions too)
       if (!empty(trim($motivation_analysis)) &&
           strpos($motivation_analysis, 'Analysis is Pending') === false &&
           strpos($motivation_analysis, 'No analysis data available') === false &&
           strpos($motivation_analysis, 'Unpublished - Analysis Pending') === false &&
-          strpos($motivation_analysis, 'Unpublished - No analysis data available') === false) {
+          strpos($motivation_analysis, 'Unpublished - No analysis data available') === false &&
+          strpos($motivation_analysis, '<p>Analysis is Pending.</p>') === false &&
+          strpos($motivation_analysis, '<p>No analysis data available.</p>') === false) {
         
         $has_motivation_analysis = TRUE;
       }
