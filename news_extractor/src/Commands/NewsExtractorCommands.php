@@ -776,7 +776,11 @@ class NewsExtractorCommands extends DrushCommands {
       $this->output()->writeln("Processing: " . $node->getTitle());
       
       try {
-        $extraction_service->processArticle($node);
+        if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
+          throw new \Exception("No URL available for processing");
+        }
+        $url = $node->get('field_original_url')->uri;
+        $extraction_service->processArticle($node, $url);
         $processed++;
         $this->output()->writeln("  ✅ Completed");
       } catch (\Exception $e) {
@@ -836,12 +840,16 @@ class NewsExtractorCommands extends DrushCommands {
             $this->reprocessFailedScraping($node);
             break;
           case 'analyze_only':
-            $extraction_service->processAIAnalysis($node);
+            $extraction_service->analyzeArticleOnly($node);
             break;
           case 'reprocess':
           case 'full':
           default:
-            $extraction_service->processArticle($node);
+            if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
+              throw new \Exception("No URL available for processing");
+            }
+            $url = $node->get('field_original_url')->uri;
+            $extraction_service->processArticle($node, $url);
             break;
         }
         $this->output()->writeln("✅ Successfully processed node {$node_id}");
@@ -920,12 +928,16 @@ class NewsExtractorCommands extends DrushCommands {
             $this->reprocessFailedScraping($node);
             break;
           case 'analyze_only':
-            $extraction_service->processAIAnalysis($node);
+            $extraction_service->analyzeArticleOnly($node);
             break;
           case 'reprocess':
           case 'full':
           default:
-            $extraction_service->processArticle($node);
+            if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
+              throw new \Exception("No URL available for processing");
+            }
+            $url = $node->get('field_original_url')->uri;
+            $extraction_service->processArticle($node, $url);
             break;
         }
         $processed++;
@@ -1034,8 +1046,8 @@ class NewsExtractorCommands extends DrushCommands {
    * Helper method to reprocess failed scraping for a specific node.
    */
   private function reprocessFailedScraping($node) {
-    /** @var \Drupal\news_extractor\Service\ScrapingService $scraping_service */
-    $scraping_service = \Drupal::service('news_extractor.scraping');
+    /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
+    $extraction_service = \Drupal::service('news_extractor.extraction');
     
     if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
       throw new \Exception("No URL available for scraping");
@@ -1044,8 +1056,8 @@ class NewsExtractorCommands extends DrushCommands {
     $url = $node->get('field_original_url')->uri;
     $this->output()->writeln("  🔄 Re-scraping URL: " . $url);
     
-    // Re-run Diffbot scraping
-    $scraping_service->scrapeArticle($node);
+    // Re-run Diffbot scraping using the extraction service
+    $extraction_service->scrapeArticleOnly($node, $url);
     
     $this->output()->writeln("  ✅ Scraping completed");
   }
