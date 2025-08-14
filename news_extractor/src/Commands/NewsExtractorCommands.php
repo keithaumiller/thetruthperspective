@@ -835,6 +835,15 @@ class NewsExtractorCommands extends DrushCommands {
       $this->output()->writeln("Processing specific node: {$node_id} - " . $node->getTitle());
       
       try {
+        // Check if article should be deleted instead of processed
+        $should_delete = $this->shouldDeleteArticle($node);
+        if ($should_delete) {
+          $this->output()->writeln("🗑️ Deleting: " . $should_delete);
+          $node->delete();
+          $this->output()->writeln("✅ Node {$node_id} deleted");
+          return;
+        }
+        
         switch ($type) {
           case 'scrape_only':
             $this->reprocessFailedScraping($node);
@@ -923,6 +932,16 @@ class NewsExtractorCommands extends DrushCommands {
       $this->output()->writeln("Processing: " . $node->getTitle() . " (ID: " . $node->id() . ")");
       
       try {
+        // Check if article should be deleted instead of processed
+        $should_delete = $this->shouldDeleteArticle($node);
+        if ($should_delete) {
+          $this->output()->writeln("  🗑️ Deleting: " . $should_delete);
+          $node->delete();
+          $processed++; // Count as processed since we handled it
+          $this->output()->writeln("  ✅ Deleted");
+          continue;
+        }
+        
         switch ($type) {
           case 'scrape_only':
             $this->reprocessFailedScraping($node);
@@ -959,6 +978,74 @@ class NewsExtractorCommands extends DrushCommands {
     $this->output()->writeln("🎉 Bulk processing completed!");
     $this->output()->writeln("  ✅ Successfully processed: {$processed}");
     $this->output()->writeln("  ❌ Failed: {$failed}");
+  }
+
+  /**
+   * Clean up articles that are not suitable for processing.
+   * 
+   * @command news-extractor:cleanup
+   * @aliases ne:cleanup
+   * @option limit Maximum number of articles to check (default: 100)
+   * @option dry-run Show what would be deleted without actually deleting
+   * @usage news-extractor:cleanup
+   *   Clean up unwanted articles (videos, PDFs, social media, etc.)
+   * @usage news-extractor:cleanup --dry-run
+   *   See what articles would be deleted without deleting them
+   */
+  public function cleanupArticles(array $options = ['limit' => 100, 'dry-run' => false]) {
+    $limit = $options['limit'];
+    $dry_run = $options['dry-run'];
+    
+    $this->output()->writeln("🧹 " . ($dry_run ? "Checking" : "Cleaning up") . " unwanted articles...");
+    
+    // Find all articles
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->accessCheck(FALSE)
+      ->range(0, $limit)
+      ->sort('created', 'DESC');
+    
+    $nids = $query->execute();
+    
+    if (empty($nids)) {
+      $this->output()->writeln("✅ No articles found to check.");
+      return;
+    }
+    
+    $this->output()->writeln("Checking " . count($nids) . " articles...");
+    
+    $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($nids);
+    $deleted = 0;
+    $checked = 0;
+    
+    foreach ($nodes as $node) {
+      $checked++;
+      $should_delete = $this->shouldDeleteArticle($node);
+      
+      if ($should_delete) {
+        $this->output()->writeln("📄 " . $node->getTitle() . " (ID: " . $node->id() . ")");
+        $this->output()->writeln("  🗑️ Reason: " . $should_delete);
+        
+        if ($dry_run) {
+          $this->output()->writeln("  📋 Would delete (dry-run mode)");
+        } else {
+          $node->delete();
+          $this->output()->writeln("  ✅ Deleted");
+        }
+        
+        $deleted++;
+      }
+    }
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("🎉 Cleanup completed!");
+    $this->output()->writeln("  📊 Articles checked: {$checked}");
+    $this->output()->writeln("  🗑️ Articles " . ($dry_run ? "would be " : "") . "deleted: {$deleted}");
+    
+    if ($dry_run && $deleted > 0) {
+      $this->output()->writeln("");
+      $this->output()->writeln("💡 Run without --dry-run to actually delete these articles");
+    }
   }
 
   /**
@@ -1060,6 +1147,51 @@ class NewsExtractorCommands extends DrushCommands {
     $extraction_service->scrapeArticleOnly($node, $url);
     
     $this->output()->writeln("  ✅ Scraping completed");
+  }
+
+  /**
+   * Check if an article should be deleted instead of processed.
+   * 
+   * @param \Drupal\node\NodeInterface $node
+   *   The article node to check.
+   * 
+   * @return string|false
+   *   Reason for deletion or FALSE if should not delete.
+   */
+  private function shouldDeleteArticle($node) {
+    // Check for no URL available
+    if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
+      return "No URL available for processing";
+    }
+    
+    $url = $node->get('field_original_url')->uri;
+    
+    // Check for video content
+    if (preg_match('/\/video/i', $url)) {
+      return "Video content not suitable for text analysis";
+    }
+    
+    // Check for Facebook links
+    if (preg_match('/facebook\.com/i', $url)) {
+      return "Facebook link not suitable for processing";
+    }
+    
+    // Check for PDF files
+    if (preg_match('/\.pdf$/i', $url)) {
+      return "PDF file not suitable for processing";
+    }
+    
+    // Check for other social media that aren't processable
+    if (preg_match('/(twitter\.com|instagram\.com|linkedin\.com|tiktok\.com)/i', $url)) {
+      return "Social media link not suitable for processing";
+    }
+    
+    // Check for other video platforms
+    if (preg_match('/(youtube\.com|vimeo\.com|dailymotion\.com)/i', $url)) {
+      return "Video platform link not suitable for processing";
+    }
+    
+    return false;
   }
 
 }
