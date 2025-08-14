@@ -23,7 +23,11 @@
       {% for source in sources %}
         <div class="news-source-item">
           <div class="source-link">
-            {{ source.link }}
+            {% if source.link %}
+              {{ source.link }}
+            {% else %}
+              <span class="source-name">{{ source.name }}</span>
+            {% endif %}
           </div>
           <div class="source-stats">
             <span class="article-count">{{ source.article_count }} article{{ source.article_count != 1 ? 's' : '' }}</span>

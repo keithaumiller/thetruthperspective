@@ -85,77 +85,71 @@ class NewsSourcesDirectoryBlock extends BlockBase implements ContainerFactoryPlu
         'tags' => ['taxonomy_term_list:tags', 'node_list:article'],
         'max-age' => 3600, // Cache for 1 hour
       ],
-    ];
-
-    return $build;
+    ];    return $build;
   }
 
   /**
-   * Get news sources with article counts from taxonomy terms.
+   * Get news sources with article counts from field_news_source field.
    *
    * @return array
    *   Array of news source data.
    */
   protected function getNewsSourcesWithCounts() {
     try {
-      // Get news source taxonomy terms (they should be in the 'tags' vocabulary now)
-      // We'll identify them by looking for terms that match known news source patterns
-      $query = $this->database->select('taxonomy_term_field_data', 't');
-      $query->leftJoin('node__field_tags', 'nft', 't.tid = nft.field_tags_target_id');
-      $query->leftJoin('node_field_data', 'n', 'nft.entity_id = n.nid AND n.type = :type AND n.status = 1', [':type' => 'article']);
-      $query->fields('t', ['tid', 'name']);
+      // Query the field_news_source field directly to get actual news sources
+      $query = $this->database->select('node__field_news_source', 'nfs');
+      $query->join('node_field_data', 'n', 'nfs.entity_id = n.nid AND n.type = :type AND n.status = 1', [':type' => 'article']);
+      $query->fields('nfs', ['field_news_source_value']);
       $query->addExpression('COUNT(DISTINCT n.nid)', 'article_count');
-      $query->condition('t.vid', 'tags');
-      $query->condition('t.status', 1);
+      $query->condition('nfs.field_news_source_value', '', '<>');
+      $query->isNotNull('nfs.field_news_source_value');
       
-      // Filter for news source patterns
-      $source_patterns = [
-        'CNN%',
-        'Fox News%',
-        'Reuters%',
-        'BBC%',
-        'Associated Press%',
-        'NPR%',
-        'New York Times%',
-        'Washington Post%',
-        'Wall Street Journal%',
-        'The Guardian%',
-        'Politico%',
-        'NBC News%',
-        'ABC News%',
-        'CBS News%',
-        'MSNBC%',
-        'Bloomberg%',
-        'USA Today%',
-        'AP News%',
-      ];
+      // Exclude placeholder/invalid sources
+      $query->condition('nfs.field_news_source_value', 'Source Unavailable', '<>');
+      $query->condition('nfs.field_news_source_value', 'linkedin.com', '<>');
+      $query->condition('nfs.field_news_source_value', 'Newspapers.com', '<>');
       
-      $or_condition = $query->orConditionGroup();
-      foreach ($source_patterns as $pattern) {
-        $or_condition->condition('t.name', $pattern, 'LIKE');
-      }
-      $query->condition($or_condition);
-      
-      $query->groupBy('t.tid');
-      $query->groupBy('t.name');
+      $query->groupBy('nfs.field_news_source_value');
       $query->having('COUNT(DISTINCT n.nid) > 0'); // Only sources with articles
       $query->orderBy('article_count', 'DESC');
-      $query->orderBy('t.name', 'ASC');
+      $query->orderBy('field_news_source_value', 'ASC');
       
       $results = $query->execute()->fetchAll();
       
       $sources = [];
       foreach ($results as $result) {
-        $term_url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $result->tid]);
-        $term_link = Link::fromTextAndUrl($result->name, $term_url);
+        $source_name = $result->field_news_source_value;
         
-        $sources[] = [
-          'tid' => $result->tid,
-          'name' => $result->name,
-          'article_count' => (int) $result->article_count,
-          'url' => $term_url->toString(),
-          'link' => $term_link,
-        ];
+        // Find corresponding taxonomy term for this news source
+        $term_query = $this->database->select('taxonomy_term_field_data', 't');
+        $term_query->fields('t', ['tid']);
+        $term_query->condition('t.vid', 'tags');
+        $term_query->condition('t.status', 1);
+        $term_query->condition('t.name', $source_name);
+        $term_result = $term_query->execute()->fetchField();
+        
+        if ($term_result) {
+          // Create link to taxonomy term page
+          $term_url = Url::fromRoute('entity.taxonomy_term.canonical', ['taxonomy_term' => $term_result]);
+          $term_link = Link::fromTextAndUrl($source_name, $term_url);
+          
+          $sources[] = [
+            'tid' => $term_result,
+            'name' => $source_name,
+            'article_count' => (int) $result->article_count,
+            'url' => $term_url->toString(),
+            'link' => $term_link,
+          ];
+        } else {
+          // No taxonomy term exists yet, just show as text for now
+          $sources[] = [
+            'tid' => null,
+            'name' => $source_name,
+            'article_count' => (int) $result->article_count,
+            'url' => null,
+            'link' => null,
+          ];
+        }
       }
       
       return $sources;
