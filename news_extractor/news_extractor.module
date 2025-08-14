@@ -417,19 +417,23 @@ function news_extractor_cron() {
     }
   }
 
-  // STEP 2: Find unpublished articles that need reprocessing
-  $logger->info('Step 2: Finding unpublished articles for reprocessing');
+  // STEP 2: Find unpublished articles that need reprocessing (only articles less than 3 days old)
+  $logger->info('Step 2: Finding unpublished articles for reprocessing (less than 3 days old)');
+  
+  // Only reprocess articles created within the last 3 days to prevent infinite retrying
+  $three_days_ago = \Drupal::time()->getRequestTime() - (3 * 24 * 60 * 60);
   
   $unpublished_query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
     ->condition('status', 0) // Only unpublished articles
     ->condition('field_original_url.uri', '', '<>') // Must have URL for reprocessing
+    ->condition('created', $three_days_ago, '>') // Only articles less than 3 days old
     ->accessCheck(FALSE);
   
   $unpublished_nids = $unpublished_query->execute();
   $stats['unpublished_found'] = count($unpublished_nids);
   
-  $logger->info('Found @count unpublished articles for reprocessing', ['@count' => $stats['unpublished_found']]);
+  $logger->info('Found @count unpublished articles (less than 3 days old) for reprocessing', ['@count' => $stats['unpublished_found']]);
 
   // Reprocess unpublished articles (limit to 20 per run to avoid timeouts)
   $reprocess_limit = min(20, count($unpublished_nids));

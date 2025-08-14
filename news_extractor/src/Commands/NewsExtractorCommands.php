@@ -835,15 +835,6 @@ class NewsExtractorCommands extends DrushCommands {
       $this->output()->writeln("Processing specific node: {$node_id} - " . $node->getTitle());
       
       try {
-        // Check if article should be deleted instead of processed
-        $should_delete = $this->shouldDeleteArticle($node);
-        if ($should_delete) {
-          $this->output()->writeln("🗑️ Deleting: " . $should_delete);
-          $node->delete();
-          $this->output()->writeln("✅ Node {$node_id} deleted");
-          return;
-        }
-        
         switch ($type) {
           case 'scrape_only':
             $this->reprocessFailedScraping($node);
@@ -932,16 +923,6 @@ class NewsExtractorCommands extends DrushCommands {
       $this->output()->writeln("Processing: " . $node->getTitle() . " (ID: " . $node->id() . ")");
       
       try {
-        // Check if article should be deleted instead of processed
-        $should_delete = $this->shouldDeleteArticle($node);
-        if ($should_delete) {
-          $this->output()->writeln("  🗑️ Deleting: " . $should_delete);
-          $node->delete();
-          $processed++; // Count as processed since we handled it
-          $this->output()->writeln("  ✅ Deleted");
-          continue;
-        }
-        
         switch ($type) {
           case 'scrape_only':
             $this->reprocessFailedScraping($node);
@@ -1147,51 +1128,6 @@ class NewsExtractorCommands extends DrushCommands {
     $extraction_service->scrapeArticleOnly($node, $url);
     
     $this->output()->writeln("  ✅ Scraping completed");
-  }
-
-  /**
-   * Check if an article should be deleted instead of processed.
-   * 
-   * @param \Drupal\node\NodeInterface $node
-   *   The article node to check.
-   * 
-   * @return string|false
-   *   Reason for deletion or FALSE if should not delete.
-   */
-  private function shouldDeleteArticle($node) {
-    // Check for no URL available
-    if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
-      return "No URL available for processing";
-    }
-    
-    $url = $node->get('field_original_url')->uri;
-    
-    // Check for video content
-    if (preg_match('/\/video/i', $url)) {
-      return "Video content not suitable for text analysis";
-    }
-    
-    // Check for Facebook links
-    if (preg_match('/facebook\.com/i', $url)) {
-      return "Facebook link not suitable for processing";
-    }
-    
-    // Check for PDF files
-    if (preg_match('/\.pdf$/i', $url)) {
-      return "PDF file not suitable for processing";
-    }
-    
-    // Check for other social media that aren't processable
-    if (preg_match('/(twitter\.com|instagram\.com|linkedin\.com|tiktok\.com)/i', $url)) {
-      return "Social media link not suitable for processing";
-    }
-    
-    // Check for other video platforms
-    if (preg_match('/(youtube\.com|vimeo\.com|dailymotion\.com)/i', $url)) {
-      return "Video platform link not suitable for processing";
-    }
-    
-    return false;
   }
 
   /**
