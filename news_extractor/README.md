@@ -17,6 +17,70 @@ The module follows a service-oriented architecture with clear separation of conc
 - **DataProcessingService** (Levers): Field updates, taxonomy management, and data formatting
 - **NewsExtractionService** (Orchestrator): Coordinates all services in the processing pipeline
 
+## Article Processing Flow After Initial Creation
+
+### Stage 1: Entity Creation Trigger
+- **File**: `news_extractor.module`
+- **Function**: `news_extractor_entity_insert()`
+- **Action**: Detects new article with `field_original_url` and calls orchestrator service
+
+### Stage 2: Content Scraping (Sensors)
+- **File**: `src/Service/ScrapingService.php`
+- **Function**: `ScrapingService::extractContent()`
+- **Actions**:
+  - Makes Diffbot API call with 13-second rate limiting
+  - Extracts article text, metadata, images, publication date
+  - Stores complete JSON response in `field_json_scraped_article_data`
+  - Updates body content and title (if empty)
+
+### Stage 3: Metadata Updates
+- **File**: `src/Service/ScrapingService.php`
+- **Function**: `ScrapingService::updateMetadataFields()`
+- **Actions**:
+  - Extracts news source from Diffbot `siteName` (Priority 1) or URL domain (Priority 2)
+  - Updates author, site name, breadcrumb, word count, language fields
+  - Processes external image URL
+  - Updates publication date from Diffbot data
+
+### Stage 4: AI Analysis (Processors)
+- **File**: `src/Service/AIProcessingService.php`
+- **Function**: `AIProcessingService::generateAnalysis()`
+- **Actions**:
+  - Sends article text to AWS Bedrock Claude 3.5 Sonnet
+  - Generates structured motivation analysis, bias detection, sentiment
+  - Stores raw AI response in `field_ai_raw_response`
+
+### Stage 5: Data Processing & Final Publishing (Levers)
+- **File**: `src/Service/DataProcessingService.php`
+- **Function**: `DataProcessingService::processAnalysisData()`
+- **Actions**:
+  - Parses AI response into structured fields
+  - Creates taxonomy terms for entities and motivations
+  - Formats motivation analysis with taxonomy links
+  - Performs final entity save with complete data
+
+### Stage 6: Post-Processors (Publishing Control)
+- **File**: `src/Service/DataProcessingService.php`
+- **Functions**: 
+  - `postProcessPublishingStatus()` (orchestrator)
+  - `postProcessScrapedDataStatus()` (checks scraping)
+  - `postProcessMotivationAnalysis()` (checks AI analysis)
+- **Actions**:
+  - Checks if scraped data = "Scraped data unavailable" → **UNPUBLISHES** article
+  - Checks for "Analysis is Pending" or "No analysis data available" → **UNPUBLISHES** article
+  - Sets news source to "Source Unavailable" for failed articles
+  - Updates analysis fields to indicate unpublished status
+
+### Stage 7: Automated Cleanup (Cron)
+- **File**: `news_extractor.module`
+- **Function**: `news_extractor_cron()` - runs automatically
+- **Actions**:
+  - Finds unpublished articles and runs them through the complete process flow (Stages 1-6)
+  - Deletes unpublished failed articles older than 24 hours (limit 50)
+  - Logs statistics: found, reprocessed successfully, failed, deleted counts
+
+**Note**: Post-processors in Stage 6 run after all processing is complete to make final publishing decisions based on data quality and completeness.
+
 ## Key Features
 
 ### 🔍 **Content Extraction**

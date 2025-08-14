@@ -95,6 +95,12 @@ class DataProcessingService {
       // Final save with formatted analysis
       $entity->save();
 
+      // POST-PROCESSOR: Check publishing status after all processing is complete
+      $this->postProcessPublishingStatus($entity);
+
+      // Final save after post-processing
+      $entity->save();
+
       $this->logger()->info('Successfully processed analysis data for: @title', [
         '@title' => $entity->getTitle(),
       ]);
@@ -704,6 +710,106 @@ class DataProcessingService {
     }
 
     return ucwords(str_replace(['-', '_', '.'], ' ', $host));
+  }
+
+  /**
+   * Post-process entity to determine final publishing status.
+   * 
+   * Runs after all content processing is complete to make final
+   * publishing decisions based on data quality and completeness.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to post-process.
+   */
+  protected function postProcessPublishingStatus(EntityInterface $entity) {
+    // Check scraped data status
+    $this->postProcessScrapedDataStatus($entity);
+    
+    // Check motivation analysis status  
+    $this->postProcessMotivationAnalysis($entity);
+  }
+
+  /**
+   * Post-processor to handle articles with unavailable scraped data.
+   * 
+   * Unpublishes articles where the JSON scraped data is "Scraped data unavailable"
+   * to prevent incomplete articles from appearing in the public site.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to check and potentially unpublish.
+   */
+  protected function postProcessScrapedDataStatus(EntityInterface $entity) {
+    // Check if entity has the scraped data field
+    if (!$entity->hasField('field_json_scraped_article_data')) {
+      return;
+    }
+
+    // Get the scraped data value
+    $scraped_data = $entity->get('field_json_scraped_article_data')->value;
+    
+    // Check for "Scraped data unavailable" message
+    if (trim($scraped_data) === "Scraped data unavailable" || 
+        trim($scraped_data) === "Scraped data unavailable.") {
+      
+      // Unpublish the article
+      if ($entity->isPublished()) {
+        $entity->setUnpublished();
+        
+        $this->logger()->warning('Unpublished article with unavailable scraped data: @title (ID: @id)', [
+          '@title' => $entity->getTitle(),
+          '@id' => $entity->id(),
+        ]);
+        
+        // Set news source to indicate the issue
+        if ($entity->hasField('field_news_source')) {
+          $entity->set('field_news_source', 'Source Unavailable');
+        }
+      }
+    }
+  }
+
+  /**
+   * Post-process motivation analysis to unpublish nodes with pending analysis.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to check and potentially unpublish.
+   */
+  protected function postProcessMotivationAnalysis(EntityInterface $entity) {
+    // Check if entity has the motivation analysis field
+    if (!$entity->hasField('field_motivation_analysis')) {
+      return;
+    }
+
+    $motivation_analysis = $entity->get('field_motivation_analysis')->value;
+    
+    // Unpublish if analysis contains pending indicators
+    if (!empty($motivation_analysis) && 
+        (strpos($motivation_analysis, 'Analysis is Pending') !== false ||
+         strpos($motivation_analysis, 'No analysis data available') !== false)) {
+      
+      // Unpublish the article
+      if ($entity->isPublished()) {
+        $entity->setUnpublished();
+        
+        $this->logger()->warning('Unpublished article with pending motivation analysis: @title (ID: @id)', [
+          '@title' => $entity->getTitle(),
+          '@id' => $entity->id(),
+        ]);
+        
+        // Update the analysis field to reflect the action taken
+        if (strpos($motivation_analysis, 'Analysis is Pending') !== false) {
+          $entity->set('field_motivation_analysis', [
+            'value' => str_replace('Analysis is Pending', 'Unpublished - Analysis Pending', $motivation_analysis),
+            'format' => $entity->get('field_motivation_analysis')->format ?: 'basic_html',
+          ]);
+        } else {
+          $entity->set('field_motivation_analysis', [
+            'value' => '<p>Unpublished - No analysis data available.</p>',
+            'format' => $entity->get('field_motivation_analysis')->format ?: 'basic_html',
+          ]);
+        }
+      }
+    }
   }
 
 }

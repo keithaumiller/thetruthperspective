@@ -451,12 +451,6 @@ class ScrapingService {
     // Update publication date
     $this->updatePublicationDate($entity, $article_data);
 
-    // POST-PROCESSOR: Unpublish articles with "Scraped data unavailable"
-    $this->postProcessScrapedDataStatus($entity);
-
-    // POST-PROCESSOR: Unpublish articles with pending motivation analysis
-    $this->postProcessMotivationAnalysis($entity);
-
     $this->logger()->info('Updated metadata fields for: @title', [
       '@title' => $entity->getTitle(),
     ]);
