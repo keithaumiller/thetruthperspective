@@ -1271,4 +1271,88 @@ class NewsExtractorCommands extends DrushCommands {
     $this->output()->writeln("Check the logs for detailed taxonomy term creation information.");
   }
 
+  /**
+   * Create missing taxonomy terms for existing news sources.
+   *
+   * @command news-extractor:create-missing-taxonomy
+   * @aliases ne:cmt
+   * @usage news-extractor:create-missing-taxonomy
+   *   Create taxonomy terms for news sources that don't have them
+   */
+  public function createMissingTaxonomy() {
+    $this->output()->writeln("🏷️ Creating missing taxonomy terms for news sources...");
+    
+    /** @var \Drupal\news_extractor\Service\DataProcessingService $data_service */
+    $data_service = \Drupal::service('news_extractor.data_processing');
+    
+    // Get all unique news sources from articles
+    $query = \Drupal::database()->select('node__field_news_source', 'ns')
+      ->fields('ns', ['field_news_source_value'])
+      ->condition('ns.field_news_source_value', '', '<>')
+      ->condition('ns.field_news_source_value', 'Source Unavailable', '<>')
+      ->distinct();
+    
+    $news_sources = $query->execute()->fetchCol();
+    
+    if (empty($news_sources)) {
+      $this->output()->writeln("❌ No news sources found in articles.");
+      return;
+    }
+    
+    $this->output()->writeln("Found " . count($news_sources) . " unique news sources in articles.");
+    
+    $created_count = 0;
+    $existing_count = 0;
+    
+    foreach ($news_sources as $news_source) {
+      $this->output()->writeln("Processing: {$news_source}");
+      
+      // Check if taxonomy term already exists
+      $existing_terms = \Drupal::entityTypeManager()
+        ->getStorage('taxonomy_term')
+        ->loadByProperties([
+          'vid' => 'news_sources',
+          'name' => $news_source,
+        ]);
+      
+      if (!empty($existing_terms)) {
+        $existing_count++;
+        $this->output()->writeln("  ✅ Taxonomy term already exists");
+      } else {
+        // Create new taxonomy term
+        try {
+          $term = \Drupal::entityTypeManager()
+            ->getStorage('taxonomy_term')
+            ->create([
+              'vid' => 'news_sources',
+              'name' => $news_source,
+            ]);
+          $term->save();
+          
+          $created_count++;
+          $this->output()->writeln("  🆕 Created new taxonomy term (TID: {$term->id()})");
+          
+          \Drupal::logger('news_extractor')->info('Created missing taxonomy term for news source: @source (TID: @tid)', [
+            '@source' => $news_source,
+            '@tid' => $term->id(),
+          ]);
+          
+        } catch (\Exception $e) {
+          $this->output()->writeln("  ❌ Error creating taxonomy term: " . $e->getMessage());
+          \Drupal::logger('news_extractor')->error('Failed to create taxonomy term for @source: @error', [
+            '@source' => $news_source,
+            '@error' => $e->getMessage(),
+          ]);
+        }
+      }
+    }
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("🎉 Completed! Created {$created_count} new taxonomy terms, {$existing_count} already existed.");
+    
+    if ($created_count > 0) {
+      $this->output()->writeln("💡 Run 'drush ne:est' to reprocess articles and link them to the new taxonomy terms.");
+    }
+  }
+
 }

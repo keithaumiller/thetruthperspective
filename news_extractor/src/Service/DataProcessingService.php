@@ -252,6 +252,17 @@ class DataProcessingService {
       $news_source = $entity->get('field_news_source')->value;
       if (!empty($news_source) && $news_source !== 'Source Unavailable') {
         $tags[] = $news_source;
+        
+        // AUTOMATICALLY CREATE NEWS SOURCE TAXONOMY TERM
+        $news_source_term_id = $this->getOrCreateNewsSourceTerm($news_source);
+        if ($news_source_term_id) {
+          $this->logger()->info('Ensured news source taxonomy term exists for "@source" (TID: @tid) for: @title', [
+            '@source' => $news_source,
+            '@tid' => $news_source_term_id,
+            '@title' => $entity->getTitle(),
+          ]);
+        }
+        
         $this->logger()->info('Added news source "@source" as taxonomy tag for: @title', [
           '@source' => $news_source,
           '@title' => $entity->getTitle(),
@@ -313,6 +324,59 @@ class DataProcessingService {
     catch (\Exception $e) {
       $this->logger()->error('Error creating tag @tag: @message', [
         '@tag' => $tag_name,
+        '@message' => $e->getMessage(),
+      ]);
+      return NULL;
+    }
+  }
+
+  /**
+   * Get or create a taxonomy term for news sources.
+   *
+   * @param string $source_name
+   *   The news source name.
+   *
+   * @return int|null
+   *   The term ID or NULL on failure.
+   */
+  protected function getOrCreateNewsSourceTerm($source_name) {
+    // Skip invalid sources
+    if (empty($source_name) || $source_name === 'Source Unavailable') {
+      return NULL;
+    }
+
+    $term_storage = $this->entityTypeManager->getStorage('taxonomy_term');
+    $terms = $term_storage->loadByProperties([
+      'name' => $source_name,
+      'vid' => 'news_sources',
+    ]);
+
+    if (!empty($terms)) {
+      $term = reset($terms);
+      $this->logger()->info('Found existing news source taxonomy term for "@source_name": TID @tid', [
+        '@source_name' => $source_name,
+        '@tid' => $term->id(),
+      ]);
+      return $term->id();
+    }
+
+    try {
+      $term = $term_storage->create([
+        'name' => $source_name,
+        'vid' => 'news_sources',
+      ]);
+      $term->save();
+      
+      $this->logger()->info('Created new news source taxonomy term for "@source_name": TID @tid', [
+        '@source_name' => $source_name,
+        '@tid' => $term->id(),
+      ]);
+      
+      return $term->id();
+    }
+    catch (\Exception $e) {
+      $this->logger()->error('Error creating news source taxonomy term @source: @message', [
+        '@source' => $source_name,
         '@message' => $e->getMessage(),
       ]);
       return NULL;
@@ -696,6 +760,8 @@ class DataProcessingService {
       'washingtonpost.com' => 'Washington Post',
       'politico.com' => 'Politico',
       'thehill.com' => 'The Hill',
+      'theonion.com' => 'TheOnion',
+      'theguardian.com' => 'The Guardian',
     ];
 
     if (isset($domain_map[$host])) {

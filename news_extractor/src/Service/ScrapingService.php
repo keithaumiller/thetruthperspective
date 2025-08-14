@@ -705,6 +705,7 @@ class ScrapingService {
       'washingtonpost.com' => 'Washington Post',
       'politico.com' => 'Politico',
       'thehill.com' => 'The Hill',
+      'theonion.com' => 'TheOnion',
     ];
 
     if (isset($domain_map[$host])) {

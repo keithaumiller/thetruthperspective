@@ -142,9 +142,9 @@ class TemporalProcessingAnalyticsBlock extends BlockBase implements ContainerFac
     
     $temporal_data = [
       ['Time Metric', 'Value', 'Context'],
-      ['Articles Processed (24h)', number_format($metrics['articles_last_24h']), 'Real-time processing volume'],
+      ['Articles Processed (24h)', number_format($metrics['articles_last_24h'] ?? 0), 'Real-time processing volume'],
       ['Peak Processing Hour', '17:00', 'Busiest analysis period'],
-      ['Average Processing Time', $this->formatProcessingTime($metrics['avg_processing_time']), 'From URL to full analysis'],
+      ['Average Processing Time', $this->formatProcessingTime($metrics['avg_processing_time'] ?? 0), 'From URL to full analysis'],
     ];
     
     $build = [

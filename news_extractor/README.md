@@ -193,6 +193,18 @@ drush ne:pop-url 25               # Custom batch size
 drush news-extractor:populate-sources-url  # Full alias
 ```
 
+#### Taxonomy Management
+```bash
+# Create missing taxonomy terms for existing news sources
+drush ne:cmt                      # Create taxonomy terms for all news sources
+drush news-extractor:create-missing-taxonomy  # Full alias
+
+# Reprocess articles to link them to taxonomy terms
+drush ne:est                      # Reprocess 20 articles (recommended after creating terms)
+drush ne:est --limit=50           # Reprocess more articles
+drush news-extractor:ensure-source-taxonomy  # Full alias
+```
+
 #### Smart Cleanup (Remove Unsuitable Content)
 ```bash
 # Preview what would be deleted (recommended first step)

@@ -79,9 +79,19 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
  */
 function news_extractor_entity_insert(EntityInterface $entity) {
   if ($entity->bundle() === 'article' && $entity->hasField('field_original_url')) {
-    $original_url = $entity->get('field_original_url')->uri ?? '';
+    // Get URL with proper null checking
+    $url_field = $entity->get('field_original_url');
+    if ($url_field->isEmpty()) {
+      \Drupal::logger('news_extractor')->warning('Article created without URL: @title (ID: @id)', [
+        '@title' => $entity->getTitle(),
+        '@id' => $entity->id(),
+      ]);
+      return;
+    }
     
-    if (!empty($original_url)) {
+    $original_url = $url_field->uri;
+    
+    if (!empty($original_url) && filter_var($original_url, FILTER_VALIDATE_URL)) {
       // Note: News source extraction is handled during Diffbot scraping in ScrapingService::updateMetadataFields()
       // This ensures we have the actual siteName from Diffbot API for accurate source identification
       
@@ -89,6 +99,12 @@ function news_extractor_entity_insert(EntityInterface $entity) {
       /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
       $extraction_service = \Drupal::service('news_extractor.extraction');
       $extraction_service->processArticle($entity, $original_url);
+    } else {
+      \Drupal::logger('news_extractor')->warning('Article created with invalid URL: @url for @title (ID: @id)', [
+        '@url' => $original_url,
+        '@title' => $entity->getTitle(),
+        '@id' => $entity->id(),
+      ]);
     }
   }
 }
