@@ -308,3 +308,196 @@ function _news_extractor_has_invalid_title($title) {
 
   return FALSE;
 }
+
+/**
+ * Implements hook_cron().
+ * 
+ * Automated processing for failed and stale articles:
+ * 1. Reprocess articles with "Scraped data unavailable."
+ * 2. Unpublish articles that still fail after reprocessing
+ * 3. Delete unpublished articles older than 1 day
+ */
+function news_extractor_cron() {
+  $logger = \Drupal::logger('news_extractor');
+  $logger->info('Starting news_extractor automated cleanup cron job');
+
+  // Get extraction service
+  /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
+  $extraction_service = \Drupal::service('news_extractor.extraction');
+
+  $stats = [
+    'failed_scraping_found' => 0,
+    'failed_scraping_fixed' => 0,
+    'unpublished_for_failure' => 0,
+    'old_articles_deleted' => 0,
+  ];
+
+  // STEP 1: Find and reprocess articles with failed scraping
+  $logger->info('Step 1: Finding articles with failed scraping data');
+  
+  $failed_scraping_query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
+    ->condition('status', 1) // Only published articles
+    ->accessCheck(FALSE);
+  
+  $failed_nids = $failed_scraping_query->execute();
+  $stats['failed_scraping_found'] = count($failed_nids);
+  
+  $logger->info('Found @count articles with failed scraping', ['@count' => $stats['failed_scraping_found']]);
+
+  // Reprocess failed scraping articles (limit to 20 per run to avoid timeouts)
+  $reprocess_limit = min(20, count($failed_nids));
+  $failed_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple(array_slice($failed_nids, 0, $reprocess_limit));
+  
+  foreach ($failed_nodes as $node) {
+    try {
+      if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
+        $logger->warning('Node @nid has no URL for reprocessing', ['@nid' => $node->id()]);
+        continue;
+      }
+      
+      $url = $node->get('field_original_url')->uri;
+      $logger->info('Reprocessing failed article @nid: @title', [
+        '@nid' => $node->id(),
+        '@title' => $node->getTitle(),
+      ]);
+      
+      // Attempt to reprocess
+      $success = $extraction_service->scrapeArticleOnly($node, $url);
+      
+      if ($success) {
+        $stats['failed_scraping_fixed']++;
+        $logger->info('Successfully reprocessed article @nid', ['@nid' => $node->id()]);
+        
+        // Try AI analysis if scraping succeeded
+        try {
+          $extraction_service->analyzeArticleOnly($node);
+        } catch (\Exception $ai_e) {
+          $logger->warning('AI analysis failed for reprocessed article @nid: @error', [
+            '@nid' => $node->id(),
+            '@error' => $ai_e->getMessage(),
+          ]);
+        }
+      } else {
+        $logger->warning('Failed to reprocess article @nid', ['@nid' => $node->id()]);
+      }
+      
+    } catch (\Exception $e) {
+      $logger->error('Error reprocessing article @nid: @error', [
+        '@nid' => $node->id(),
+        '@error' => $e->getMessage(),
+      ]);
+    }
+  }
+
+  // STEP 2: Unpublish articles that still have failed processing
+  $logger->info('Step 2: Unpublishing articles with persistent processing failures');
+  
+  // Find articles that still have failed scraping or no AI analysis
+  $still_failed_query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('status', 1) // Only published articles
+    ->accessCheck(FALSE);
+  
+  // Articles with failed scraping OR no AI analysis
+  $or_group = $still_failed_query->orConditionGroup();
+  $or_group->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=');
+  
+  // No AI analysis group
+  $no_ai_group = $still_failed_query->andConditionGroup();
+  $no_ai_group->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '<>');
+  $no_ai_or = $no_ai_group->orConditionGroup();
+  $no_ai_or->condition('field_ai_raw_response', NULL, 'IS NULL');
+  $no_ai_or->condition('field_ai_raw_response', '', '=');
+  $no_ai_group->condition($no_ai_or);
+  
+  $or_group->condition($no_ai_group);
+  $still_failed_query->condition($or_group);
+  
+  $still_failed_nids = $still_failed_query->execute();
+  
+  if (!empty($still_failed_nids)) {
+    $still_failed_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($still_failed_nids);
+    
+    foreach ($still_failed_nodes as $node) {
+      // Unpublish the node
+      $node->set('status', 0);
+      $node->save();
+      $stats['unpublished_for_failure']++;
+      
+      $logger->info('Unpublished article @nid due to processing failure: @title', [
+        '@nid' => $node->id(),
+        '@title' => $node->getTitle(),
+      ]);
+    }
+  }
+
+  // STEP 3: Delete old unpublished articles with processing failures
+  $logger->info('Step 3: Deleting old unpublished articles with processing failures');
+  
+  // Find unpublished articles older than 24 hours with processing issues
+  $one_day_ago = \Drupal::time()->getRequestTime() - (24 * 60 * 60);
+  
+  $old_failed_query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('status', 0) // Only unpublished articles
+    ->condition('created', $one_day_ago, '<') // Older than 24 hours
+    ->accessCheck(FALSE);
+  
+  // Same conditions as step 2 - articles with processing failures
+  $old_or_group = $old_failed_query->orConditionGroup();
+  $old_or_group->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=');
+  
+  // No AI analysis group for old articles
+  $old_no_ai_group = $old_failed_query->andConditionGroup();
+  $old_no_ai_group->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '<>');
+  $old_no_ai_or = $old_no_ai_group->orConditionGroup();
+  $old_no_ai_or->condition('field_ai_raw_response', NULL, 'IS NULL');
+  $old_no_ai_or->condition('field_ai_raw_response', '', '=');
+  $old_no_ai_group->condition($old_no_ai_or);
+  
+  $old_or_group->condition($old_no_ai_group);
+  $old_failed_query->condition($old_or_group);
+  
+  $old_failed_nids = $old_failed_query->execute();
+  
+  if (!empty($old_failed_nids)) {
+    // Limit deletions to prevent timeouts (max 50 per run)
+    $delete_limit = min(50, count($old_failed_nids));
+    $old_failed_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple(array_slice($old_failed_nids, 0, $delete_limit));
+    
+    foreach ($old_failed_nodes as $node) {
+      $title = $node->getTitle();
+      $nid = $node->id();
+      
+      try {
+        $node->delete();
+        $stats['old_articles_deleted']++;
+        
+        $logger->info('Deleted old failed article @nid: @title', [
+          '@nid' => $nid,
+          '@title' => $title,
+        ]);
+      } catch (\Exception $e) {
+        $logger->error('Error deleting old article @nid: @error', [
+          '@nid' => $nid,
+          '@error' => $e->getMessage(),
+        ]);
+      }
+    }
+  }
+
+  // Log final statistics
+  $logger->info('News extractor cron job completed. Statistics: @stats', [
+    '@stats' => json_encode($stats),
+  ]);
+
+  // Also log human-readable summary
+  $logger->info('Cron summary: Found @found failed articles, fixed @fixed, unpublished @unpublished persistent failures, deleted @deleted old articles', [
+    '@found' => $stats['failed_scraping_found'],
+    '@fixed' => $stats['failed_scraping_fixed'],
+    '@unpublished' => $stats['unpublished_for_failure'],
+    '@deleted' => $stats['old_articles_deleted'],
+  ]);
+}
