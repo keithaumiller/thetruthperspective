@@ -44,7 +44,14 @@ The module follows a service-oriented architecture with clear separation of conc
 2. **Content Scraping**: Diffbot API extraction
 3. **AI Analysis**: Claude AI processing with structured prompts
 4. **Data Processing**: Field updates and taxonomy assignment
-5. **Quality Assurance**: Validation and error handling
+5. **Publishing Logic**: Automated publish/unpublish based on processing status
+6. **Quality Assurance**: Validation and error handling
+
+### 📰 **Publishing Management**
+- **Intelligent Publishing**: Articles automatically published only when processing is complete
+- **Status-Based Visibility**: Unpublished during processing failures, republished after success
+- **Manual Republishing**: Drush commands to fix stuck unpublished articles
+- **Processing Status Tracking**: Clear visibility into why articles are published/unpublished
 
 ## Installation & Configuration
 
@@ -147,6 +154,25 @@ drush news-extractor:bulk-process --type=reprocess
 drush news-extractor:status
 ```
 
+#### Publishing Management
+```bash
+# Re-evaluate and republish eligible unpublished articles
+drush ne:republish                # Default limit (50)
+drush ne:republish --limit=100    # Custom limit
+drush ne:republish --dry-run      # Show what would be republished
+
+# Automated cleanup (runs via cron)
+drush ne:cron-cleanup             # Manual trigger of cron cleanup
+```
+
+#### System Maintenance
+```bash
+# Automated cron job operations (runs hourly)
+# 1. Reprocess failed scraping attempts
+# 2. Unpublish articles with processing failures
+# 3. Delete old failed articles (optional)
+```
+
 ### Processing Types
 
 **Full Processing** (`full`): Complete pipeline from URL to analyzed article
@@ -190,7 +216,25 @@ Diffbot API → Content Extraction → Metadata Capture
     ↓
 Claude AI → Sentiment Analysis → Bias Detection → Entity Extraction
     ↓
-Data Processing → Field Updates → Taxonomy Assignment → Storage
+Data Processing → Field Updates → Taxonomy Assignment
+    ↓
+Publishing Logic → Status Evaluation → Publish/Unpublish Decision → Storage
+```
+
+### Publishing Logic Flow
+
+```
+Article Processing Status Check:
+    ↓
+Has scraped_data_success? → NO → Keep Unpublished
+    ↓ YES
+Has AI analysis completed? → NO → Keep Unpublished  
+    ↓ YES
+Has valid motivation analysis? → NO → Keep Unpublished
+    ↓ YES
+Has news source assigned? → NO → Keep Unpublished
+    ↓ YES
+PUBLISH ARTICLE → Make Visible to Public
 ```
 
 ## Error Handling
@@ -260,6 +304,12 @@ function mymodule_news_extractor_post_ai_analysis($node, $ai_response) {
 - Check API keys in configuration
 - Verify field machine names match expectations
 - Check logs for specific error messages
+
+**Articles not being published:**
+- Use `drush ne:republish --dry-run` to see eligible articles
+- Check processing completion with `drush ne:status`
+- Verify all required fields have data (scraped data, AI analysis, motivation, news source)
+- Run `drush ne:republish` to fix stuck unpublished articles
 
 **Missing data:**
 - Ensure all required fields exist on article content type
