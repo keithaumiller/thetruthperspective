@@ -703,7 +703,10 @@ class MetricsDataService implements MetricsDataServiceInterface {
       $database = $this->database;
       $connection = $database;
       
-      // Fix MySQL strict mode compliance - only select what we group by
+      // Define preferred sources for default selection
+      $preferred_sources = ['CNN', 'Fox News', 'TheOnion'];
+      
+      // Get all sources first
       $query = $connection->select('node_field_data', 'n');
       
       // Join with news source field
@@ -719,21 +722,47 @@ class MetricsDataService implements MetricsDataServiceInterface {
         ->condition('ns.field_news_source_value', NULL, 'IS NOT NULL')
         ->condition('ns.field_news_source_value', 'Source Unavailable', '<>')
         ->groupBy('ns.field_news_source_value')
-        ->orderBy('article_count', 'DESC')
-        ->range(0, $limit);
+        ->orderBy('article_count', 'DESC');
       
       $results = $query->execute()->fetchAll();
       
-      $sources = [];
+      // Build sources array
+      $all_sources = [];
       foreach ($results as $row) {
-        $sources[] = [
+        $all_sources[] = [
           'source_id' => $row->news_source,
           'source_name' => $row->news_source,
           'article_count' => (int) $row->article_count,
         ];
       }
       
-      return $sources;
+      // Prioritize preferred sources for the default selection
+      $prioritized_sources = [];
+      $remaining_sources = [];
+      
+      // First, add preferred sources if they exist
+      foreach ($preferred_sources as $preferred) {
+        foreach ($all_sources as $source) {
+          if ($source['source_name'] === $preferred) {
+            $prioritized_sources[] = $source;
+            break;
+          }
+        }
+      }
+      
+      // Then add remaining sources (excluding already selected preferred ones)
+      $selected_names = array_column($prioritized_sources, 'source_name');
+      foreach ($all_sources as $source) {
+        if (!in_array($source['source_name'], $selected_names)) {
+          $remaining_sources[] = $source;
+        }
+      }
+      
+      // Combine: preferred sources first, then others by article count
+      $final_sources = array_merge($prioritized_sources, $remaining_sources);
+      
+      // Apply limit
+      return array_slice($final_sources, 0, $limit);
       
     } catch (\Exception $e) {
       $this->loggerFactory->get('newsmotivationmetrics')->error('Failed to load top news sources: @error', [
