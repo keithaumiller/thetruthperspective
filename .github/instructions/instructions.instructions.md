@@ -7,6 +7,10 @@ The environment is a Drupal 11 modules repository for The Truth Perspective plat
 
 Dev/prod environment: The code is deployed on a production server with the following specifications:
 - **Server**: Ubuntu 22.04 LTS
+- **Drupal Root**: /var/www/html/drupal
+- **Site Path**: sites/default
+- **Drush Access**: Available via SSH to production server
+
 ubuntu@ip-:~$ uname -a
 Linux ip- 6.8.0-1031-aws #33-Ubuntu SMP Fri Jun 20 18:11:07 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
 ubuntu@ip-:~$ php -version
@@ -14,6 +18,22 @@ PHP 8.3.6 (cli) (built: Jul 14 2025 18:30:55) (NTS)
 Copyright (c) The PHP Group
 Zend Engine v4.3.6, Copyright (c) Zend Technologies
     with Zend OPcache v8.3.6, Copyright (c), by Zend Technologies
+
+ubuntu@ip-172-16-4-59:/var/www/html/drupal$ drush status
+Drupal version   : 11.2.2
+Site URI         : http://default
+DB driver        : mysql
+DB hostname      : localhost
+DB port          : 3306
+DB username      : drupal_user
+DB name          : drupal_db
+Database         : Connected
+Drupal bootstrap : Successful
+Default theme    : olivero
+Admin theme      : claro
+PHP binary       : /usr/bin/php8.3
+Drush version    : 13.6.0.0
+Drupal root      : /var/www/html/drupal
 
 
 

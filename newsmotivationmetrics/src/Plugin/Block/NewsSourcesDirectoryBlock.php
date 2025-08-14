@@ -143,6 +143,11 @@ class NewsSourcesDirectoryBlock extends BlockBase implements ContainerFactoryPlu
       foreach ($results as $result) {
         $source_name = $result->field_news_source_value;
         
+        // Debug logging for each source name
+        \Drupal::logger('newsmotivationmetrics')->info('Checking taxonomy term for source: "@source_name"', [
+          '@source_name' => $source_name,
+        ]);
+        
         // Find corresponding taxonomy term for this news source
         $term_query = $this->database->select('taxonomy_term_field_data', 't');
         $term_query->fields('t', ['tid']);
@@ -150,6 +155,12 @@ class NewsSourcesDirectoryBlock extends BlockBase implements ContainerFactoryPlu
         $term_query->condition('t.status', 1);
         $term_query->condition('t.name', $source_name);
         $term_result = $term_query->execute()->fetchField();
+        
+        // Debug logging for taxonomy term lookup result
+        \Drupal::logger('newsmotivationmetrics')->info('Taxonomy term lookup for "@source_name": @result', [
+          '@source_name' => $source_name,
+          '@result' => $term_result ? "Found TID {$term_result}" : 'Not found',
+        ]);
         
         if ($term_result) {
           // Create link to taxonomy term page
