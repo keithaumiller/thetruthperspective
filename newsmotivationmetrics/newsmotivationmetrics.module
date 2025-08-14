@@ -33,7 +33,7 @@ function newsmotivationmetrics_theme($existing, $type, $theme, $path) {
     ],
     'news_sources_directory' => [
       'variables' => [
-        'news_sources' => [],
+        'sources' => [],
         'total_sources' => 0,
         'total_articles' => 0,
       ],

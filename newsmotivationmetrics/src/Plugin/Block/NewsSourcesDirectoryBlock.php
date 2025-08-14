@@ -63,6 +63,12 @@ class NewsSourcesDirectoryBlock extends BlockBase implements ContainerFactoryPlu
   public function build() {
     $sources = $this->getNewsSourcesWithCounts();
 
+    // Debug logging
+    \Drupal::logger('newsmotivationmetrics')->info('News Sources Directory Build: @count sources, empty check: @empty', [
+      '@count' => count($sources),
+      '@empty' => empty($sources) ? 'TRUE' : 'FALSE',
+    ]);
+
     if (empty($sources)) {
       return [
         '#markup' => '<div class="news-sources-directory"><p>No news sources found.</p></div>',
@@ -73,11 +79,21 @@ class NewsSourcesDirectoryBlock extends BlockBase implements ContainerFactoryPlu
       ];
     }
 
+    $total_sources = count($sources);
+    $total_articles = array_sum(array_column($sources, 'article_count'));
+    
+    // Debug the template variables
+    \Drupal::logger('newsmotivationmetrics')->info('News Sources Directory Template Variables: sources=@sources_count, total_sources=@total_sources, total_articles=@total_articles', [
+      '@sources_count' => count($sources),
+      '@total_sources' => $total_sources,
+      '@total_articles' => $total_articles,
+    ]);
+
     $build = [
       '#theme' => 'news_sources_directory',
       '#sources' => $sources,
-      '#total_sources' => count($sources),
-      '#total_articles' => array_sum(array_column($sources, 'article_count')),
+      '#total_sources' => $total_sources,
+      '#total_articles' => $total_articles,
       '#attached' => [
         'library' => ['newsmotivationmetrics/news-sources-directory'],
       ],
@@ -85,7 +101,9 @@ class NewsSourcesDirectoryBlock extends BlockBase implements ContainerFactoryPlu
         'tags' => ['taxonomy_term_list:tags', 'node_list:article'],
         'max-age' => 3600, // Cache for 1 hour
       ],
-    ];    return $build;
+    ];
+    
+    return $build;
   }
 
   /**
@@ -115,6 +133,11 @@ class NewsSourcesDirectoryBlock extends BlockBase implements ContainerFactoryPlu
       $query->orderBy('field_news_source_value', 'ASC');
       
       $results = $query->execute()->fetchAll();
+      
+      // Debug logging
+      \Drupal::logger('newsmotivationmetrics')->info('News Sources Directory Query Results: @count results found', [
+        '@count' => count($results),
+      ]);
       
       $sources = [];
       foreach ($results as $result) {
@@ -151,6 +174,11 @@ class NewsSourcesDirectoryBlock extends BlockBase implements ContainerFactoryPlu
           ];
         }
       }
+      
+      // Debug logging
+      \Drupal::logger('newsmotivationmetrics')->info('News Sources Directory Final Sources: @count sources processed', [
+        '@count' => count($sources),
+      ]);
       
       return $sources;
       
