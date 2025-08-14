@@ -126,6 +126,30 @@ drush ne:pop-url 25               # Custom batch size
 drush news-extractor:populate-sources-url  # Full alias
 ```
 
+#### Smart Cleanup (Remove Unsuitable Content)
+```bash
+# Preview what would be deleted (recommended first step)
+drush ne:cleanup --dry-run        # Shows articles that would be deleted
+drush ne:cleanup --dry-run --limit=200  # Check more articles
+
+# Actually delete unsuitable articles
+drush ne:cleanup                  # Delete up to 100 articles
+drush ne:cleanup --limit=500      # Delete more articles
+
+# Full alias
+drush news-extractor:cleanup      # Same functionality
+```
+
+**Automatically removes articles that are:**
+- 🎥 **Video content** (URLs containing `/video/`)
+- 📘 **Facebook links** (`facebook.com` domains)
+- 📄 **PDF files** (`.pdf` extensions)
+- 📱 **Social media** (Twitter, Instagram, LinkedIn, TikTok)
+- 🎬 **Video platforms** (YouTube, Vimeo, Dailymotion)
+- 🔗 **Articles with no URL** (missing `field_original_url`)
+
+> **💡 Tip**: Run `drush ne:cleanup --dry-run` first to see what would be deleted before running actual cleanup.
+
 #### Standard Processing
 ```bash
 # Process recent articles
@@ -140,12 +164,14 @@ drush news-extractor:bulk-process --type=scrape_only
 # Process only AI analysis (articles already scraped)
 drush news-extractor:bulk-process --type=analyze_only
 
-# Reprocess articles (re-run AI analysis)
+# Reprocess articles (re-run AI analysis) - now with smart cleanup
 drush news-extractor:bulk-process --type=reprocess
 
 # Check processing status
 drush news-extractor:status
 ```
+
+> **🧹 Smart Processing**: All bulk processing commands now automatically delete unsuitable articles (videos, PDFs, social media, etc.) instead of trying to process them, keeping your database clean and focused on actual news content.
 
 ### Processing Types
 
@@ -166,10 +192,37 @@ drush news-extractor:status
 - **Capabilities**: Sentiment, bias, credibility, entities, motivations
 - **Output**: Structured JSON responses for systematic data storage
 
-## Content Filtering
+## Content Filtering & Smart Cleanup
 
-### Blocked Content
-The module automatically filters out content from:
+### Automatically Deleted Content
+The module now automatically **deletes** (rather than processes) articles that are:
+
+**🎥 Video Content**
+- URLs containing `/video/` paths
+- Fox News video links, YouTube videos, etc.
+
+**📱 Social Media Content**
+- Facebook links (`facebook.com`)
+- Twitter/X links (`twitter.com`) 
+- Instagram links (`instagram.com`)
+- LinkedIn articles (`linkedin.com`)
+- TikTok links (`tiktok.com`)
+
+**🎬 Video Platforms**
+- YouTube videos (`youtube.com`)
+- Vimeo content (`vimeo.com`)
+- Dailymotion videos (`dailymotion.com`)
+
+**📄 Document Files**
+- PDF files (`.pdf` extensions)
+- Direct document downloads
+
+**🔗 Invalid Articles**
+- Articles with no URL (`field_original_url` missing/empty)
+- Malformed or unreachable URLs
+
+### Traditional Content Filtering
+The module also filters out content from:
 - `comparecards.com`
 - `fool.com` 
 - `lendingtree.com`
@@ -178,8 +231,8 @@ The module automatically filters out content from:
 
 ### URL Validation
 - Validates article URLs before processing
-- Skips invalid or unreachable URLs
-- Logs skipped content for review
+- Automatically deletes invalid or unsuitable content
+- Logs deleted content for review
 
 ## Data Flow
 
