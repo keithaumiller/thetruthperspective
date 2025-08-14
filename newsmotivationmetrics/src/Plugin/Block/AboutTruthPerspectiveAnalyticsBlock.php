@@ -165,14 +165,69 @@ class AboutTruthPerspectiveAnalyticsBlock extends BlockBase implements Container
     if ($config['show_mission']) {
       $build['mission'] = [
         '#type' => 'details',
-        '#title' => '🎯 Our Mission',
+        '#title' => '🎯 Our Mission & Methodology Transparency',
         '#open' => $expanded,
         '#attributes' => ['class' => ['mission-section']],
-        'content' => [
+        'intro' => [
           '#type' => 'html_tag',
           '#tag' => 'p',
           '#value' => 'The Truth Perspective leverages advanced AI technology to analyze news content across multiple media sources, providing transparency into narrative patterns, motivational drivers, and thematic trends in modern journalism.',
           '#attributes' => ['class' => ['mission-text']],
+        ],
+        'limitations' => [
+          '#type' => 'details',
+          '#title' => '⚠️ Critical Limitations & Bias Awareness',
+          '#open' => $expanded,
+          'content' => [
+            '#type' => 'html_tag',
+            '#tag' => 'p',
+            '#value' => 'This platform demonstrates both the capabilities and inherent dangers of using Large Language Models (LLMs) for automatic ranking and rating systems. Our analysis reveals significant inconsistencies - for example, satirical content from The Onion may receive similar "credibility scores" as traditional news from CNN, highlighting how AI systems can misinterpret context, satire, and journalistic intent.',
+            '#attributes' => ['class' => ['limitations-text']],
+          ],
+        ],
+        'black_box' => [
+          '#type' => 'details',
+          '#title' => '🔍 The "Black Box" Problem',
+          '#open' => $expanded,
+          'content' => [
+            '#type' => 'html_tag',
+            '#tag' => 'p',
+            '#value' => 'These AI-driven assessments operate as opaque "black boxes" where the reasoning behind scores and classifications remains largely hidden. This creates a fundamental power imbalance: those who control the LLMs - major tech corporations and AI companies - effectively control how information is ranked, rated, and perceived by the public.',
+            '#attributes' => ['class' => ['black-box-text']],
+          ],
+        ],
+        'transparency' => [
+          '#type' => 'details',
+          '#title' => '📊 Transparency Through Example',
+          '#open' => $expanded,
+          'content' => [
+            '#type' => 'html_tag',
+            '#tag' => 'p',
+            '#value' => 'Rather than hiding these limitations, we expose them. Our statistics comparing The Onion\'s AI-generated "bias scores" against CNN\'s demonstrate how algorithmic assessment can flatten the crucial distinction between satire and journalism, revealing the dangerous potential for AI-mediated information control.',
+            '#attributes' => ['class' => ['transparency-text']],
+          ],
+        ],
+        'scientific_value' => [
+          '#type' => 'details',
+          '#title' => '🔬 Scientific Value & Predictive Potential',
+          '#open' => $expanded,
+          'content' => [
+            '#type' => 'html_tag',
+            '#tag' => 'p',
+            '#value' => 'Despite these limitations, the true scientific value of this analysis lies in its potential for prediction and actionable insights. While individual article ratings may be flawed, aggregate patterns in narrative trends, source behavior, and thematic evolution may still provide valuable predictive indicators for understanding media dynamics, public discourse shifts, and information ecosystem changes over time.',
+            '#attributes' => ['class' => ['scientific-value-text']],
+          ],
+        ],
+        'purpose' => [
+          '#type' => 'details',
+          '#title' => '💡 Our True Purpose',
+          '#open' => $expanded,
+          'content' => [
+            '#type' => 'html_tag',
+            '#tag' => 'p',
+            '#value' => 'This platform serves as both an analytical tool and a warning: automated content ranking systems, no matter how sophisticated, embed the biases and limitations of their creators while concentrating unprecedented power over information interpretation in the hands of those who control the technology. Yet through transparent methodology and aggregate analysis, meaningful insights about information patterns may still emerge.',
+            '#attributes' => ['class' => ['purpose-text']],
+          ],
         ],
       ];
     }
