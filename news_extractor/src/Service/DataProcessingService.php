@@ -699,7 +699,16 @@ class DataProcessingService {
     $source = trim($source);
 
     // Handle CNN variants first - normalize all CNN sub-brands to just "CNN"
-    if (preg_match('/^CNN\s*[-–—]\s*/i', $source) || 
+    // This includes exact matches and pattern matches
+    if ($source === 'CNN Money' ||
+        $source === 'CNN Politics' ||
+        $source === 'CNN Business' ||
+        $source === 'CNN Health' ||
+        $source === 'CNN Travel' ||
+        $source === 'CNN Style' ||
+        $source === 'CNN Sport' ||
+        $source === 'CNN Entertainment' ||
+        preg_match('/^CNN\s*[-–—]\s*/i', $source) || 
         preg_match('/^CNN\s+/i', $source) ||
         stripos($source, 'CNN Money') !== false ||
         stripos($source, 'CNN Politics') !== false ||
@@ -788,6 +797,9 @@ class DataProcessingService {
    *   The entity to post-process.
    */
   protected function postProcessPublishingStatus(EntityInterface $entity) {
+    // FIRST: Normalize news source field
+    $this->postProcessNewsSourceNormalization($entity);
+    
     // Check scraped data status
     $this->postProcessScrapedDataStatus($entity);
     
@@ -796,6 +808,44 @@ class DataProcessingService {
     
     // PUBLISHING CRITERIA: Publish articles with successful motivation analysis
     $this->postProcessPublishingCriteria($entity);
+  }
+
+  /**
+   * Post-processor to normalize news source field values.
+   * 
+   * Cleans and standardizes news source names to ensure consistency
+   * across articles from the same source (e.g., "CNN Money" -> "CNN").
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to normalize.
+   */
+  protected function postProcessNewsSourceNormalization(EntityInterface $entity) {
+    // Check if entity has the news source field
+    if (!$entity->hasField('field_news_source')) {
+      return;
+    }
+
+    $current_source = $entity->get('field_news_source')->value;
+    
+    // Skip if field is empty or already marked as unavailable
+    if (empty($current_source) || $current_source === 'Source Unavailable') {
+      return;
+    }
+
+    // Clean and normalize the source name
+    $normalized_source = $this->cleanNewsSource($current_source);
+    
+    // Update the field if normalization changed the value
+    if ($normalized_source !== $current_source) {
+      $entity->set('field_news_source', $normalized_source);
+      
+      $this->logger()->info('POST-PROCESSOR: Normalized news source from "@old" to "@new" for: @title (ID: @id)', [
+        '@old' => $current_source,
+        '@new' => $normalized_source,
+        '@title' => $entity->getTitle(),
+        '@id' => $entity->id(),
+      ]);
+    }
   }
 
   /**
