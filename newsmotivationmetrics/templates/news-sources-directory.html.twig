@@ -1,0 +1,40 @@
+{#
+/**
+ * @file
+ * Template for the News Sources Directory block.
+ *
+ * Available variables:
+ * - sources: Array of news source data with 'name', 'article_count', 'link'
+ * - total_sources: Total number of news sources
+ * - total_articles: Total number of articles across all sources
+ */
+#}
+<div class="news-sources-directory">
+  <div class="news-sources-header">
+    <h3 class="news-sources-title">📰 News Sources</h3>
+    <div class="news-sources-stats">
+      <span class="source-count">{{ total_sources }} sources</span>
+      <span class="article-count">{{ total_articles }} articles</span>
+    </div>
+  </div>
+  
+  {% if sources is not empty %}
+    <div class="news-sources-grid">
+      {% for source in sources %}
+        <div class="news-source-item">
+          <div class="source-link">
+            {{ source.link }}
+          </div>
+          <div class="source-stats">
+            <span class="article-count">{{ source.article_count }} article{{ source.article_count != 1 ? 's' : '' }}</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="news-sources-empty">
+      <p>No news sources available yet.</p>
+      <p><small>News sources will appear here as articles are processed.</small></p>
+    </div>
+  {% endif %}
+</div>

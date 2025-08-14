@@ -162,3 +162,11 @@ fullwidth-override:
       css/fullwidth-override.css: {}
   dependencies:
     - core/drupal
+
+news-sources-directory:
+  version: 1.x
+  css:
+    theme:
+      css/news-sources-directory.css: {}
+  dependencies:
+    - core/drupal

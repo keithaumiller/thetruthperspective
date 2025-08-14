@@ -1,0 +1,176 @@
+/**
+ * News Sources Directory Block Styles
+ */
+
+.news-sources-directory {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.news-sources-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.news-sources-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.news-sources-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.news-sources-stats .source-count,
+.news-sources-stats .article-count {
+  background: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.news-sources-grid {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: white;
+  padding: 0.5rem;
+}
+
+.news-source-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.news-source-item:hover {
+  background: #f8f9fa;
+  border-color: #0d6efd;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+.news-source-item:last-child {
+  margin-bottom: 0;
+}
+
+.source-link a {
+  color: #0d6efd;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.source-link a:hover {
+  color: #0a58ca;
+  text-decoration: underline;
+}
+
+.source-stats {
+  font-size: 0.8rem;
+  color: #6c757d;
+  background: #f8f9fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.news-sources-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+}
+
+.news-sources-empty p {
+  margin: 0.5rem 0;
+}
+
+.news-sources-empty small {
+  font-size: 0.875rem;
+  color: #adb5bd;
+}
+
+/* Scrollbar styling for webkit browsers */
+.news-sources-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.news-sources-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.news-sources-grid::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.news-sources-grid::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .news-sources-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .news-sources-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .news-source-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .source-stats {
+    align-self: flex-end;
+  }
+}
+
+/* Focus styles for accessibility */
+.source-link a:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Animation for new items */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.news-source-item {
+  animation: fadeInUp 0.3s ease-out;
+}

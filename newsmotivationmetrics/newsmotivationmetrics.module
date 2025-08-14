@@ -31,6 +31,14 @@ function newsmotivationmetrics_theme($existing, $type, $theme, $path) {
       ],
       'template' => 'donation-support-block',
     ],
+    'news_sources_directory' => [
+      'variables' => [
+        'news_sources' => [],
+        'total_sources' => 0,
+        'total_articles' => 0,
+      ],
+      'template' => 'news-sources-directory',
+    ],
   ];
 }
 
