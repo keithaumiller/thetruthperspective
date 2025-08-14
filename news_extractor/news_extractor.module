@@ -342,14 +342,66 @@ function news_extractor_cron() {
   $extraction_service = \Drupal::service('news_extractor.extraction');
 
   $stats = [
+    'published_checked' => 0,
+    'articles_unpublished' => 0,
     'unpublished_found' => 0,
     'reprocessed_successfully' => 0,
     'reprocessing_failed' => 0,
     'old_articles_deleted' => 0,
   ];
 
-  // STEP 1: Find unpublished articles that need reprocessing
-  $logger->info('Step 1: Finding unpublished articles for reprocessing');
+  // STEP 1: Check published articles for post-processor conditions
+  $logger->info('Step 1: Checking published articles for post-processor conditions');
+  
+  // Find published articles that might need to be unpublished
+  $published_query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('status', 1) // Only published articles
+    ->accessCheck(FALSE);
+  
+  $published_nids = $published_query->execute();
+  $stats['published_checked'] = count($published_nids);
+  
+  $logger->info('Found @count published articles to check for post-processor conditions', ['@count' => $stats['published_checked']]);
+
+  // Check published articles for unpublishing conditions (limit to 50 per run)
+  $check_limit = min(50, count($published_nids));
+  $published_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple(array_slice($published_nids, 0, $check_limit));
+  
+  foreach ($published_nodes as $node) {
+    try {
+      // Get the data processing service to run post-processors
+      $data_processing_service = \Drupal::service('news_extractor.data_processing');
+      
+      // Check if the article should be unpublished by running post-processors
+      $original_status = $node->isPublished();
+      
+      // Run post-processors (this may unpublish the article)
+      $reflection = new \ReflectionClass($data_processing_service);
+      $method = $reflection->getMethod('postProcessPublishingStatus');
+      $method->setAccessible(true);
+      $method->invoke($data_processing_service, $node);
+      
+      // Save if status changed
+      if ($original_status !== $node->isPublished()) {
+        $node->save();
+        $stats['articles_unpublished']++;
+        $logger->info('Unpublished article @nid due to post-processor conditions: @title', [
+          '@nid' => $node->id(),
+          '@title' => $node->getTitle(),
+        ]);
+      }
+      
+    } catch (\Exception $e) {
+      $logger->error('Error checking article @nid for post-processor conditions: @error', [
+        '@nid' => $node->id(),
+        '@error' => $e->getMessage(),
+      ]);
+    }
+  }
+
+  // STEP 2: Find unpublished articles that need reprocessing
+  $logger->info('Step 2: Finding unpublished articles for reprocessing');
   
   $unpublished_query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
@@ -399,8 +451,8 @@ function news_extractor_cron() {
     }
   }
 
-  // STEP 2: Delete old unpublished articles with persistent failures
-  $logger->info('Step 2: Deleting old unpublished articles with persistent failures');
+  // STEP 3: Delete old unpublished articles with persistent failures
+  $logger->info('Step 3: Deleting old unpublished articles with persistent failures');
   
   // Find unpublished articles older than 24 hours
   $one_day_ago = \Drupal::time()->getRequestTime() - (24 * 60 * 60);
@@ -445,7 +497,9 @@ function news_extractor_cron() {
   ]);
 
   // Also log human-readable summary
-  $logger->info('Cron summary: Found @found unpublished articles, reprocessed @success successfully, @failed failed, deleted @deleted old articles', [
+  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, deleted @deleted old articles', [
+    '@checked' => $stats['published_checked'],
+    '@unpublished' => $stats['articles_unpublished'],
     '@found' => $stats['unpublished_found'],
     '@success' => $stats['reprocessed_successfully'],
     '@failed' => $stats['reprocessing_failed'],
