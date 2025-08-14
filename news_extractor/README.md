@@ -65,11 +65,14 @@ The module follows a service-oriented architecture with clear separation of conc
   - `postProcessPublishingStatus()` (orchestrator)
   - `postProcessScrapedDataStatus()` (checks scraping)
   - `postProcessMotivationAnalysis()` (checks AI analysis)
+  - `postProcessPublishingCriteria()` (publishing criteria)
 - **Actions**:
   - Checks if scraped data = "Scraped data unavailable" → **UNPUBLISHES** article
   - Checks for "Analysis is Pending" or "No analysis data available" → **UNPUBLISHES** article
+  - **PUBLISHING CRITERIA**: If article has valid motivation analysis AND valid scraped data → **PUBLISHES** article
   - Sets news source to "Source Unavailable" for failed articles
   - Updates analysis fields to indicate unpublished status
+  - Logs publishing decisions with reasons
 
 ### Stage 7: Automated Cleanup (Cron)
 - **File**: `news_extractor.module`

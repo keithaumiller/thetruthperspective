@@ -727,6 +727,9 @@ class DataProcessingService {
     
     // Check motivation analysis status  
     $this->postProcessMotivationAnalysis($entity);
+    
+    // PUBLISHING CRITERIA: Publish articles with successful motivation analysis
+    $this->postProcessPublishingCriteria($entity);
   }
 
   /**
@@ -809,6 +812,99 @@ class DataProcessingService {
           ]);
         }
       }
+    }
+  }
+
+  /**
+   * Post-process publishing criteria to publish articles with successful processing.
+   * 
+   * Publishes articles that have successfully completed all processing stages
+   * and have valid motivation analysis data.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to check and potentially publish.
+   */
+  protected function postProcessPublishingCriteria(EntityInterface $entity) {
+    // Only proceed if article is currently unpublished
+    if ($entity->isPublished()) {
+      return;
+    }
+
+    // Check if we have successful motivation analysis
+    $has_motivation_analysis = FALSE;
+    
+    if ($entity->hasField('field_motivation_analysis') && 
+        !$entity->get('field_motivation_analysis')->isEmpty()) {
+      
+      $motivation_analysis = $entity->get('field_motivation_analysis')->value;
+      
+      // Consider analysis successful if it exists and doesn't contain failure indicators
+      if (!empty(trim($motivation_analysis)) &&
+          strpos($motivation_analysis, 'Analysis is Pending') === false &&
+          strpos($motivation_analysis, 'No analysis data available') === false &&
+          strpos($motivation_analysis, 'Unpublished - Analysis Pending') === false &&
+          strpos($motivation_analysis, 'Unpublished - No analysis data available') === false) {
+        
+        $has_motivation_analysis = TRUE;
+      }
+    }
+
+    // Check if we have successful scraped data
+    $has_valid_scraped_data = FALSE;
+    
+    if ($entity->hasField('field_json_scraped_article_data') && 
+        !$entity->get('field_json_scraped_article_data')->isEmpty()) {
+      
+      $scraped_data = $entity->get('field_json_scraped_article_data')->value;
+      
+      // Consider scraped data valid if it's not the failure message
+      if (!empty(trim($scraped_data)) &&
+          trim($scraped_data) !== "Scraped data unavailable" &&
+          trim($scraped_data) !== "Scraped data unavailable.") {
+        
+        $has_valid_scraped_data = TRUE;
+      }
+    }
+
+    // PUBLISHING CRITERIA: Both successful scraping and motivation analysis
+    if ($has_motivation_analysis && $has_valid_scraped_data) {
+      $entity->setPublished();
+      
+      $this->logger()->info('Published article after successful processing: @title (ID: @id)', [
+        '@title' => $entity->getTitle(),
+        '@id' => $entity->id(),
+      ]);
+      
+      // Ensure news source is properly set (not "Source Unavailable")
+      if ($entity->hasField('field_news_source')) {
+        $current_source = $entity->get('field_news_source')->value;
+        if ($current_source === 'Source Unavailable' || empty($current_source)) {
+          // Try to extract from stored data as fallback
+          $stored_data = json_decode($entity->get('field_json_scraped_article_data')->value, TRUE);
+          if (!empty($stored_data['objects'][0]['siteName'])) {
+            $entity->set('field_news_source', $this->cleanNewsSource($stored_data['objects'][0]['siteName']));
+            $this->logger()->info('Updated news source from stored data for published article @id: @source', [
+              '@id' => $entity->id(),
+              '@source' => $stored_data['objects'][0]['siteName'],
+            ]);
+          }
+        }
+      }
+    } else {
+      // Log why article remains unpublished
+      $reasons = [];
+      if (!$has_valid_scraped_data) {
+        $reasons[] = 'invalid scraped data';
+      }
+      if (!$has_motivation_analysis) {
+        $reasons[] = 'missing motivation analysis';
+      }
+      
+      $this->logger()->info('Article remains unpublished due to: @reasons - @title (ID: @id)', [
+        '@reasons' => implode(', ', $reasons),
+        '@title' => $entity->getTitle(),
+        '@id' => $entity->id(),
+      ]);
     }
   }
 
