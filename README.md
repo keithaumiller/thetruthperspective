@@ -15,30 +15,22 @@ This repository contains custom Drupal modules for The Truth Perspective website
 ### 1. 🗞️ News Extractor Module ✅ **FULLY OPERATIONAL**
 **Version**: 1.2.0 | **Location**: [`/news_extractor/`](./news_extractor/README.md)
 
-Comprehensive news content extraction, AI analysis, and automated publishing management system.
+Comprehensive news content extraction, AI analysis, and automated source population system.
 
 **✅ Production Features**:
 - ✅ **Multi-Stage Source Population**: JSON data → URL mapping → Feed metadata
 - ✅ **Comprehensive Field Architecture**: 20+ specialized fields for complete article analysis
 - ✅ **AI Integration**: AWS Bedrock Claude 3.5 Sonnet for content analysis
 - ✅ **Automated Processing**: Cron-based background processing (50 articles/hour)
-- ✅ **Intelligent Publishing**: Automated publish/unpublish based on processing completion
-- ✅ **Drush Commands**: Complete command suite for bulk operations, statistics, and republishing
+- ✅ **Drush Commands**: Complete command suite for bulk operations and statistics
 - ✅ **Database Optimization**: Proper NULL handling and efficient queries
 
 **Core Capabilities**:
 - **Content Extraction**: Diffbot API integration for clean article parsing
 - **News Source Detection**: Multi-stage extraction from JSON, URLs, and feeds
 - **AI Analysis**: Motivation detection, bias analysis, sentiment scoring
-- **Publishing Logic**: Smart publish/unpublish based on processing status
 - **Field Management**: 135+ articles with comprehensive metadata
 - **Automation**: Real-time processing via Drupal hooks and cron
-
-**Recent Publishing Logic Enhancement**:
-- **Fixed Critical Issue**: Articles now properly published after successful processing
-- **Status-Based Publishing**: Unpublished during failures, republished after success
-- **Manual Recovery**: `drush ne:republish` command for fixing stuck articles
-- **Comprehensive Validation**: 4-point publishing criteria (scraped data, AI analysis, motivation analysis, news source)
 
 **Technical Architecture**:
 - Service injection with dependency management
@@ -118,11 +110,8 @@ drush ne:pop-url                 # Process articles from URLs (fallback)
 #### Testing and Debugging
 ```bash
 drush ne:test https://example.com  # Test extraction for specific URL
-drush ne:republish --dry-run       # Check which articles would be republished
-drush ne:republish                 # Actually republish eligible articles
-drush ne:cron-cleanup             # Manual trigger of automated maintenance
 ```
-**Output**: Detailed extraction results, publishing status, and source mapping
+**Output**: Detailed extraction results and source mapping
 
 ## Technical Architecture
 
@@ -170,17 +159,6 @@ Priority 3: Feed Metadata → RSS Source → Cleaned Name
 ```
 Clean Content → AWS Bedrock Claude → Multiple Analysis Fields
 ```
-
-#### Stage 5: Publishing Logic
-```
-Processing Status Check → Publishing Criteria Validation → Publish/Unpublish Decision
-```
-
-**Publishing Criteria**:
-1. ✅ Scraped data success verification
-2. ✅ AI analysis completion check  
-3. ✅ Motivation analysis validity
-4. ✅ News source availability
 
 ### Production Infrastructure
 
@@ -231,10 +209,6 @@ drush ne:pop-url
 
 # Test specific URL extraction
 drush ne:test https://cnn.com/article
-
-# Fix publishing issues
-drush ne:republish --dry-run      # See what would be republished
-drush ne:republish                # Actually republish eligible articles
 ```
 
 ## News Source Population System
@@ -300,17 +274,14 @@ Each module contains detailed technical documentation:
 
 ## Version History
 
-### v1.2.0 (August 14, 2025) - **CURRENT PRODUCTION**
-- ✅ **Critical Publishing Logic Fix**: Resolved inverted publishing behavior
-- ✅ **Automated Re-publishing**: Articles now properly published after successful processing
-- ✅ **Enhanced Drush Commands**: Added `ne:republish` with dry-run support for stuck articles
-- ✅ **Comprehensive Publishing Validation**: 4-point criteria system for publish decisions
-- ✅ **Status-Based Visibility**: Articles unpublished during failures, republished after success
-- ✅ **Manual Recovery Tools**: Complete toolkit for managing publishing issues
+### v1.2.0 (August 12, 2025) - **CURRENT PRODUCTION**
 - ✅ **News Source Population**: Complete multi-stage extraction system
 - ✅ **Database Optimization**: Proper NULL handling in all queries
+- ✅ **Drush Commands**: Comprehensive command suite with debugging
 - ✅ **Field Architecture**: 20+ specialized fields fully documented
 - ✅ **Processing Pipeline**: Multi-stage automation with cron integration
+- ✅ **Error Handling**: Robust error recovery and logging
+- ✅ **Performance**: Batch processing and memory optimization
 
 ### v1.1.1 (August 2025)
 - ✅ Enhanced news source extraction from JSON scraped data

@@ -95,9 +95,6 @@ class DataProcessingService {
       // Final save with formatted analysis
       $entity->save();
 
-      // POST-PROCESSOR: Check if article should be published after successful processing
-      $this->postProcessPublishingStatus($entity);
-
       $this->logger()->info('Successfully processed analysis data for: @title', [
         '@title' => $entity->getTitle(),
       ]);
@@ -190,7 +187,7 @@ class DataProcessingService {
       return;
     }
 
-    $tags = $this->extractTagsFromData($structured_data);
+    $tags = $this->extractTagsFromData($structured_data, $entity);
     $tag_ids = [];
 
     foreach ($tags as $tag) {
@@ -216,11 +213,13 @@ class DataProcessingService {
    *
    * @param array $structured_data
    *   The structured data.
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity (used to get news source).
    *
    * @return array
    *   Array of tag names.
    */
-  protected function extractTagsFromData(array $structured_data) {
+  protected function extractTagsFromData(array $structured_data, EntityInterface $entity = NULL) {
     $tags = [];
 
     // Extract entity names
@@ -240,6 +239,18 @@ class DataProcessingService {
     // Add metrics
     if (isset($structured_data['metrics']) && is_array($structured_data['metrics'])) {
       $tags = array_merge($tags, $structured_data['metrics']);
+    }
+
+    // Add news source as a tag if available
+    if ($entity && $entity->hasField('field_news_source')) {
+      $news_source = $entity->get('field_news_source')->value;
+      if (!empty($news_source) && $news_source !== 'Source Unavailable') {
+        $tags[] = $news_source;
+        $this->logger()->info('Added news source "@source" as taxonomy tag for: @title', [
+          '@source' => $news_source,
+          '@title' => $entity->getTitle(),
+        ]);
+      }
     }
 
     return array_unique($tags);
@@ -478,41 +489,6 @@ class DataProcessingService {
   }
 
   /**
-   * Re-evaluate and potentially re-publish an article based on current processing status.
-   * 
-   * This method can be used to manually check if unpublished articles
-   * should be re-published after processing has been completed.
-   *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
-   *   The entity to evaluate.
-   * 
-   * @return bool
-   *   TRUE if the article was re-published, FALSE otherwise.
-   */
-  public function reevaluatePublishingStatus(EntityInterface $entity) {
-    // Only process unpublished articles
-    if ($entity->isPublished()) {
-      return FALSE; // Already published
-    }
-
-    $should_publish = $this->shouldArticleBePublished($entity);
-    
-    if ($should_publish) {
-      $entity->setPublished();
-      $entity->save();
-      
-      $this->logger()->info('Re-published article during reevaluation: @title (ID: @id)', [
-        '@title' => $entity->getTitle(),
-        '@id' => $entity->id(),
-      ]);
-      
-      return TRUE;
-    }
-    
-    return FALSE;
-  }
-
-  /**
    * Extract news source from various entity fields.
    * 
    * NOTE: This method is primarily for URL-based fallback extraction.
@@ -709,108 +685,6 @@ class DataProcessingService {
     }
 
     return ucwords(str_replace(['-', '_', '.'], ' ', $host));
-  }
-
-  /**
-   * Post-process publishing status after successful AI analysis.
-   * 
-   * Re-publishes articles that have completed processing successfully.
-   * This ensures articles that were unpublished due to pending analysis
-   * are made public again once analysis is complete.
-   *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
-   *   The entity to check and potentially publish.
-   */
-  protected function postProcessPublishingStatus(EntityInterface $entity) {
-    // Only process unpublished articles
-    if ($entity->isPublished()) {
-      return;
-    }
-
-    // Check if article now has successful processing
-    $should_publish = $this->shouldArticleBePublished($entity);
-    
-    if ($should_publish) {
-      $entity->setPublished();
-      $entity->save();
-      
-      $this->logger()->info('Re-published article after successful processing: @title (ID: @id)', [
-        '@title' => $entity->getTitle(),
-        '@id' => $entity->id(),
-      ]);
-    }
-  }
-
-  /**
-   * Determine if an article should be published based on processing status.
-   * 
-   * An article should be published if:
-   * - It has successful scraped data (not "Scraped data unavailable")
-   * - It has AI analysis data (field_ai_raw_response is not empty)
-   * - The motivation analysis doesn't contain pending indicators
-   *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
-   *   The entity to evaluate.
-   * 
-   * @return bool
-   *   TRUE if the article should be published, FALSE otherwise.
-   */
-  protected function shouldArticleBePublished(EntityInterface $entity) {
-    // Check 1: Must have successful scraped data
-    if ($entity->hasField('field_json_scraped_article_data')) {
-      $scraped_data = $entity->get('field_json_scraped_article_data')->value;
-      
-      // Fail if no scraped data or failed scraping
-      if (empty($scraped_data) || 
-          trim($scraped_data) === "Scraped data unavailable" || 
-          trim($scraped_data) === "Scraped data unavailable.") {
-        return FALSE;
-      }
-    } else {
-      return FALSE; // No scraped data field
-    }
-
-    // Check 2: Must have AI analysis
-    if ($entity->hasField('field_ai_raw_response')) {
-      $ai_response = $entity->get('field_ai_raw_response')->value;
-      
-      // Fail if no AI analysis
-      if (empty(trim($ai_response))) {
-        return FALSE;
-      }
-    } else {
-      return FALSE; // No AI response field
-    }
-
-    // Check 3: Motivation analysis must not contain pending indicators
-    if ($entity->hasField('field_motivation_analysis')) {
-      $motivation_analysis = $entity->get('field_motivation_analysis')->value;
-      
-      // Fail if analysis contains pending indicators
-      if (!empty($motivation_analysis) && 
-          (strpos($motivation_analysis, 'Analysis is Pending') !== false ||
-           strpos($motivation_analysis, 'No analysis data available') !== false ||
-           strpos($motivation_analysis, 'Unpublished - Analysis Pending') !== false ||
-           strpos($motivation_analysis, 'Unpublished - No analysis data available') !== false)) {
-        return FALSE;
-      }
-    }
-
-    // Check 4: Must have a valid news source
-    if ($entity->hasField('field_news_source')) {
-      $news_source = $entity->get('field_news_source')->value;
-      
-      // Fail if no source or indicates unavailable
-      if (empty(trim($news_source)) || 
-          trim($news_source) === 'Source Unavailable') {
-        return FALSE;
-      }
-    } else {
-      return FALSE; // No news source field
-    }
-
-    // All checks passed - article should be published
-    return TRUE;
   }
 
 }
