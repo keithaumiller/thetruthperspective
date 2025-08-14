@@ -394,28 +394,32 @@ function news_extractor_cron() {
   // STEP 2: Unpublish articles that still have failed processing
   $logger->info('Step 2: Unpublishing articles with persistent processing failures');
   
-  // Find articles that still have failed scraping or no AI analysis
-  $still_failed_query = \Drupal::entityQuery('node')
+  // Find articles that still have failed scraping
+  $failed_scraping_query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
     ->condition('status', 1) // Only published articles
+    ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
     ->accessCheck(FALSE);
   
-  // Articles with failed scraping OR no AI analysis
-  $or_group = $still_failed_query->orConditionGroup();
-  $or_group->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=');
+  $failed_scraping_nids = $failed_scraping_query->execute();
   
-  // No AI analysis group
-  $no_ai_group = $still_failed_query->andConditionGroup();
-  $no_ai_group->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '<>');
-  $no_ai_or = $no_ai_group->orConditionGroup();
-  $no_ai_or->condition('field_ai_raw_response', NULL, 'IS NULL');
-  $no_ai_or->condition('field_ai_raw_response', '', '=');
-  $no_ai_group->condition($no_ai_or);
+  // Find articles with good scraping but no AI analysis
+  $no_ai_query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('status', 1) // Only published articles
+    ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '<>')
+    ->condition('field_json_scraped_article_data', '', '<>')
+    ->accessCheck(FALSE);
   
-  $or_group->condition($no_ai_group);
-  $still_failed_query->condition($or_group);
+  $ai_or_group = $no_ai_query->orConditionGroup();
+  $ai_or_group->condition('field_ai_raw_response', NULL, 'IS NULL');
+  $ai_or_group->condition('field_ai_raw_response', '', '=');
+  $no_ai_query->condition($ai_or_group);
   
-  $still_failed_nids = $still_failed_query->execute();
+  $no_ai_nids = $no_ai_query->execute();
+  
+  // Combine both sets of problematic articles
+  $still_failed_nids = array_unique(array_merge($failed_scraping_nids, $no_ai_nids));
   
   if (!empty($still_failed_nids)) {
     $still_failed_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($still_failed_nids);
@@ -426,7 +430,7 @@ function news_extractor_cron() {
       $node->save();
       $stats['unpublished_for_failure']++;
       
-      $logger->info('Unpublished article @nid due to processing failure: @title', [
+      $logger->warning('Unpublished article with pending motivation analysis: @title (ID: @nid)', [
         '@nid' => $node->id(),
         '@title' => $node->getTitle(),
       ]);
@@ -439,28 +443,34 @@ function news_extractor_cron() {
   // Find unpublished articles older than 24 hours with processing issues
   $one_day_ago = \Drupal::time()->getRequestTime() - (24 * 60 * 60);
   
-  $old_failed_query = \Drupal::entityQuery('node')
+  // Find old articles with failed scraping
+  $old_failed_scraping_query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
     ->condition('status', 0) // Only unpublished articles
     ->condition('created', $one_day_ago, '<') // Older than 24 hours
+    ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
     ->accessCheck(FALSE);
   
-  // Same conditions as step 2 - articles with processing failures
-  $old_or_group = $old_failed_query->orConditionGroup();
-  $old_or_group->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=');
+  $old_failed_scraping_nids = $old_failed_scraping_query->execute();
   
-  // No AI analysis group for old articles
-  $old_no_ai_group = $old_failed_query->andConditionGroup();
-  $old_no_ai_group->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '<>');
-  $old_no_ai_or = $old_no_ai_group->orConditionGroup();
-  $old_no_ai_or->condition('field_ai_raw_response', NULL, 'IS NULL');
-  $old_no_ai_or->condition('field_ai_raw_response', '', '=');
-  $old_no_ai_group->condition($old_no_ai_or);
+  // Find old articles with good scraping but no AI analysis
+  $old_no_ai_query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('status', 0) // Only unpublished articles
+    ->condition('created', $one_day_ago, '<') // Older than 24 hours
+    ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '<>')
+    ->condition('field_json_scraped_article_data', '', '<>')
+    ->accessCheck(FALSE);
   
-  $old_or_group->condition($old_no_ai_group);
-  $old_failed_query->condition($old_or_group);
+  $old_ai_or_group = $old_no_ai_query->orConditionGroup();
+  $old_ai_or_group->condition('field_ai_raw_response', NULL, 'IS NULL');
+  $old_ai_or_group->condition('field_ai_raw_response', '', '=');
+  $old_no_ai_query->condition($old_ai_or_group);
   
-  $old_failed_nids = $old_failed_query->execute();
+  $old_no_ai_nids = $old_no_ai_query->execute();
+  
+  // Combine both sets of old problematic articles
+  $old_failed_nids = array_unique(array_merge($old_failed_scraping_nids, $old_no_ai_nids));
   
   if (!empty($old_failed_nids)) {
     // Limit deletions to prevent timeouts (max 50 per run)
