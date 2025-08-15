@@ -395,3 +395,117 @@
     display: none !important;
   }
 }
+
+/* === RECENT ACTIVITY TIMELINE CHART === */
+.recent-activity-timeline-chart-container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin: 20px 0;
+}
+
+.recent-activity-timeline-chart-container .chart-header {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  padding: 25px 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recent-activity-timeline-chart-container .chart-header h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.8em;
+  font-weight: 300;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.recent-activity-timeline-chart-container .chart-controls {
+  margin-top: 20px;
+}
+
+.recent-activity-timeline-chart-container .source-selector {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #333;
+  font-size: 14px;
+  min-height: 120px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.recent-activity-timeline-chart-container .source-selector:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+  background: white;
+}
+
+.recent-activity-timeline-chart-container .source-selector option {
+  background: white;
+  color: #333;
+  padding: 6px 8px;
+}
+
+.recent-activity-timeline-chart-container .source-selector option:checked {
+  background: #28a745;
+  color: white;
+}
+
+.recent-activity-timeline-chart-container canvas {
+  width: 100% !important;
+  height: auto !important;
+  background: #fafafa;
+  border-radius: 0 0 12px 12px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.recent-activity-chart-empty {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 20px 0;
+  border: 2px dashed #dee2e6;
+}
+
+.recent-activity-chart-empty p {
+  color: #6c757d;
+  font-size: 1.1em;
+  margin: 0;
+}
+
+/* Activity Chart Mobile Responsiveness */
+@media (max-width: 768px) {
+  .recent-activity-timeline-chart-container .chart-header {
+    padding: 20px;
+  }
+  
+  .recent-activity-timeline-chart-container .chart-header h3 {
+    font-size: 1.5em;
+    margin-bottom: 15px;
+  }
+  
+  .recent-activity-timeline-chart-container .source-selector {
+    max-width: none;
+    width: 100%;
+    min-height: 100px;
+  }
+  
+  .recent-activity-timeline-chart-container canvas {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .recent-activity-timeline-chart-container .chart-header {
+    padding: 15px;
+  }
+  
+  .recent-activity-timeline-chart-container .chart-header h3 {
+    font-size: 1.3em;
+    margin-bottom: 10px;
+  }
+}

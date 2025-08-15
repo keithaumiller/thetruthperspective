@@ -39,6 +39,15 @@ function newsmotivationmetrics_theme($existing, $type, $theme, $path) {
       ],
       'template' => 'news-sources-directory',
     ],
+    'recent_activity_timeline_chart' => [
+      'variables' => [
+        'chart_data' => NULL,
+        'chart_id' => NULL,
+        'config' => NULL,
+        'content' => NULL,
+      ],
+      'template' => 'recent-activity-timeline-chart',
+    ],
   ];
 }
 

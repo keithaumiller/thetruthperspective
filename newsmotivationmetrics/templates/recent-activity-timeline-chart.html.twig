@@ -1,0 +1,31 @@
+{#
+/**
+ * @file
+ * Template for Recent Activity Timeline Chart Block
+ *
+ * Variables:
+ * - chart_data: The chart configuration and data
+ * - chart_id: Unique identifier for the chart
+ * - config: Block configuration
+ * - content: The chart content
+ */
+#}
+
+{%
+  set classes = [
+    'recent-activity-timeline-chart-block',
+    'news-metrics-block'
+  ]
+%}
+
+<div{{ attributes.addClass(classes) }}>
+  {% if content %}
+    {{ content }}
+  {% else %}
+    <div class="recent-activity-chart-empty">
+      <h3>📈 Recent Activity Timeline</h3>
+      <p>No article data available for chart display.</p>
+      <p><small>Articles will appear here once content processing begins.</small></p>
+    </div>
+  {% endif %}
+</div>
