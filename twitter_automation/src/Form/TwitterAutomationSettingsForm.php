@@ -75,8 +75,8 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Bearer Token'),
       '#default_value' => $config->get('bearer_token'),
-      '#description' => $this->t('Twitter API v2 Bearer Token from your Twitter Developer account.'),
-      '#required' => TRUE,
+      '#description' => $this->t('Twitter API v2 Bearer Token from your Twitter Developer account. <strong>Leave empty to test content generation without posting to Twitter.</strong>'),
+      '#required' => FALSE,
       '#attributes' => ['autocomplete' => 'off'],
     ];
 

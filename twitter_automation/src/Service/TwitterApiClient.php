@@ -127,6 +127,7 @@ class TwitterApiClient {
     $bearer_token = $config->get('bearer_token');
     
     if (empty($bearer_token)) {
+      $this->logger->warning('No Bearer Token configured - Twitter API connection cannot be tested');
       return FALSE;
     }
 
