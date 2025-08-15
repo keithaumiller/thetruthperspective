@@ -3,5 +3,7 @@
   <img src="{{ node.field_external_image_url.0.uri }}" alt="{{ node.title.value }}" />
 {% endif %}
 
+{# Display the article title #}
+<h1 class="article-title">{{ node.title.value }}</h1>
 
 {{ content }}
