@@ -6,7 +6,7 @@ use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface;
+use Drupal\newsmotivationmetrics\Service\Interface\ActivityTimelineChartServiceInterface;
 
 /**
  * Provides a 'Recent Activity Timeline Chart' Block.
@@ -20,11 +20,11 @@ use Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface;
 class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFactoryPluginInterface {
 
   /**
-   * The metrics data service.
+   * The activity timeline chart service.
    *
-   * @var \Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface
+   * @var \Drupal\newsmotivationmetrics\Service\Interface\ActivityTimelineChartServiceInterface
    */
-  protected $metricsDataService;
+  protected $activityTimelineChartService;
 
   /**
    * Constructs a new RecentActivityTimelineChartBlock.
@@ -33,10 +33,10 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
     array $configuration,
     $plugin_id,
     $plugin_definition,
-    MetricsDataServiceInterface $metrics_data_service
+    ActivityTimelineChartServiceInterface $activity_timeline_chart_service
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->metricsDataService = $metrics_data_service;
+    $this->activityTimelineChartService = $activity_timeline_chart_service;
   }
 
   /**
@@ -47,7 +47,7 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('newsmotivationmetrics.metrics_data_service')
+      $container->get('newsmotivationmetrics.activity_timeline_chart_service')
     );
   }
 
@@ -120,243 +120,20 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
   public function build() {
     $config = $this->getConfiguration();
     
-    // Get the daily article data
-    $daily_articles = $this->metricsDataService->getDailyArticlesBySource();
-    
-    if (empty($daily_articles)) {
-      return [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['recent-activity-chart-empty']],
-        'message' => [
-          '#markup' => '<p>No recent activity data available for chart display.</p>',
-        ],
-      ];
-    }
-
-    // Prepare chart data
-    $chart_data = $this->prepareChartData($daily_articles, $config);
-    
-    // Generate unique chart ID
-    $chart_id = 'recent-activity-timeline-chart-' . substr(md5(microtime()), 0, 8);
-    
-    $build = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['recent-activity-timeline-chart-container']],
-    ];
-
-    // Chart title and controls
-    $build['header'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-header']],
-      'title' => [
-        '#markup' => '<h3>📈 Recent Activity Timeline (Last ' . $config['days_to_show'] . ' Days)</h3>',
-      ],
-      'description' => [
-        '#type' => 'html_tag',
-        '#tag' => 'p',
-        '#value' => 'This chart shows article publication activity for the top news sources over the past ' . $config['days_to_show'] . ' days. ' . ($config['show_unpublished'] ? 'Solid lines = Published articles, Dashed lines = Articles being processed.' : 'Only published articles are shown.'),
-        '#attributes' => ['class' => ['chart-description']],
-      ],
-    ];
-
-    // Chart controls
-    $build['controls'] = [
-      '#type' => 'details',
-      '#title' => t('📊 Chart Controls'),
-      '#open' => FALSE,
-      '#attributes' => ['class' => ['chart-controls-section']],
-    ];
-
-    $build['controls']['controls_container'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-controls']],
-    ];
-
-    $build['controls']['controls_container']['selector_group'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['control-group']],
-    ];
-
-    $build['controls']['controls_container']['selector_group']['label'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'label',
-      '#value' => t('Select News Sources (showing top ' . count($chart_data['source_options']) . ' by article count):'),
-      '#attributes' => [
-        'for' => 'activity-source-selector-' . substr($chart_id, -8),
-        'class' => ['control-label'],
-      ],
-    ];
-
-    $build['controls']['controls_container']['selector_group']['selector'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Filter Sources'),
-      '#title_display' => 'invisible',
-      '#multiple' => TRUE,
-      '#size' => min(count($chart_data['source_options']), 8),
-      '#options' => $chart_data['source_options'],
-      '#attributes' => [
-        'id' => 'activity-source-selector-' . substr($chart_id, -8),
-        'class' => ['form-select', 'source-selector'],
-        'data-chart-target' => $chart_id,
-        'multiple' => 'multiple',
-        'size' => min(count($chart_data['source_options']), 8),
-      ],
-      '#default_value' => array_keys($chart_data['source_options']),
-    ];
-
-    $build['controls']['controls_container']['help_text'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'div',
-      '#value' => '💡 Each source shows article publication activity over time. ' . ($config['show_unpublished'] ? '<strong>Solid lines</strong> show published articles, <strong>dashed lines</strong> show articles currently being processed. ' : '') . 'Use Ctrl+Click to select multiple sources.',
-      '#attributes' => ['class' => ['help-text', 'text-muted', 'small']],
-    ];
-
-    // Chart canvas
-    $build['chart'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'canvas',
-      '#attributes' => [
-        'id' => $chart_id,
-        'class' => ['recent-activity-timeline-chart'],
-        'width' => 800,
-        'height' => 400,
-        'data-chart-type' => 'activity-timeline',
-        'aria-label' => 'Recent Activity Timeline Chart',
-      ],
-    ];
-
-    // Add Chart.js data to drupalSettings
-    $build['#attached']['drupalSettings']['newsmotivationmetrics_activity'][$chart_id] = $chart_data;
-    
-    // Attach JavaScript and CSS
-    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-style';
-    $build['#attached']['library'][] = 'newsmotivationmetrics/activity-timeline-chart';
-
-    return $build;
-  }
-
-  /**
-   * Prepare chart data for JavaScript consumption.
-   */
-  private function prepareChartData(array $daily_articles, array $config): array {
-    $timeline_data = [];
-    $all_sources = [];
-    $date_labels = [];
-    
-    // Sort by date ascending for timeline
-    uksort($daily_articles, function($a, $b) {
-      return strtotime($a) - strtotime($b);
-    });
-    
-    // Limit to configured days
-    $daily_articles = array_slice($daily_articles, -$config['days_to_show'], $config['days_to_show'], true);
-    
-    // Collect all sources and dates
-    foreach ($daily_articles as $date => $day_data) {
-      $date_labels[] = $date;
-      foreach ($day_data['sources'] as $source => $counts) {
-        if (!in_array($source, $all_sources)) {
-          $all_sources[] = $source;
-        }
-      }
-    }
-    
-    // Sort sources by total article count
-    $source_totals = [];
-    foreach ($all_sources as $source) {
-      $total = 0;
-      foreach ($daily_articles as $day_data) {
-        if (isset($day_data['sources'][$source])) {
-          $total += $day_data['sources'][$source]['total'];
-        }
-      }
-      $source_totals[$source] = $total;
-    }
-    arsort($source_totals);
-    
-    // Limit to top sources
-    $top_sources = array_slice(array_keys($source_totals), 0, $config['top_sources_limit']);
-    
-    // Create datasets for each source
-    $datasets = [];
-    $colors = [
-      '#DC2626', '#2563EB', '#16A34A', '#CA8A04', '#7C3AED', '#DC2626',
-      '#0891B2', '#BE185D', '#9A3412', '#4338CA', '#059669', '#D97706'
-    ];
-    
-    foreach ($top_sources as $index => $source) {
-      $published_data = [];
-      $unpublished_data = [];
-      
-      foreach ($date_labels as $date) {
-        $day_data = $daily_articles[$date] ?? ['sources' => []];
-        $source_data = $day_data['sources'][$source] ?? ['published' => 0, 'unpublished' => 0];
-        
-        $published_data[] = [
-          'x' => $date,
-          'y' => $source_data['published']
-        ];
-        
-        if ($config['show_unpublished']) {
-          $unpublished_data[] = [
-            'x' => $date,
-            'y' => $source_data['unpublished']
-          ];
-        }
-      }
-      
-      $base_color = $colors[$index % count($colors)];
-      
-      // Published articles dataset
-      $datasets[] = [
-        'label' => $source . ' (Published)',
-        'data' => $published_data,
-        'borderColor' => $base_color,
-        'backgroundColor' => $base_color . '20',
-        'borderWidth' => 2,
-        'fill' => false,
-        'tension' => 0.1,
-        'pointRadius' => 3,
-        'pointHoverRadius' => 5,
-      ];
-      
-      // Unpublished articles dataset (if enabled)
-      if ($config['show_unpublished'] && !empty(array_filter($unpublished_data, fn($point) => $point['y'] > 0))) {
-        $datasets[] = [
-          'label' => $source . ' (Processing)',
-          'data' => $unpublished_data,
-          'borderColor' => $base_color,
-          'backgroundColor' => $base_color . '10',
-          'borderWidth' => 1,
-          'borderDash' => [5, 5],
-          'fill' => false,
-          'tension' => 0.1,
-          'pointRadius' => 2,
-          'pointHoverRadius' => 4,
-        ];
-      }
-    }
-    
-    // Create source selector options
-    $source_options = [];
-    foreach ($top_sources as $source) {
-      $source_options[$source] = $source . ' (' . $source_totals[$source] . ' articles)';
-    }
-    
-    return [
-      'timelineData' => $datasets,
-      'labels' => $date_labels,
-      'source_options' => $source_options,
-      'topSources' => $top_sources,
-      'config' => $config,
-      'debugInfo' => [
-        'dataPoints' => count($date_labels),
-        'sourceCount' => count($top_sources),
-        'timestamp' => time(),
-        'date' => date('Y-m-d H:i:s'),
-        'show_unpublished' => $config['show_unpublished'],
-      ],
-    ];
+    return $this->activityTimelineChartService->buildActivityTimelineChart([
+      'canvas_id' => 'recent-activity-timeline-chart-' . substr(md5(microtime()), 0, 8),
+      'title' => 'Recent Activity Timeline',
+      'show_controls' => TRUE,
+      'show_legend' => TRUE,
+      'show_title' => TRUE,
+      'chart_height' => 400,
+      'days_back' => $config['days_to_show'],
+      'source_limit' => $config['top_sources_limit'],
+      'show_unpublished' => $config['show_unpublished'],
+      'container_classes' => ['timeline-chart-container', 'activity-timeline', 'recent-activity-timeline-chart-block'],
+      'library' => 'newsmotivationmetrics/activity-timeline-chart',
+      'js_behavior' => 'activityTimelineChart',
+    ]);
   }
 
   /**

@@ -72,7 +72,7 @@ class NewsMotivationTimelineChartBlock extends BlockBase implements ContainerFac
       'chart_height' => 400,
       'days_back' => 30,
       'term_limit' => 10,
-      'container_classes' => ['news-motivation-timeline-section'],
+      'container_classes' => ['timeline-chart-container', 'motivation-timeline', 'news-motivation-timeline-section'],
       'library' => 'newsmotivationmetrics/news-motivation-timeline',
       'js_behavior' => 'newsMotivationTimelineChart',
     ]);

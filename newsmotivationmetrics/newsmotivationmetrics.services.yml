@@ -23,6 +23,10 @@ services:
     class: Drupal\newsmotivationmetrics\Service\NewsSourceTimelineChartService
     arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
 
+  newsmotivationmetrics.activity_timeline_chart_service:
+    class: Drupal\newsmotivationmetrics\Service\ActivityTimelineChartService
+    arguments: ['@newsmotivationmetrics.metrics_data_service', '@logger.factory']
+
   newsmotivationmetrics.news_sources_commands:
     class: Drupal\newsmotivationmetrics\Commands\NewsSourcesCommands
     arguments: ['@database']

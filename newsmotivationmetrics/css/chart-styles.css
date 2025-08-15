@@ -3,43 +3,27 @@
  * The Truth Perspective Analytics Dashboard
  */
 
-/* === FULL-WIDTH LAYOUT SUPPORT === */
-.news-motivation-timeline-section,
-.news-source-timeline-section,
-.recent-activity-timeline-chart-block,
-.news-metrics-header,
-.metrics-overview-sections {
+/* === UNIFIED TIMELINE CHART CONTAINERS === */
+.timeline-chart-container {
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  padding: 30px;
-  margin: 20px auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin: 20px 0;
   width: 100%;
   box-sizing: border-box;
 }
 
 /* Ensure content doesn't touch edges on very wide screens */
-.news-motivation-timeline-section,
-.news-source-timeline-section,
-.recent-activity-timeline-chart-block,
-.news-metrics-header,
-.metrics-overview-sections {
+.timeline-chart-container {
   max-width: 1400px;
   margin-left: auto;
   margin-right: auto;
 }
 
 /* Full-width override when specifically applied */
-.metrics-fullwidth-page .news-motivation-timeline-section,
-.metrics-fullwidth-page .news-source-timeline-section,
-.metrics-fullwidth-page .recent-activity-timeline-chart-block,
-.metrics-fullwidth-page .news-metrics-header,
-.metrics-fullwidth-page .metrics-overview-sections,
-.page--metrics-fullwidth .news-motivation-timeline-section,
-.page--metrics-fullwidth .news-source-timeline-section,
-.page--metrics-fullwidth .recent-activity-timeline-chart-block,
-.page--metrics-fullwidth .news-metrics-header,
-.page--metrics-fullwidth .metrics-overview-sections {
+.metrics-fullwidth-page .timeline-chart-container,
+.page--metrics-fullwidth .timeline-chart-container {
   max-width: none;
   margin-left: 0;
   margin-right: 0;
@@ -48,12 +32,39 @@
   margin-bottom: 0;
 }
 
+/* === CHART HEADER SECTION === */
+.timeline-chart-container .chart-header {
+  background: #f8f9fa;
+  color: #333;
+  padding: 25px 30px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.timeline-chart-container .chart-header h2,
+.timeline-chart-container .chart-header h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.8em;
+  font-weight: 300;
+  color: #333;
+}
+
+.timeline-chart-container .chart-description {
+  margin: 10px 0;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
 /* === CHART CONTROLS === */
+.chart-controls-section {
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+}
+
 .chart-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
-  margin-bottom: 30px;
+  padding: 20px 30px;
   align-items: flex-start;
 }
 
@@ -62,6 +73,7 @@
   min-width: 300px;
 }
 
+.control-group .control-label,
 .control-group label {
   display: block;
   font-weight: 600;
@@ -69,9 +81,10 @@
   color: #333;
 }
 
-.term-selector {
+.term-selector,
+.source-selector {
   width: 100%;
-  min-height: 200px;
+  min-height: 120px;
   border: 2px solid #ddd;
   border-radius: 6px;
   padding: 8px;
@@ -79,60 +92,135 @@
   background: #fff;
 }
 
-.term-selector option {
+.term-selector option,
+.source-selector option {
   padding: 4px 8px;
   border-radius: 3px;
 }
 
-.term-selector option:checked {
+.term-selector option:checked,
+.source-selector option:checked {
   background: #007cba;
   color: white;
 }
 
-.control-buttons {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.btn {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  text-decoration: none;
-  display: inline-block;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #5a6268;
-  transform: translateY(-1px);
+.help-text {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #6c757d;
+  line-height: 1.4;
 }
 
 /* === CHART CONTAINER === */
 .chart-container {
   position: relative;
-  margin: 20px 0;
+  padding: 20px 30px;
   background: #fafafa;
-  border-radius: 8px;
-  padding: 20px;
   width: 100%;
   box-sizing: border-box;
 }
 
-.chart-section-title {
-  color: #333;
-  font-size: 1.8em;
-  font-weight: 300;
-  margin-bottom: 20px;
-  text-align: center;
+.chart-container canvas {
+  width: 100% !important;
+  height: auto !important;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+/* === CHART ACTIONS === */
+.chart-actions {
+  display: flex;
+  gap: 10px;
+  padding: 15px 30px;
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  justify-content: flex-start;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s ease;
+  font-size: 0.9em;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  border-color: #545b62;
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background: transparent;
+  color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-outline:hover {
+  background: #6c757d;
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* === CHART TYPE MODIFIERS === */
+.timeline-chart-container.activity-timeline .chart-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.timeline-chart-container.activity-timeline .chart-header h2,
+.timeline-chart-container.activity-timeline .chart-header h3 {
+  color: white;
+}
+
+.timeline-chart-container.motivation-timeline .chart-header {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.timeline-chart-container.motivation-timeline .chart-header h2,
+.timeline-chart-container.motivation-timeline .chart-header h3 {
+  color: white;
+}
+
+.timeline-chart-container.source-timeline .chart-header {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.timeline-chart-container.source-timeline .chart-header h2,
+.timeline-chart-container.source-timeline .chart-header h3 {
+  color: white;
+}
+
+/* === LEGACY SUPPORT === */
+/* Support for existing class names during transition */
+.news-motivation-timeline-section,
+.news-source-timeline-section,
+.recent-activity-timeline-chart-container {
+  /* Inherit from unified container */
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin: 20px 0;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* === NEWS METRICS HEADER === */
@@ -143,6 +231,9 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 12px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .news-metrics-header h1 {
@@ -162,7 +253,12 @@
 
 /* === METRICS OVERVIEW SECTIONS === */
 .metrics-overview-sections {
-  margin: 40px 0;
+  margin: 40px auto;
+  max-width: 1400px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 30px;
 }
 
 .metrics-overview-sections details {
@@ -187,10 +283,11 @@
 
 /* === METHODOLOGY EXPLANATION === */
 .methodology-explanation {
-  margin: 40px 0;
+  margin: 40px auto;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  max-width: 1400px;
 }
 
 .methodology-explanation summary {
@@ -225,11 +322,19 @@
 
 /* === RESPONSIVE DESIGN === */
 @media (max-width: 768px) {
-  .news-motivation-timeline-section,
+  .timeline-chart-container,
   .news-metrics-header,
-  .metrics-overview-sections {
+  .metrics-overview-sections,
+  .methodology-explanation {
     margin: 10px 0;
-    padding: 20px;
+    border-radius: 8px;
+  }
+  
+  .timeline-chart-container .chart-header,
+  .chart-controls,
+  .chart-container,
+  .chart-actions {
+    padding: 15px 20px;
   }
   
   .chart-controls {
@@ -251,22 +356,28 @@
   .methodology-grid {
     grid-template-columns: 1fr;
   }
+  
+  .chart-actions {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 480px) {
   .btn {
-    padding: 8px 16px;
-    font-size: 0.9em;
+    padding: 6px 12px;
+    font-size: 0.85em;
   }
   
-  .control-buttons {
-    flex-direction: column;
+  .timeline-chart-container .chart-header h2,
+  .timeline-chart-container .chart-header h3 {
+    font-size: 1.4em;
   }
 }
 
 /* === ACCESSIBILITY IMPROVEMENTS === */
 .btn:focus,
-.term-selector:focus {
+.term-selector:focus,
+.source-selector:focus {
   outline: 2px solid #667eea;
   outline-offset: 2px;
 }
@@ -303,12 +414,12 @@
 
 /* === PRINT STYLES === */
 @media print {
-  .chart-controls,
-  .control-buttons {
+  .chart-controls-section,
+  .chart-actions {
     display: none;
   }
   
-  .news-motivation-timeline-section {
+  .timeline-chart-container {
     box-shadow: none;
     border: 1px solid #ddd;
   }
@@ -317,13 +428,16 @@
     background: #f8f9fa !important;
     color: #333 !important;
   }
+  
+  .timeline-chart-container .chart-header {
+    background: #f8f9fa !important;
+    color: #333 !important;
+  }
 }
 
 /* === MOBILE LANDSCAPE ORIENTATION FOR TIMELINE CHART === */
-/* Portrait mode handling with JavaScript-controlled visibility */
 @media (max-width: 768px) and (orientation: portrait) {
-  /* When JavaScript adds portrait-mode class, enhance the styling */
-  .news-motivation-timeline-section.portrait-mode .chart-container {
+  .timeline-chart-container.motivation-timeline.portrait-mode .chart-container {
     position: relative;
     min-height: 200px;
     display: flex;
@@ -334,7 +448,7 @@
     border-radius: 8px;
   }
   
-  .news-motivation-timeline-section.portrait-mode .chart-container::before {
+  .timeline-chart-container.motivation-timeline.portrait-mode .chart-container::before {
     content: '📱↻\A\ASwitch to landscape mode to view the timeline chart\A\ARotate your device for the best chart viewing experience';
     white-space: pre-line;
     text-align: center;
@@ -345,12 +459,11 @@
     max-width: 280px;
   }
   
-  /* Fallback for when JavaScript hasn't loaded yet */
-  .news-motivation-timeline-section:not(.portrait-mode) .chart-container canvas {
+  .timeline-chart-container.motivation-timeline:not(.portrait-mode) .chart-container canvas {
     display: none;
   }
   
-  .news-motivation-timeline-section:not(.portrait-mode) .chart-container {
+  .timeline-chart-container.motivation-timeline:not(.portrait-mode) .chart-container {
     position: relative;
     min-height: 200px;
     display: flex;
@@ -361,7 +474,7 @@
     border-radius: 8px;
   }
   
-  .news-motivation-timeline-section:not(.portrait-mode) .chart-container::before {
+  .timeline-chart-container.motivation-timeline:not(.portrait-mode) .chart-container::before {
     content: '📱↻\A\ASwitch to landscape mode to view the timeline chart\A\ARotate your device for the best chart viewing experience';
     white-space: pre-line;
     text-align: center;
@@ -372,147 +485,51 @@
     max-width: 280px;
   }
   
-  /* Hide controls in portrait mode regardless */
-  .news-motivation-timeline-section .chart-controls-section {
+  .timeline-chart-container.motivation-timeline .chart-controls-section {
     display: none;
   }
   
-  /* Keep the chart title visible */
-  .news-motivation-timeline-section .chart-section-title {
+  .timeline-chart-container.motivation-timeline .chart-section-title {
     display: block;
     color: #495057;
     margin-bottom: 20px;
   }
 }
 
-/* Ensure everything is visible in landscape */
 @media (max-width: 768px) and (orientation: landscape) {
-  .news-motivation-timeline-section .chart-container canvas {
+  .timeline-chart-container.motivation-timeline .chart-container canvas {
     display: block !important;
   }
   
-  .news-motivation-timeline-section .chart-controls-section {
+  .timeline-chart-container.motivation-timeline .chart-controls-section {
     display: block !important;
   }
   
-  .news-motivation-timeline-section .chart-container::before {
+  .timeline-chart-container.motivation-timeline .chart-container::before {
     display: none !important;
   }
   
-  .news-motivation-timeline-section.portrait-mode .chart-container::before {
+  .timeline-chart-container.motivation-timeline.portrait-mode .chart-container::before {
     display: none !important;
   }
 }
 
-/* === RECENT ACTIVITY TIMELINE CHART === */
-.recent-activity-timeline-chart-container {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  margin: 20px 0;
-}
-
-.recent-activity-timeline-chart-container .chart-header {
-  background: #f8f9fa;
-  color: #333;
-  padding: 25px 30px;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.recent-activity-timeline-chart-container .chart-header h3 {
-  margin: 0 0 20px 0;
-  font-size: 1.8em;
-  font-weight: 300;
-  color: #333;
-}
-
-.recent-activity-timeline-chart-container .chart-controls {
-  margin-top: 20px;
-}
-
-.recent-activity-timeline-chart-container .source-selector {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 8px 12px;
-  color: #333;
-  font-size: 14px;
-  min-height: 120px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.recent-activity-timeline-chart-container .source-selector:focus {
-  outline: 2px solid #007cba;
-  outline-offset: 2px;
-  border-color: #007cba;
-}
-
-.recent-activity-timeline-chart-container .source-selector option {
-  background: white;
-  color: #333;
-  padding: 6px 8px;
-}
-
-.recent-activity-timeline-chart-container .source-selector option:checked {
-  background: #007cba;
-  color: white;
-}
-
-.recent-activity-timeline-chart-container canvas {
-  width: 100% !important;
-  height: auto !important;
-  background: #fafafa;
-  border-radius: 0 0 12px 12px;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.recent-activity-chart-empty {
+/* === EMPTY CHART STATES === */
+.chart-empty {
   text-align: center;
   padding: 60px 20px;
   background: #f8f9fa;
-  border-radius: 12px;
-  margin: 20px 0;
   border: 2px dashed #dee2e6;
 }
 
-.recent-activity-chart-empty p {
+.chart-no-data h3 {
+  color: #6c757d;
+  font-size: 1.3em;
+  margin-bottom: 10px;
+}
+
+.chart-no-data p {
   color: #6c757d;
   font-size: 1.1em;
   margin: 0;
-}
-
-/* Activity Chart Mobile Responsiveness */
-@media (max-width: 768px) {
-  .recent-activity-timeline-chart-container .chart-header {
-    padding: 20px;
-  }
-  
-  .recent-activity-timeline-chart-container .chart-header h3 {
-    font-size: 1.5em;
-    margin-bottom: 15px;
-  }
-  
-  .recent-activity-timeline-chart-container .source-selector {
-    max-width: none;
-    width: 100%;
-    min-height: 100px;
-  }
-  
-  .recent-activity-timeline-chart-container canvas {
-    padding: 15px;
-  }
-}
-
-@media (max-width: 480px) {
-  .recent-activity-timeline-chart-container .chart-header {
-    padding: 15px;
-  }
-  
-  .recent-activity-timeline-chart-container .chart-header h3 {
-    font-size: 1.3em;
-    margin-bottom: 10px;
-  }
 }

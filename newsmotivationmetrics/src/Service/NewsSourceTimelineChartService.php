@@ -81,84 +81,34 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
 
     // Chart title (if enabled)
     if ($options['show_title'] && !empty($options['title'])) {
-      $build['title'] = [
-        '#type' => 'html_tag',
-        '#tag' => 'h2',
-        '#value' => $options['title'],
-        '#attributes' => ['class' => ['chart-section-title']],
+      $build['header'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['chart-header']],
+        'title' => [
+          '#type' => 'html_tag',
+          '#tag' => 'h2',
+          '#value' => $options['title'],
+          '#attributes' => ['class' => ['chart-section-title']],
+        ],
+        'description' => [
+          '#type' => 'html_tag',
+          '#tag' => 'p',
+          '#value' => 'This chart shows credibility scores, bias ratings, and sentiment trends for the top news sources (by article count) over the past ' . $options['days_back'] . ' days. Colors are assigned by selection order: 1st source=Red shades, 2nd source=Blue shades, 3rd source=Green shades.',
+          '#attributes' => ['class' => ['chart-description']],
+        ],
       ];
     }
-
-    // Status and description
-    $build['status'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-status-container']],
-    ];
-
-    $build['status']['message'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'div',
-      '#value' => '📊 Loading news source quality trends...',
-      '#attributes' => [
-        'class' => ['chart-status-message'],
-        'id' => $options['canvas_id'] === 'news-source-timeline-chart' ? 'chart-status' : 'chart-status-' . substr($options['canvas_id'], -8),
-      ],
-    ];
-
-    $build['description'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'p',
-      '#value' => 'This chart shows credibility scores, bias ratings, and sentiment trends for the top news sources (by article count) over the past ' . $options['days_back'] . ' days. Colors are assigned by selection order: 1st source=Red shades, 2nd source=Blue shades, 3rd source=Green shades.',
-      '#attributes' => ['class' => ['chart-description']],
-    ];
 
     // Chart controls (if enabled)
     if ($options['show_controls']) {
       $build['controls'] = $this->buildChartControls($extended_sources, $options['canvas_id']);
     }
 
-    // Chart canvas
-    $build['chart_container'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-container']],
-    ];
+    // Chart container and canvas
+    $build['chart_container'] = $this->buildChartContainer($options, $chart_data);
 
-    $build['chart_container']['canvas'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'canvas',
-      '#attributes' => [
-        'id' => $options['canvas_id'],
-        'class' => ['news-source-timeline-chart'],
-        'style' => 'max-width: 100%; height: ' . $options['chart_height'] . 'px; max-height: 500px;',
-        'aria-label' => 'News Source Quality Trends - Interactive Timeline Chart',
-      ],
-    ];
-
-    // Chart reset button
-    $build['chart_container']['reset_button'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'button',
-      '#value' => '🔄 Reset to Top ' . $options['source_limit'],
-      '#attributes' => [
-        'id' => $options['canvas_id'] === 'news-source-timeline-chart' ? 'reset-chart' : 'reset-chart-' . substr($options['canvas_id'], -8),
-        'class' => ['btn', 'btn-sm', 'btn-secondary', 'chart-reset-button'],
-        'style' => 'margin-top: 10px; margin-right: 5px;',
-        'title' => 'Reset chart to show top ' . $options['source_limit'] . ' news sources',
-      ],
-    ];
-
-    // Chart clear button
-    $build['chart_container']['clear_button'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'button',
-      '#value' => '🧹 Clear All',
-      '#attributes' => [
-        'id' => $options['canvas_id'] === 'news-source-timeline-chart' ? 'clear-chart' : 'clear-chart-' . substr($options['canvas_id'], -8),
-        'class' => ['btn', 'btn-sm', 'btn-outline-secondary', 'chart-clear-button'],
-        'style' => 'margin-top: 10px;',
-        'title' => 'Clear all selected sources',
-      ],
-    ];
+    // Chart actions (reset/clear buttons)
+    $build['actions'] = $this->buildChartActions($options['canvas_id'], $options['source_limit']);
 
     // Attach JavaScript settings and libraries with isolated namespace
     $build['#attached']['drupalSettings']['newsmotivationmetrics_sources'] = $this->buildJavaScriptSettings($chart_data, $options, $extended_sources);
@@ -256,6 +206,76 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
     ];
 
     return $controls;
+  }
+
+  /**
+   * Build chart container with canvas element.
+   *
+   * @param array $options
+   *   Chart options array.
+   * @param array $chart_data
+   *   Chart data array.
+   *
+   * @return array
+   *   Render array for chart container.
+   */
+  protected function buildChartContainer(array $options, array $chart_data): array {
+    return [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['chart-container']],
+      'canvas' => [
+        '#type' => 'html_tag',
+        '#tag' => 'canvas',
+        '#attributes' => [
+          'id' => $options['canvas_id'],
+          'class' => ['news-source-timeline-chart'],
+          'style' => 'max-width: 100%; height: ' . $options['chart_height'] . 'px; max-height: 500px;',
+          'aria-label' => 'News Source Quality Trends - Interactive Timeline Chart',
+        ],
+      ],
+    ];
+  }
+
+  /**
+   * Build chart action buttons.
+   *
+   * @param string $canvas_id
+   *   The canvas element ID.
+   * @param int $source_limit
+   *   The default number of sources to show.
+   *
+   * @return array
+   *   Render array for chart actions.
+   */
+  protected function buildChartActions(string $canvas_id, int $source_limit): array {
+    $unique_id = substr(md5($canvas_id), 0, 8);
+
+    return [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['chart-actions']],
+      'reset' => [
+        '#type' => 'html_tag',
+        '#tag' => 'button',
+        '#value' => t('🔄 Reset to Top ' . $source_limit),
+        '#attributes' => [
+          'id' => 'reset-chart-' . $unique_id,
+          'class' => ['btn', 'btn-secondary', 'chart-reset-btn'],
+          'type' => 'button',
+          'data-canvas-id' => $canvas_id,
+        ],
+      ],
+      'clear' => [
+        '#type' => 'html_tag',
+        '#tag' => 'button',
+        '#value' => t('🧹 Clear All'),
+        '#attributes' => [
+          'id' => 'clear-chart-' . $unique_id,
+          'class' => ['btn', 'btn-outline', 'chart-clear-btn'],
+          'type' => 'button',
+          'data-canvas-id' => $canvas_id,
+        ],
+      ],
+    ];
   }
 
   /**
