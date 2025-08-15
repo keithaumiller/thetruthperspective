@@ -6,19 +6,8 @@
 (function (Drupal, drupalSettings) {
   'use strict';
 
-  console.log('=== Recent Activity Timeline Chart Script Loading ===');
-  console.log('Drupal object:', typeof Drupal);
-  console.log('drupalSettings object:', typeof drupalSettings);
-  console.log('Chart object:', typeof Chart);
-  console.log('=== Recent Activity Chart Script Loaded Successfully ===');
-
   Drupal.behaviors.recentActivityTimelineChart = {
     attach: function (context, settings) {
-      console.log('=== Recent Activity Timeline Chart Behavior Attach Called ===');
-      console.log('Context type:', typeof context);
-      console.log('Context element:', context);
-      console.log('Settings keys:', Object.keys(settings));
-      
       // Check if Chart.js is loaded
       if (typeof Chart === 'undefined') {
         console.error('Chart.js is not loaded for Recent Activity Timeline Chart');
@@ -26,13 +15,9 @@
       }
 
       const charts = context.querySelectorAll('.recent-activity-timeline-chart');
-      console.log('Found', charts.length, 'Recent Activity chart canvases to process');
       
       charts.forEach(function(canvas) {
-        console.log('✅ Processing Recent Activity canvas with ID:', canvas.id);
-        
         if (canvas.getAttribute('data-chart-initialized')) {
-          console.log('Skipping already initialized Recent Activity canvas:', canvas.id);
           return;
         }
         
@@ -261,7 +246,7 @@
         resizeObserver.observe(canvas.parentElement);
       }
       
-      console.log('Recent Activity Timeline Chart created successfully:', canvas.id);
+      console.log('Recent Activity Timeline Chart created successfully with', config.data.datasets.length, 'datasets');
       return chart;
       
     } catch (error) {
@@ -281,60 +266,41 @@
         return;
       }
 
-      // Source toggle functionality
-      const sourceToggles = container.querySelectorAll('.source-toggle');
-      if (sourceToggles.length === 0) {
-        console.warn('No source toggles found in Recent Activity Timeline Chart');
+      // Source toggle functionality - look for select elements with activity-source-selector prefix
+      const sourceSelectors = container.querySelectorAll('select[id^="activity-source-selector"]');
+      if (sourceSelectors.length === 0) {
+        console.warn('No source selectors found in Recent Activity Timeline Chart');
         return;
       }
 
-      const canvas = container.querySelector('canvas');
-      if (!canvas || !canvas.chartInstance) {
-        console.error('Canvas or chart instance not found for source filtering');
-        return;
-      }
+      sourceSelectors.forEach(selector => {
+        const chartTarget = selector.getAttribute('data-chart-target');
+        const canvas = container.querySelector(`canvas#${chartTarget}`);
+        
+        if (!canvas || !canvas.chartInstance) {
+          console.error('Canvas or chart instance not found for source filtering:', chartTarget);
+          return;
+        }
 
-      const chart = canvas.chartInstance;
+        const chart = canvas.chartInstance;
 
-      sourceToggles.forEach(toggle => {
-        toggle.addEventListener('change', function() {
-          const sourceName = this.dataset.source;
-          const isVisible = this.checked;
+        selector.addEventListener('change', function() {
+          const selectedSources = Array.from(this.selectedOptions).map(option => option.value);
           
-          if (!sourceName) {
-            console.warn('Source name not found in toggle element');
-            return;
-          }
-
-          // Find datasets for this source
-          let datasetsUpdated = false;
+          // Hide/show datasets based on selected sources
           chart.data.datasets.forEach((dataset, index) => {
-            if (dataset.label && dataset.label.includes(sourceName)) {
-              const meta = chart.getDatasetMeta(index);
-              meta.hidden = !isVisible;
-              datasetsUpdated = true;
-            }
+            const meta = chart.getDatasetMeta(index);
+            const sourceName = dataset.label.replace(/ \(Published\)| \(Processing\)/, '');
+            
+            meta.hidden = !selectedSources.includes(sourceName);
           });
 
-          if (datasetsUpdated) {
-            chart.update();
-            console.log(`Updated visibility for source: ${sourceName} to ${isVisible ? 'visible' : 'hidden'}`);
-          } else {
-            console.warn(`No datasets found for source: ${sourceName}`);
-          }
+          chart.update();
+          console.log(`Updated visibility for selected sources:`, selectedSources);
         });
       });
 
-      // Date range filtering (if implemented)
-      const dateRangeInputs = container.querySelectorAll('input[type="date"]');
-      dateRangeInputs.forEach(input => {
-        input.addEventListener('change', function() {
-          // Date range filtering would be implemented here
-          console.log('Date range filter changed:', this.value);
-        });
-      });
-
-      console.log(`Source filtering setup complete for ${sourceToggles.length} sources`);
+      console.log(`Source filtering setup complete for ${sourceSelectors.length} selectors`);
       
     } catch (error) {
       console.error('Error setting up source filtering:', error);

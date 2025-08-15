@@ -157,22 +157,64 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
       'title' => [
         '#markup' => '<h3>📈 Recent Activity Timeline (Last ' . $config['days_to_show'] . ' Days)</h3>',
       ],
-      'controls' => [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['chart-controls']],
-        'source_selector' => [
-          '#type' => 'select',
-          '#title' => $this->t('Filter Sources'),
-          '#options' => $chart_data['source_options'],
-          '#multiple' => TRUE,
-          '#attributes' => [
-            'id' => 'activity-source-selector',
-            'class' => ['source-selector'],
-            'data-chart-target' => $chart_id,
-          ],
-          '#default_value' => array_keys($chart_data['source_options']),
-        ],
+      'description' => [
+        '#type' => 'html_tag',
+        '#tag' => 'p',
+        '#value' => 'This chart shows article publication activity for the top news sources over the past ' . $config['days_to_show'] . ' days. ' . ($config['show_unpublished'] ? 'Solid lines = Published articles, Dashed lines = Articles being processed.' : 'Only published articles are shown.'),
+        '#attributes' => ['class' => ['chart-description']],
       ],
+    ];
+
+    // Chart controls
+    $build['#content']['controls'] = [
+      '#type' => 'details',
+      '#title' => t('📊 Chart Controls'),
+      '#open' => FALSE,
+      '#attributes' => ['class' => ['chart-controls-section']],
+    ];
+
+    $build['#content']['controls']['controls_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['chart-controls']],
+    ];
+
+    $build['#content']['controls']['controls_container']['selector_group'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['control-group']],
+    ];
+
+    $build['#content']['controls']['controls_container']['selector_group']['label'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'label',
+      '#value' => t('Select News Sources (showing top ' . count($chart_data['source_options']) . ' by article count):'),
+      '#attributes' => [
+        'for' => 'activity-source-selector-' . substr($chart_id, -8),
+        'class' => ['control-label'],
+      ],
+    ];
+
+    $build['#content']['controls']['controls_container']['selector_group']['selector'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Filter Sources'),
+      '#title_display' => 'invisible',
+      '#multiple' => TRUE,
+      '#size' => min(count($chart_data['source_options']), 8),
+      '#options' => $chart_data['source_options'],
+      '#attributes' => [
+        'id' => 'activity-source-selector-' . substr($chart_id, -8),
+        'class' => ['form-select', 'source-selector'],
+        'data-chart-target' => $chart_id,
+        'multiple' => 'multiple',
+        'size' => min(count($chart_data['source_options']), 8),
+      ],
+      '#default_value' => array_keys($chart_data['source_options']),
+    ];
+
+    $build['#content']['controls']['controls_container']['help_text'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#value' => '💡 Each source shows article publication activity over time. ' . ($config['show_unpublished'] ? '<strong>Solid lines</strong> show published articles, <strong>dashed lines</strong> show articles currently being processed. ' : '') . 'Use Ctrl+Click to select multiple sources.',
+      '#attributes' => ['class' => ['help-text', 'text-muted', 'small']],
     ];
 
     // Chart canvas
