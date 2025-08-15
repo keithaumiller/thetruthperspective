@@ -1,14 +1,12 @@
-servi  twitter_automation.content_generator:
-    class: Drupal\twitter_automation\Service\ContentGenerator
-    arguments: ['@newsmotivationmetrics.metrics_data_service', '@entity_type.manager', '@logger.factory']:
+services:
   twitter_automation.api_client:
-    class: Drupal	witter_automation\Service\TwitterApiClient
+    class: Drupal\twitter_automation\Service\TwitterApiClient
     arguments: ['@config.factory', '@http_client', '@logger.factory']
 
   twitter_automation.content_generator:
-    class: Drupal	witter_automation\Service\ContentGenerator
-    arguments: ['@newsmotivationmetrics.metrics_data', '@entity_type.manager', '@logger.factory']
+    class: Drupal\twitter_automation\Service\ContentGenerator
+    arguments: ['@newsmotivationmetrics.metrics_data_service', '@entity_type.manager', '@logger.factory']
 
   twitter_automation.scheduler:
-    class: Drupal	witter_automation\Service\TwitterScheduler
+    class: Drupal\twitter_automation\Service\TwitterScheduler
     arguments: ['@config.factory', '@twitter_automation.api_client', '@twitter_automation.content_generator', '@queue', '@state', '@logger.factory']
