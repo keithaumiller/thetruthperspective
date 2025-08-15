@@ -149,7 +149,7 @@ class ChartDataService implements ChartDataServiceInterface {
       // Set default options
       $options = $options + [
         'limit' => 10,
-        'days_back' => 30,
+        'days_back' => 90,
         'source_ids' => [],
       ];
 

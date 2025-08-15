@@ -74,7 +74,11 @@
           },
           plugins: {
             title: {
-              display: false  // Title handled by block header
+              display: true,
+              text: 'Recent Activity Timeline (Last 90 Days)',
+              font: {
+                size: 16
+              }
             },
             legend: {
               display: true,

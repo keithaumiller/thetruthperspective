@@ -51,20 +51,10 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
   public function buildNewsSourceTimelineChart(array $options = []): array {
     // Set default options
     $options = $options + [
-      'canvas_id' => 'news-source-timeline-chart',
-      'title' => 'News Source Quality Trends Over Time',
-      'show_controls' => TRUE,
-      'show_legend' => TRUE,
-      'show_title' => TRUE,
-      'chart_height' => 400,
-      'days_back' => 30,
-      'source_limit' => 3, // Fewer sources since each has 3 metrics
-      'container_classes' => ['news-source-timeline-section'],
-      'library' => 'newsmotivationmetrics/news-source-timeline',
-      'js_behavior' => 'newsSourceTimelineChart',
-    ];
-
-    // Get chart data
+      'limit' => 10,
+      'days_back' => 90,
+      'source_ids' => [],
+    ];    // Get chart data
     $chart_data = $this->chartDataService->getNewsSourceTimelineChartData([
       'limit' => $options['source_limit'],
       'days_back' => $options['days_back'],
@@ -189,7 +179,7 @@ class NewsSourceTimelineChartService implements NewsSourceTimelineChartServiceIn
       'show_legend' => $config['show_legend'] ?? TRUE,
       'show_title' => TRUE,
       'chart_height' => $config['chart_height'] ?? 400,
-      'days_back' => $config['days_back'] ?? 30,
+      'days_back' => $config['days_back'] ?? 90,
       'source_limit' => $config['source_limit'] ?? 5,
       'container_classes' => ['news-source-timeline-block'],
       'library' => 'newsmotivationmetrics/news-source-timeline',

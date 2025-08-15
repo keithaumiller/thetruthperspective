@@ -283,6 +283,13 @@
             }
           },
           plugins: {
+            title: {
+              display: true,
+              text: 'News Source Quality Trends (Last 90 Days)',
+              font: {
+                size: 16
+              }
+            },
             legend: {
               display: true,
               position: 'top'
