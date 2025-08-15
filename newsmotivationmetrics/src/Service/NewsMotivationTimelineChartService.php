@@ -52,14 +52,14 @@ class NewsMotivationTimelineChartService implements NewsMotivationTimelineChartS
     // Set default options
     $options = $options + [
       'canvas_id' => 'news-motivation-timeline-chart',
-      'title' => 'News Motivation Trends Over Time',
+      'title' => 'Motivation Trends Over Time',
       'show_controls' => TRUE,
       'show_legend' => TRUE,
       'show_title' => TRUE,
       'chart_height' => 400,
       'days_back' => 30,
       'term_limit' => 10,
-      'container_classes' => ['news-motivation-timeline-section'],
+      'container_classes' => ['timeline-chart-container', 'motivation-timeline'],
       'library' => 'newsmotivationmetrics/news-motivation-timeline',
       'js_behavior' => 'newsMotivationTimelineChart',
     ];
@@ -97,8 +97,14 @@ class NewsMotivationTimelineChartService implements NewsMotivationTimelineChartS
         'title' => [
           '#type' => 'html_tag',
           '#tag' => 'h2',
-          '#value' => $options['title'],
+          '#value' => '🎯 ' . $options['title'] . ' (Last ' . $options['days_back'] . ' Days)',
           '#attributes' => ['class' => ['chart-section-title']],
+        ],
+        'description' => [
+          '#type' => 'html_tag',
+          '#tag' => 'p',
+          '#value' => 'This chart displays the frequency trends of motivation-related terms and entities detected in news articles over the past ' . $options['days_back'] . ' days. Each line represents how often a particular motivation or key entity appears in analyzed content.',
+          '#attributes' => ['class' => ['chart-description']],
         ],
       ];
     }
@@ -135,14 +141,14 @@ class NewsMotivationTimelineChartService implements NewsMotivationTimelineChartS
     // Convert block config to chart options
     $options = [
       'canvas_id' => 'news-motivation-timeline-chart-' . substr(md5(serialize($config)), 0, 8),
-      'title' => $config['chart_title'] ?? 'News Motivation Trends Over Time',
+      'title' => $config['chart_title'] ?? 'Motivation Trends Over Time',
       'show_controls' => $config['show_controls'] ?? TRUE,
       'show_legend' => $config['show_legend'] ?? TRUE,
       'show_title' => !empty($config['chart_title']),
       'chart_height' => min($config['chart_height'] ?? 400, 500),
       'days_back' => $config['days_back'] ?? 30,
       'term_limit' => $config['term_limit'] ?? 10,
-      'container_classes' => ['news-motivation-timeline-block', 'news-motivation-timeline-section'],
+      'container_classes' => ['timeline-chart-container', 'motivation-timeline'],
       'library' => 'newsmotivationmetrics/news-motivation-timeline',
       'js_behavior' => 'newsMotivationTimelineChart',
       'auto_refresh' => $config['auto_refresh'] ?? FALSE,
