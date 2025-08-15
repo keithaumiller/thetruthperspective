@@ -1,4 +1,6 @@
-services:
+servi  twitter_automation.content_generator:
+    class: Drupal\twitter_automation\Service\ContentGenerator
+    arguments: ['@newsmotivationmetrics.metrics_data_service', '@entity_type.manager', '@logger.factory']:
   twitter_automation.api_client:
     class: Drupal	witter_automation\Service\TwitterApiClient
     arguments: ['@config.factory', '@http_client', '@logger.factory']
