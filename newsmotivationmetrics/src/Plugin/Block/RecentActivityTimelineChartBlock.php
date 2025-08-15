@@ -56,7 +56,6 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
    */
   public function defaultConfiguration() {
     return [
-      'chart_height' => 400,
       'days_to_show' => 30,
       'show_unpublished' => TRUE,
       'top_sources_limit' => 6,
@@ -74,14 +73,6 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
       '#type' => 'details',
       '#title' => $this->t('Chart Settings'),
       '#open' => TRUE,
-    ];
-
-    $form['chart_settings']['chart_height'] = [
-      '#type' => 'number',
-      '#title' => $this->t('Chart Height (pixels)'),
-      '#default_value' => $config['chart_height'],
-      '#min' => 200,
-      '#max' => 800,
     ];
 
     $form['chart_settings']['days_to_show'] = [
@@ -118,7 +109,6 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
     parent::blockSubmit($form, $form_state);
     $values = $form_state->getValues();
     
-    $this->configuration['chart_height'] = $values['chart_settings']['chart_height'];
     $this->configuration['days_to_show'] = $values['chart_settings']['days_to_show'];
     $this->configuration['show_unpublished'] = $values['chart_settings']['show_unpublished'];
     $this->configuration['top_sources_limit'] = $values['chart_settings']['top_sources_limit'];
@@ -193,7 +183,7 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
         'id' => $chart_id,
         'class' => ['recent-activity-timeline-chart'],
         'width' => 800,
-        'height' => $config['chart_height'],
+        'height' => 400,
         'data-chart-type' => 'activity-timeline',
         'aria-label' => 'Recent Activity Timeline Chart',
       ],

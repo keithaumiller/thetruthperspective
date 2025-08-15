@@ -47,20 +47,20 @@
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
+        maintainAspectRatio: true,
+        aspectRatio: 2, // Width:Height ratio of 2:1
+        resizeDelay: 100, // Debounce resize events
         interaction: {
           mode: 'index',
           intersect: false,
         },
+        animation: {
+          duration: 750, // Reduce animation time
+          easing: 'easeOutQuart',
+        },
         plugins: {
           title: {
-            display: true,
-            text: 'Daily Article Activity by News Source',
-            font: {
-              size: 16,
-              weight: 'bold'
-            },
-            padding: 20
+            display: false  // Title handled by block header
           },
           legend: {
             display: true,
@@ -168,15 +168,17 @@
             time: {
               unit: 'day',
               displayFormats: {
-                day: 'MMM dd'
+                day: 'MMM dd',
+                week: 'MMM dd',
+                month: 'MMM'
               },
               tooltipFormat: 'MMM dd, yyyy'
             },
             title: {
               display: true,
-              text: 'Date',
+              text: 'Publication Date',
               font: {
-                size: 14,
+                size: 12,
                 weight: 'bold'
               }
             },
@@ -189,9 +191,9 @@
             beginAtZero: true,
             title: {
               display: true,
-              text: 'Number of Articles',
+              text: 'Article Count',
               font: {
-                size: 14,
+                size: 12,
                 weight: 'bold'
               }
             },
@@ -209,11 +211,8 @@
         },
         elements: {
           point: {
-            hoverBackgroundColor: '#fff',
+            hoverBackgroundColor: 'white',
             hoverBorderWidth: 2
-          },
-          line: {
-            tension: 0.1
           }
         }
       }
@@ -263,14 +262,6 @@
       });
       
       chart.update('none'); // Update without animation for better performance
-      
-      // Update chart title to reflect filtering
-      const titleText = selectedSources.length === chartData.topSources.length
-        ? 'Daily Article Activity by News Source'
-        : `Daily Article Activity - ${selectedSources.length} Source${selectedSources.length !== 1 ? 's' : ''} Selected`;
-      
-      chart.options.plugins.title.text = titleText;
-      chart.update('none');
     });
   }
 
