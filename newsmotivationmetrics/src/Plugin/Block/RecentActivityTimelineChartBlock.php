@@ -238,7 +238,12 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
     $build['#attached']['library'][] = 'newsmotivationmetrics/chart-style';
     $build['#attached']['library'][] = 'newsmotivationmetrics/activity-timeline-chart';
 
-    return $build;
+    // Wrap in section container for consistent styling
+    return [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['recent-activity-timeline-chart-block', 'news-metrics-block']],
+      'content' => $build,
+    ];
   }
 
   /**

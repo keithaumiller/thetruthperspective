@@ -5,6 +5,8 @@
 
 /* === FULL-WIDTH LAYOUT SUPPORT === */
 .news-motivation-timeline-section,
+.news-source-timeline-section,
+.recent-activity-timeline-chart-block,
 .news-metrics-header,
 .metrics-overview-sections {
   background: #fff;
@@ -18,6 +20,8 @@
 
 /* Ensure content doesn't touch edges on very wide screens */
 .news-motivation-timeline-section,
+.news-source-timeline-section,
+.recent-activity-timeline-chart-block,
 .news-metrics-header,
 .metrics-overview-sections {
   max-width: 1400px;
@@ -27,9 +31,13 @@
 
 /* Full-width override when specifically applied */
 .metrics-fullwidth-page .news-motivation-timeline-section,
+.metrics-fullwidth-page .news-source-timeline-section,
+.metrics-fullwidth-page .recent-activity-timeline-chart-block,
 .metrics-fullwidth-page .news-metrics-header,
 .metrics-fullwidth-page .metrics-overview-sections,
 .page--metrics-fullwidth .news-motivation-timeline-section,
+.page--metrics-fullwidth .news-source-timeline-section,
+.page--metrics-fullwidth .recent-activity-timeline-chart-block,
 .page--metrics-fullwidth .news-metrics-header,
 .page--metrics-fullwidth .metrics-overview-sections {
   max-width: none;

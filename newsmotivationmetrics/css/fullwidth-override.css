@@ -12,6 +12,8 @@
 /* Individual block styling for proper spacing */
 .metrics-fullwidth-page .news-metrics-header,
 .metrics-fullwidth-page .news-motivation-timeline-section,
+.metrics-fullwidth-page .news-source-timeline-section,
+.metrics-fullwidth-page .recent-activity-timeline-chart-block,
 .metrics-fullwidth-page .metrics-overview-sections,
 .metrics-fullwidth-page .methodology-explanation {
   width: 100%;
@@ -26,7 +28,9 @@
 }
 
 /* Ensure timeline chart section uses full width */
-.metrics-fullwidth-page .news-motivation-timeline-section {
+.metrics-fullwidth-page .news-motivation-timeline-section,
+.metrics-fullwidth-page .news-source-timeline-section,
+.metrics-fullwidth-page .recent-activity-timeline-chart-block {
   width: 100%;
   padding: 0;
 }
@@ -47,6 +51,8 @@
 /* Responsive padding for readability */
 .metrics-fullwidth-page .news-metrics-header,
 .metrics-fullwidth-page .news-motivation-timeline-section > *:not(.chart-container),
+.metrics-fullwidth-page .news-source-timeline-section > *:not(.chart-container),
+.metrics-fullwidth-page .recent-activity-timeline-chart-block > *:not(.chart-container),
 .metrics-fullwidth-page .metrics-overview-sections,
 .metrics-fullwidth-page .methodology-explanation {
   padding-left: 1rem;
@@ -57,6 +63,8 @@
 @media (max-width: 768px) {
   .metrics-fullwidth-page .news-metrics-header,
   .metrics-fullwidth-page .news-motivation-timeline-section > *:not(.chart-container),
+  .metrics-fullwidth-page .news-source-timeline-section > *:not(.chart-container),
+  .metrics-fullwidth-page .recent-activity-timeline-chart-block > *:not(.chart-container),
   .metrics-fullwidth-page .metrics-overview-sections,
   .metrics-fullwidth-page .methodology-explanation {
     padding-left: 0.75rem;
@@ -68,6 +76,8 @@
 @media (min-width: 1200px) {
   .metrics-fullwidth-page .news-metrics-header,
   .metrics-fullwidth-page .news-motivation-timeline-section > *:not(.chart-container),
+  .metrics-fullwidth-page .news-source-timeline-section > *:not(.chart-container),
+  .metrics-fullwidth-page .recent-activity-timeline-chart-block > *:not(.chart-container),
   .metrics-fullwidth-page .metrics-overview-sections,
   .metrics-fullwidth-page .methodology-explanation {
     padding-left: 1.5rem;
