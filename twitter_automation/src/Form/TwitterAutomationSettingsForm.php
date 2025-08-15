@@ -222,24 +222,65 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
    * AJAX callback for testing Twitter connection.
    */
   public function testConnectionCallback(array &$form, FormStateInterface $form_state) {
-    $bearer_token = $form_state->getValue('bearer_token');
+    // Get values from form (either newly entered or saved)
+    $api_key = $form_state->getValue('api_key') ?: $this->config('twitter_automation.settings')->get('api_key');
+    $api_secret = $form_state->getValue('api_secret') ?: $this->config('twitter_automation.settings')->get('api_secret');
+    $access_token = $form_state->getValue('access_token') ?: $this->config('twitter_automation.settings')->get('access_token');
+    $access_secret = $form_state->getValue('access_secret') ?: $this->config('twitter_automation.settings')->get('access_secret');
     
-    if (empty($bearer_token)) {
-      $message = '<div class="messages messages--error">' . $this->t('Please enter a Bearer Token first.') . '</div>';
+    if (empty($api_key) || empty($api_secret) || empty($access_token) || empty($access_secret)) {
+      $message = '<div class="messages messages--error">' . $this->t('Please enter all OAuth credentials (API Key, API Secret, Access Token, Access Token Secret) and save first.') . '</div>';
     } else {
-      // Temporarily set the token for testing
+      // Temporarily save credentials for testing
       $config = \Drupal::service('config.factory')->getEditable('twitter_automation.settings');
-      $original_token = $config->get('bearer_token');
-      $config->set('bearer_token', $bearer_token)->save();
+      $config->set('api_key', $api_key)
+        ->set('api_secret', $api_secret)
+        ->set('access_token', $access_token)
+        ->set('access_secret', $access_secret)
+        ->save();
       
-      $result = $this->twitterApiClient->testConnection();
-      
-      // Restore original token if test failed
-      if (!$result) {
-        $config->set('bearer_token', $original_token)->save();
-        $message = '<div class="messages messages--error">' . $this->t('Connection failed. Please check your Bearer Token.') . '</div>';
-      } else {
-        $message = '<div class="messages messages--status">' . $this->t('Connection successful!') . '</div>';
+      // Test OAuth connection using Twitter API 1.1
+      try {
+        $client = \Drupal::httpClient();
+        $url = 'https://api.twitter.com/1.1/account/verify_credentials.json';
+        
+        // Build OAuth header
+        $oauth_params = [
+          'oauth_consumer_key' => $api_key,
+          'oauth_token' => $access_token,
+          'oauth_signature_method' => 'HMAC-SHA1',
+          'oauth_timestamp' => time(),
+          'oauth_nonce' => bin2hex(random_bytes(16)),
+          'oauth_version' => '1.0',
+        ];
+        
+        // Create signature
+        $base_string = 'GET&' . rawurlencode($url) . '&' . rawurlencode(http_build_query($oauth_params));
+        $signing_key = rawurlencode($api_secret) . '&' . rawurlencode($access_secret);
+        $oauth_params['oauth_signature'] = base64_encode(hash_hmac('sha1', $base_string, $signing_key, true));
+        
+        // Build authorization header
+        $auth_header = 'OAuth ';
+        foreach ($oauth_params as $key => $value) {
+          $auth_header .= $key . '="' . rawurlencode($value) . '", ';
+        }
+        $auth_header = rtrim($auth_header, ', ');
+        
+        $response = $client->get($url, [
+          'headers' => [
+            'Authorization' => $auth_header,
+          ],
+        ]);
+        
+        if ($response->getStatusCode() === 200) {
+          $data = json_decode($response->getBody(), true);
+          $username = $data['screen_name'] ?? 'Unknown';
+          $message = '<div class="messages messages--status">' . $this->t('Connection successful! Connected as @username', ['@username' => '@' . $username]) . '</div>';
+        } else {
+          $message = '<div class="messages messages--error">' . $this->t('Connection failed. HTTP Status: @status', ['@status' => $response->getStatusCode()]) . '</div>';
+        }
+      } catch (\Exception $e) {
+        $message = '<div class="messages messages--error">' . $this->t('Connection failed: @error', ['@error' => $e->getMessage()]) . '</div>';
       }
     }
 
