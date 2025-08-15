@@ -56,7 +56,7 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
    */
   public function defaultConfiguration() {
     return [
-      'days_to_show' => 30,
+      'days_to_show' => 90,
       'show_unpublished' => TRUE,
       'top_sources_limit' => 6,
     ] + parent::defaultConfiguration();
@@ -80,7 +80,7 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
       '#title' => $this->t('Days to Show'),
       '#default_value' => $config['days_to_show'],
       '#min' => 7,
-      '#max' => 60,
+      '#max' => 120,
     ];
 
     $form['chart_settings']['show_unpublished'] = [
@@ -140,18 +140,12 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
     $chart_id = 'recent-activity-timeline-chart-' . substr(md5(microtime()), 0, 8);
     
     $build = [
-      '#theme' => 'recent_activity_timeline_chart',
-      '#chart_data' => $chart_data,
-      '#chart_id' => $chart_id,
-      '#config' => $config,
-      '#content' => [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['recent-activity-timeline-chart-container']],
-      ],
+      '#type' => 'container',
+      '#attributes' => ['class' => ['recent-activity-timeline-chart-container']],
     ];
 
     // Chart title and controls
-    $build['#content']['header'] = [
+    $build['header'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['chart-header']],
       'title' => [
@@ -166,24 +160,24 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
     ];
 
     // Chart controls
-    $build['#content']['controls'] = [
+    $build['controls'] = [
       '#type' => 'details',
       '#title' => t('📊 Chart Controls'),
       '#open' => FALSE,
       '#attributes' => ['class' => ['chart-controls-section']],
     ];
 
-    $build['#content']['controls']['controls_container'] = [
+    $build['controls']['controls_container'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['chart-controls']],
     ];
 
-    $build['#content']['controls']['controls_container']['selector_group'] = [
+    $build['controls']['controls_container']['selector_group'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['control-group']],
     ];
 
-    $build['#content']['controls']['controls_container']['selector_group']['label'] = [
+    $build['controls']['controls_container']['selector_group']['label'] = [
       '#type' => 'html_tag',
       '#tag' => 'label',
       '#value' => t('Select News Sources (showing top ' . count($chart_data['source_options']) . ' by article count):'),
@@ -193,7 +187,7 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
       ],
     ];
 
-    $build['#content']['controls']['controls_container']['selector_group']['selector'] = [
+    $build['controls']['controls_container']['selector_group']['selector'] = [
       '#type' => 'select',
       '#title' => $this->t('Filter Sources'),
       '#title_display' => 'invisible',
@@ -210,7 +204,7 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
       '#default_value' => array_keys($chart_data['source_options']),
     ];
 
-    $build['#content']['controls']['controls_container']['help_text'] = [
+    $build['controls']['controls_container']['help_text'] = [
       '#type' => 'html_tag',
       '#tag' => 'div',
       '#value' => '💡 Each source shows article publication activity over time. ' . ($config['show_unpublished'] ? '<strong>Solid lines</strong> show published articles, <strong>dashed lines</strong> show articles currently being processed. ' : '') . 'Use Ctrl+Click to select multiple sources.',
@@ -218,7 +212,7 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
     ];
 
     // Chart canvas
-    $build['#content']['chart'] = [
+    $build['chart'] = [
       '#type' => 'html_tag',
       '#tag' => 'canvas',
       '#attributes' => [
@@ -238,12 +232,7 @@ class RecentActivityTimelineChartBlock extends BlockBase implements ContainerFac
     $build['#attached']['library'][] = 'newsmotivationmetrics/chart-style';
     $build['#attached']['library'][] = 'newsmotivationmetrics/activity-timeline-chart';
 
-    // Wrap in section container for consistent styling
-    return [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['recent-activity-timeline-chart-block', 'news-metrics-block']],
-      'content' => $build,
-    ];
+    return $build;
   }
 
   /**
