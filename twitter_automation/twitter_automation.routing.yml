@@ -1,0 +1,23 @@
+twitter_automation.dashboard:
+  path: '/admin/config/services/twitter-automation'
+  defaults:
+    _controller: '\Drupal	witter_automation\Controller\TwitterAutomationController::dashboard'
+    _title: 'Twitter Automation Dashboard'
+  requirements:
+    _permission: 'administer twitter automation'
+
+twitter_automation.settings:
+  path: '/admin/config/services/twitter-automation/settings'
+  defaults:
+    _form: '\Drupal	witter_automation\Form\TwitterAutomationSettingsForm'
+    _title: 'Twitter Automation Settings'
+  requirements:
+    _permission: 'administer twitter automation'
+
+twitter_automation.manual_post:
+  path: '/admin/config/services/twitter-automation/manual-post'
+  defaults:
+    _form: '\Drupal\twitter_automation\Form\ManualPostForm'
+    _title: 'Manual Twitter Post'
+  requirements:
+    _permission: 'administer twitter automation'

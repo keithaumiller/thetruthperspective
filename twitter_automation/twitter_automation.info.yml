@@ -1,0 +1,12 @@
+name: 'Twitter Automation'
+type: module
+description: 'Automated Twitter posting for The Truth Perspective analytics and insights'
+package: 'The Truth Perspective'
+version: '1.0.0'
+core_version_requirement: ^11
+dependencies:
+  - drupal:system
+  - drupal:node
+  - drupal:user
+  - newsmotivationmetrics:newsmotivationmetrics
+configure: twitter_automation.settings

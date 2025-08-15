@@ -1,0 +1,7 @@
+administer twitter automation:
+  title: 'Administer Twitter Automation'
+  description: 'Configure Twitter API settings and manage automated posting'
+
+post to twitter:
+  title: 'Post to Twitter'
+  description: 'Create manual Twitter posts'
