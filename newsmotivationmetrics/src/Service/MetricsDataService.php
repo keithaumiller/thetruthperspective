@@ -784,6 +784,9 @@ class MetricsDataService implements MetricsDataServiceInterface {
       $database = $this->database;
       $connection = $database;
       
+      // Debug: Log the start of the method
+      $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Starting query execution');
+      
       $query = $connection->select('node_field_data', 'n');
       $query->leftJoin('node__field_news_source', 'ns', 'ns.entity_id = n.nid');
       
@@ -803,12 +806,27 @@ class MetricsDataService implements MetricsDataServiceInterface {
         ->orderBy('date', 'DESC')
         ->orderBy('total_count', 'DESC');
       
+      // Debug: Log the query string
+      $query_string = (string) $query;
+      $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Query = @query', ['@query' => $query_string]);
+      
       $results = $query->execute()->fetchAll();
+      
+      // Debug: Log the raw results count
+      $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Found @count raw results', ['@count' => count($results)]);
       
       $daily_data = [];
       foreach ($results as $row) {
         $date = $row->date;
         $source = $row->news_source;
+        
+        // Debug: Log each row being processed
+        $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Processing row - Date: @date, Source: @source, Pub: @pub, Unpub: @unpub', [
+          '@date' => $date,
+          '@source' => $source,
+          '@pub' => $row->published_count,
+          '@unpub' => $row->unpublished_count,
+        ]);
         
         if (!isset($daily_data[$date])) {
           $daily_data[$date] = [
@@ -830,6 +848,9 @@ class MetricsDataService implements MetricsDataServiceInterface {
         $daily_data[$date]['total_unpublished'] += (int) $row->unpublished_count;
         $daily_data[$date]['total_articles'] += (int) $row->total_count;
       }
+      
+      // Debug: Log the final processed data count
+      $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Final processed data has @count days', ['@count' => count($daily_data)]);
       
       return $daily_data;
       
