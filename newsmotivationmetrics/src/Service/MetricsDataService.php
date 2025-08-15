@@ -787,30 +787,40 @@ class MetricsDataService implements MetricsDataServiceInterface {
       // Debug: Log the start of the method
       $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Starting query execution');
       
-      $query = $connection->select('node_field_data', 'n');
-      $query->leftJoin('node__field_news_source', 'ns', 'ns.entity_id = n.nid');
+      // Use raw SQL instead of query builder to avoid expression parsing issues
+      $sql = "
+        SELECT 
+          DATE(FROM_UNIXTIME(n.created)) as date,
+          ns.field_news_source_value as news_source,
+          SUM(CASE WHEN n.status = 1 THEN 1 ELSE 0 END) as published_count,
+          SUM(CASE WHEN n.status = 0 THEN 1 ELSE 0 END) as unpublished_count,
+          COUNT(n.nid) as total_count
+        FROM node_field_data n
+        LEFT JOIN node__field_news_source ns ON ns.entity_id = n.nid
+        WHERE n.type = :article_type
+          AND n.created >= :created_after
+          AND ns.field_news_source_value != ''
+          AND ns.field_news_source_value IS NOT NULL
+          AND ns.field_news_source_value != :unavailable_source
+        GROUP BY DATE(FROM_UNIXTIME(n.created)), ns.field_news_source_value
+        ORDER BY date DESC, total_count DESC
+      ";
       
-      $query->addExpression('DATE(FROM_UNIXTIME(n.created))', 'date');
-      $query->addField('ns', 'field_news_source_value', 'news_source');
-      $query->addExpression('SUM(CASE WHEN n.status = 1 THEN 1 ELSE 0 END)', 'published_count');
-      $query->addExpression('SUM(CASE WHEN n.status = 0 THEN 1 ELSE 0 END)', 'unpublished_count');
-      $query->addExpression('COUNT(n.nid)', 'total_count');
+      $thirty_days_ago = strtotime('-30 days');
       
-      $query->condition('n.type', 'article')
-        ->condition('n.created', strtotime('-30 days'), '>=')
-        ->condition('ns.field_news_source_value', '', '<>')
-        ->condition('ns.field_news_source_value', NULL, 'IS NOT NULL')
-        ->condition('ns.field_news_source_value', 'Source Unavailable', '<>')
-        ->groupBy('DATE(FROM_UNIXTIME(n.created))')
-        ->groupBy('ns.field_news_source_value')
-        ->orderBy('date', 'DESC')
-        ->orderBy('total_count', 'DESC');
+      // Debug: Log the query and parameters
+      $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Raw SQL query with parameters', [
+        'sql' => $sql,
+        'article_type' => 'article',
+        'created_after' => $thirty_days_ago,
+        'unavailable_source' => 'Source Unavailable',
+      ]);
       
-      // Debug: Log the query string
-      $query_string = (string) $query;
-      $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Query = @query', ['@query' => $query_string]);
-      
-      $results = $query->execute()->fetchAll();
+      $results = $connection->query($sql, [
+        ':article_type' => 'article',
+        ':created_after' => $thirty_days_ago,
+        ':unavailable_source' => 'Source Unavailable',
+      ])->fetchAll();
       
       // Debug: Log the raw results count
       $this->loggerFactory->get('newsmotivationmetrics')->info('getDailyArticlesBySource: Found @count raw results', ['@count' => count($results)]);
@@ -874,21 +884,28 @@ class MetricsDataService implements MetricsDataServiceInterface {
       $database = $this->database;
       $connection = $database;
       
-      $query = $connection->select('node_field_data', 'n');
-      $query->leftJoin('node__field_tags', 't', 't.entity_id = n.nid');
+      // Use raw SQL instead of query builder to avoid expression parsing issues
+      $sql = "
+        SELECT 
+          DATE(FROM_UNIXTIME(n.created)) as date,
+          COUNT(DISTINCT t.field_tags_target_id) as tag_count,
+          COUNT(DISTINCT n.nid) as article_count
+        FROM node_field_data n
+        LEFT JOIN node__field_tags t ON t.entity_id = n.nid
+        WHERE n.type = :article_type
+          AND n.status = 1
+          AND n.created >= :created_after
+          AND t.field_tags_target_id IS NOT NULL
+        GROUP BY DATE(FROM_UNIXTIME(n.created))
+        ORDER BY date DESC
+      ";
       
-      $query->addExpression('DATE(FROM_UNIXTIME(n.created))', 'date');
-      $query->addExpression('COUNT(DISTINCT t.field_tags_target_id)', 'tag_count');
-      $query->addExpression('COUNT(DISTINCT n.nid)', 'article_count');
+      $thirty_days_ago = strtotime('-30 days');
       
-      $query->condition('n.type', 'article')
-        ->condition('n.status', 1)
-        ->condition('n.created', strtotime('-30 days'), '>=')
-        ->isNotNull('t.field_tags_target_id')
-        ->groupBy('DATE(FROM_UNIXTIME(n.created))')
-        ->orderBy('date', 'DESC');
-      
-      $results = $query->execute()->fetchAll();
+      $results = $connection->query($sql, [
+        ':article_type' => 'article',
+        ':created_after' => $thirty_days_ago,
+      ])->fetchAll();
       
       $daily_tags = [];
       foreach ($results as $row) {
