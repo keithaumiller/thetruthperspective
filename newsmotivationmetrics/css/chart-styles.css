@@ -176,33 +176,39 @@
 
 /* === CHART TYPE MODIFIERS === */
 .timeline-chart-container.activity-timeline .chart-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: #000;
 }
 
 .timeline-chart-container.activity-timeline .chart-header h2,
 .timeline-chart-container.activity-timeline .chart-header h3 {
-  color: white;
+  color: #000;
 }
 
 .timeline-chart-container.motivation-timeline .chart-header {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: #000;
 }
 
 .timeline-chart-container.motivation-timeline .chart-header h2,
 .timeline-chart-container.motivation-timeline .chart-header h3 {
-  color: white;
+  color: #000;
 }
 
 .timeline-chart-container.source-timeline .chart-header {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
+  color: #000;
 }
 
 .timeline-chart-container.source-timeline .chart-header h2,
 .timeline-chart-container.source-timeline .chart-header h3 {
-  color: white;
+  color: #000;
+}
+
+.timeline-chart-container.activity-timeline .chart-description,
+.timeline-chart-container.motivation-timeline .chart-description,
+.timeline-chart-container.source-timeline .chart-description {
+  color: #333;
 }
 
 /* === LEGACY SUPPORT === */
