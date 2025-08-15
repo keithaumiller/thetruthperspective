@@ -99,4 +99,20 @@ interface MetricsDataServiceInterface {
    */
   public function getTopNewsSources(int $limit = 10): array;
 
+  /**
+   * Get daily article counts by news source for the last 30 days.
+   *
+   * @return array
+   *   Array of daily counts with source breakdown including published/unpublished.
+   */
+  public function getDailyArticlesBySource(): array;
+
+  /**
+   * Get daily classification tag counts for the last 30 days.
+   *
+   * @return array
+   *   Array of daily tag counts with article relationships.
+   */
+  public function getDailyTagCounts(): array;
+
 }

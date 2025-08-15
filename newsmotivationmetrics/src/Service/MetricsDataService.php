@@ -773,4 +773,121 @@ class MetricsDataService implements MetricsDataServiceInterface {
     }
   }
 
+  /**
+   * Get daily article counts by news source for the last 30 days.
+   *
+   * @return array
+   *   Array of daily counts with source breakdown.
+   */
+  public function getDailyArticlesBySource(): array {
+    try {
+      $database = $this->database;
+      $connection = $database;
+      
+      $query = $connection->select('node_field_data', 'n');
+      $query->leftJoin('node__field_news_source', 'ns', 'ns.entity_id = n.nid');
+      
+      $query->addExpression('DATE(FROM_UNIXTIME(n.created))', 'date');
+      $query->addField('ns', 'field_news_source_value', 'news_source');
+      $query->addExpression('SUM(CASE WHEN n.status = 1 THEN 1 ELSE 0 END)', 'published_count');
+      $query->addExpression('SUM(CASE WHEN n.status = 0 THEN 1 ELSE 0 END)', 'unpublished_count');
+      $query->addExpression('COUNT(n.nid)', 'total_count');
+      
+      $query->condition('n.type', 'article')
+        ->condition('n.created', strtotime('-30 days'), '>=')
+        ->condition('ns.field_news_source_value', '', '<>')
+        ->condition('ns.field_news_source_value', NULL, 'IS NOT NULL')
+        ->condition('ns.field_news_source_value', 'Source Unavailable', '<>')
+        ->groupBy('DATE(FROM_UNIXTIME(n.created))')
+        ->groupBy('ns.field_news_source_value')
+        ->orderBy('date', 'DESC')
+        ->orderBy('total_count', 'DESC');
+      
+      $results = $query->execute()->fetchAll();
+      
+      $daily_data = [];
+      foreach ($results as $row) {
+        $date = $row->date;
+        $source = $row->news_source;
+        
+        if (!isset($daily_data[$date])) {
+          $daily_data[$date] = [
+            'date' => $date,
+            'sources' => [],
+            'total_published' => 0,
+            'total_unpublished' => 0,
+            'total_articles' => 0,
+          ];
+        }
+        
+        $daily_data[$date]['sources'][$source] = [
+          'published' => (int) $row->published_count,
+          'unpublished' => (int) $row->unpublished_count,
+          'total' => (int) $row->total_count,
+        ];
+        
+        $daily_data[$date]['total_published'] += (int) $row->published_count;
+        $daily_data[$date]['total_unpublished'] += (int) $row->unpublished_count;
+        $daily_data[$date]['total_articles'] += (int) $row->total_count;
+      }
+      
+      return $daily_data;
+      
+    } catch (\Exception $e) {
+      $this->loggerFactory->get('newsmotivationmetrics')->error('Failed to load daily articles by source: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      
+      return [];
+    }
+  }
+
+  /**
+   * Get daily classification tag counts for the last 30 days.
+   *
+   * @return array
+   *   Array of daily tag counts.
+   */
+  public function getDailyTagCounts(): array {
+    try {
+      $database = $this->database;
+      $connection = $database;
+      
+      $query = $connection->select('node_field_data', 'n');
+      $query->leftJoin('node__field_tags', 't', 't.entity_id = n.nid');
+      
+      $query->addExpression('DATE(FROM_UNIXTIME(n.created))', 'date');
+      $query->addExpression('COUNT(DISTINCT t.field_tags_target_id)', 'tag_count');
+      $query->addExpression('COUNT(DISTINCT n.nid)', 'article_count');
+      
+      $query->condition('n.type', 'article')
+        ->condition('n.status', 1)
+        ->condition('n.created', strtotime('-30 days'), '>=')
+        ->isNotNull('t.field_tags_target_id')
+        ->groupBy('DATE(FROM_UNIXTIME(n.created))')
+        ->orderBy('date', 'DESC');
+      
+      $results = $query->execute()->fetchAll();
+      
+      $daily_tags = [];
+      foreach ($results as $row) {
+        $daily_tags[$row->date] = [
+          'date' => $row->date,
+          'tag_count' => (int) $row->tag_count,
+          'article_count' => (int) $row->article_count,
+          'tags_per_article' => $row->article_count > 0 ? round($row->tag_count / $row->article_count, 2) : 0,
+        ];
+      }
+      
+      return $daily_tags;
+      
+    } catch (\Exception $e) {
+      $this->loggerFactory->get('newsmotivationmetrics')->error('Failed to load daily tag counts: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      
+      return [];
+    }
+  }
+
 }

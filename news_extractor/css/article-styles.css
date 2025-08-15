@@ -1,0 +1,19 @@
+/**
+ * Article display styles for news_extractor module
+ */
+
+.article-title {
+  font-size: 1.25rem; /* Slightly larger than normal paragraph text (usually 1rem) */
+  font-weight: 600; /* Semi-bold for better visibility */
+  line-height: 1.4;
+  margin: 1rem 0;
+  color: inherit;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .article-title {
+    font-size: 1.2rem;
+    margin: 0.8rem 0;
+  }
+}

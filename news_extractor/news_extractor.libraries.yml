@@ -1,0 +1,4 @@
+article_styles:
+  css:
+    theme:
+      css/article-styles.css: {}

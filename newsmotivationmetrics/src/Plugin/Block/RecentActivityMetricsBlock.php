@@ -56,10 +56,7 @@ class RecentActivityMetricsBlock extends BlockBase implements ContainerFactoryPl
    */
   public function defaultConfiguration() {
     return [
-      'show_daily_averages' => TRUE,
-      'highlight_recent_activity' => TRUE,
-      'show_total_tags' => TRUE,
-      'activity_threshold' => 10,
+      'days_to_show' => 15,
       'cache_duration' => 300,
     ] + parent::defaultConfiguration();
   }
@@ -77,33 +74,13 @@ class RecentActivityMetricsBlock extends BlockBase implements ContainerFactoryPl
       '#open' => TRUE,
     ];
 
-    $form['display_settings']['show_daily_averages'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Show Daily Averages'),
-      '#default_value' => $config['show_daily_averages'],
-      '#description' => $this->t('Display calculated daily averages for activity periods.'),
-    ];
-
-    $form['display_settings']['highlight_recent_activity'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Highlight Recent Activity'),
-      '#default_value' => $config['highlight_recent_activity'],
-      '#description' => $this->t('Apply visual highlighting to recent high-activity periods.'),
-    ];
-
-    $form['display_settings']['show_total_tags'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Show Total Classification Tags'),
-      '#default_value' => $config['show_total_tags'],
-      '#description' => $this->t('Display total count of classification tags.'),
-    ];
-
-    $form['display_settings']['activity_threshold'] = [
+    $form['display_settings']['days_to_show'] = [
       '#type' => 'number',
-      '#title' => $this->t('High Activity Threshold'),
-      '#default_value' => $config['activity_threshold'],
-      '#min' => 1,
-      '#description' => $this->t('Articles per day threshold for highlighting high activity.'),
+      '#title' => $this->t('Days to Show'),
+      '#default_value' => $config['days_to_show'],
+      '#min' => 5,
+      '#max' => 30,
+      '#description' => $this->t('Number of recent days to display in the activity tables.'),
     ];
 
     $form['performance'] = [
@@ -131,10 +108,7 @@ class RecentActivityMetricsBlock extends BlockBase implements ContainerFactoryPl
     parent::blockSubmit($form, $form_state);
     $values = $form_state->getValues();
     
-    $this->configuration['show_daily_averages'] = $values['display_settings']['show_daily_averages'];
-    $this->configuration['highlight_recent_activity'] = $values['display_settings']['highlight_recent_activity'];
-    $this->configuration['show_total_tags'] = $values['display_settings']['show_total_tags'];
-    $this->configuration['activity_threshold'] = $values['display_settings']['activity_threshold'];
+    $this->configuration['days_to_show'] = $values['display_settings']['days_to_show'];
     $this->configuration['cache_duration'] = $values['performance']['cache_duration'];
   }
 
@@ -143,97 +117,135 @@ class RecentActivityMetricsBlock extends BlockBase implements ContainerFactoryPl
    */
   public function build() {
     $config = $this->getConfiguration();
-    $metrics_data = $this->metricsDataService->getAllMetricsData();
-    $metrics = $metrics_data['metrics'];
     
-    $activity_data = [];
-    
-    // Calculate activity metrics
-    $articles_7_days = $metrics['articles_last_7_days'] ?? 109;
-    $articles_30_days = $metrics['articles_last_30_days'] ?? 130;
-    $total_tags = $metrics['total_tags'] ?? 1052;
-    
-    $daily_avg_7 = round($articles_7_days / 7, 1);
-    $daily_avg_30 = round($articles_30_days / 30, 1);
-    
-    if ($config['show_daily_averages']) {
-      $activity_data[] = [
-        'period' => 'Last 7 Days',
-        'articles' => number_format($articles_7_days),
-        'daily_avg' => $daily_avg_7,
-        'class' => $daily_avg_7 >= $config['activity_threshold'] ? 'high-activity' : 'normal-activity'
-      ];
-      
-      $activity_data[] = [
-        'period' => 'Last 30 Days',
-        'articles' => number_format($articles_30_days),
-        'daily_avg' => $daily_avg_30,
-        'class' => $daily_avg_30 >= $config['activity_threshold'] ? 'high-activity' : 'normal-activity'
-      ];
-    } else {
-      $activity_data[] = [
-        'period' => 'Last 7 Days',
-        'articles' => number_format($articles_7_days),
-        'daily_avg' => null,
-        'class' => 'normal-activity'
-      ];
-      
-      $activity_data[] = [
-        'period' => 'Last 30 Days',
-        'articles' => number_format($articles_30_days),
-        'daily_avg' => null,
-        'class' => 'normal-activity'
-      ];
-    }
-
-    $header = ['Period', 'Articles'];
-    if ($config['show_daily_averages']) {
-      $header[] = 'Daily Average';
-    }
-
-    $rows = [];
-    foreach ($activity_data as $data) {
-      $row = [$data['period'], $data['articles']];
-      if ($config['show_daily_averages']) {
-        $row[] = $data['daily_avg'];
-      }
-      
-      $row_attributes = [];
-      if ($config['highlight_recent_activity']) {
-        $row_attributes['class'] = [$data['class']];
-      }
-      
-      $rows[] = [
-        'data' => $row,
-        '#attributes' => $row_attributes,
-      ];
-    }
-
-    // Add total tags row if configured
-    if ($config['show_total_tags']) {
-      $rows[] = [
-        'data' => ['Total Classification Tags', number_format($total_tags), $config['show_daily_averages'] ? '' : ''],
-        '#attributes' => ['class' => ['tags-total']],
-      ];
-    }
+    // Get daily data
+    $daily_articles = $this->metricsDataService->getDailyArticlesBySource();
+    $daily_tags = $this->metricsDataService->getDailyTagCounts();
     
     $build = [
-      '#type' => 'details',
-      '#title' => '⚡ Recent Activity',
-      '#open' => FALSE,
+      '#type' => 'container',
       '#attributes' => ['class' => ['recent-activity-metrics']],
-      'table' => [
-        '#type' => 'table',
-        '#header' => $header,
-        '#rows' => $rows,
-        '#attributes' => ['class' => ['metrics-table', 'activity-table']],
-      ],
     ];
-
-    if ($config['highlight_recent_activity']) {
-      $build['#attributes']['class'][] = 'highlight-activity';
+    
+    // Article counts by source section
+    $build['articles_section'] = [
+      '#type' => 'details',
+      '#title' => '⚡ Daily Article Activity (Last 30 Days)',
+      '#open' => TRUE,
+      '#attributes' => ['class' => ['daily-articles-section']],
+    ];
+    
+    if (!empty($daily_articles)) {
+      $article_rows = [];
+      foreach ($daily_articles as $date_data) {
+        $date = $date_data['date'];
+        $total_pub = $date_data['total_published'];
+        $total_unpub = $date_data['total_unpublished'];
+        
+        // Create source breakdown
+        $source_details = [];
+        foreach ($date_data['sources'] as $source => $counts) {
+          $source_details[] = "{$source}: {$counts['published']}pub/{$counts['unpublished']}proc";
+        }
+        $source_breakdown = implode(', ', $source_details);
+        
+        $article_rows[] = [
+          'data' => [
+            $date,
+            $total_pub,
+            $total_unpub,
+            $total_pub + $total_unpub,
+            $source_breakdown,
+          ],
+          '#attributes' => [
+            'class' => $total_pub > 20 ? ['high-activity'] : ($total_pub > 10 ? ['medium-activity'] : ['normal-activity'])
+          ],
+        ];
+      }
+      
+      $build['articles_section']['table'] = [
+        '#type' => 'table',
+        '#header' => [
+          'Date',
+          'Published',
+          'Processing',
+          'Total',
+          'By Source (pub/proc)',
+        ],
+        '#rows' => array_slice($article_rows, 0, $config['days_to_show']), // Show configured number of days
+        '#attributes' => ['class' => ['metrics-table', 'daily-articles-table']],
+      ];
+    } else {
+      $build['articles_section']['empty'] = [
+        '#markup' => '<p>No article data available for the last 30 days.</p>',
+      ];
     }
-
+    
+    // Classification tags section
+    $build['tags_section'] = [
+      '#type' => 'details',
+      '#title' => '🏷️ Daily Classification Tags',
+      '#open' => FALSE,
+      '#attributes' => ['class' => ['daily-tags-section']],
+    ];
+    
+    if (!empty($daily_tags)) {
+      $tag_rows = [];
+      $total_tags_30_days = 0;
+      
+      foreach ($daily_tags as $date_data) {
+        $date = $date_data['date'];
+        $tag_count = $date_data['tag_count'];
+        $article_count = $date_data['article_count'];
+        $tags_per_article = $date_data['tags_per_article'];
+        
+        $total_tags_30_days += $tag_count;
+        
+        $tag_rows[] = [
+          'data' => [
+            $date,
+            $tag_count,
+            $article_count,
+            $tags_per_article,
+          ],
+          '#attributes' => [
+            'class' => $tag_count > 50 ? ['high-activity'] : ($tag_count > 25 ? ['medium-activity'] : ['normal-activity'])
+          ],
+        ];
+      }
+      
+      // Add summary row
+      $avg_tags_per_day = count($daily_tags) > 0 ? round($total_tags_30_days / count($daily_tags), 1) : 0;
+      $tag_rows[] = [
+        'data' => [
+          '<strong>30-Day Average</strong>',
+          "<strong>{$avg_tags_per_day}</strong>",
+          '',
+          '',
+        ],
+        '#attributes' => ['class' => ['summary-row']],
+      ];
+      
+      $build['tags_section']['table'] = [
+        '#type' => 'table',
+        '#header' => [
+          'Date',
+          'New Tags',
+          'Articles',
+          'Tags/Article',
+        ],
+        '#rows' => array_slice($tag_rows, 0, 11), // Show last 10 days + summary
+        '#attributes' => ['class' => ['metrics-table', 'daily-tags-table']],
+      ];
+    } else {
+      $build['tags_section']['empty'] = [
+        '#markup' => '<p>No tag data available for the last 30 days.</p>',
+      ];
+    }
+    
+    // Add CSS for styling
+    $build['#attached']['library'][] = 'newsmotivationmetrics/chart-style';
+    
     return $build;
   }
 
