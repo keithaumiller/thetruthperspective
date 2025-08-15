@@ -1,7 +1,7 @@
 services:
   twitter_automation.api_client:
     class: Drupal\twitter_automation\Service\TwitterApiClient
-    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
 
   twitter_automation.content_generator:
     class: Drupal\twitter_automation\Service\ContentGenerator
