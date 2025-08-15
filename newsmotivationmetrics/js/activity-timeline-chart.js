@@ -8,16 +8,30 @@
 
   Drupal.behaviors.recentActivityTimelineChart = {
     attach: function (context, settings) {
+      console.log('=== Recent Activity Timeline Chart Script Loading ===');
+      console.log('Drupal object:', typeof Drupal);
+      console.log('drupalSettings object:', typeof drupalSettings);
+
       // Check if Chart.js is loaded
       if (typeof Chart === 'undefined') {
         console.error('Chart.js is not loaded for Recent Activity Timeline Chart');
         return;
       }
 
-      const charts = context.querySelectorAll('.recent-activity-timeline-chart');
+      console.log('=== Chart Script Loaded Successfully ===');
+      console.log('Environment check:');
+      console.log('- Drupal available:', typeof Drupal !== 'undefined');
+      console.log('- jQuery available:', typeof $ !== 'undefined');
+      console.log('- drupalSettings available:', typeof drupalSettings !== 'undefined');
+
+      const charts = context.querySelectorAll('.activity-timeline-chart');
+      console.log('Found', charts.length, 'activity timeline chart canvases to process');
       
       charts.forEach(function(canvas) {
+        console.log('✅ Processing canvas with ID:', canvas.getAttribute('id'));
+        
         if (canvas.getAttribute('data-chart-initialized')) {
+          console.log('Skipping already processed canvas:', canvas.getAttribute('id'));
           return;
         }
         
@@ -25,9 +39,13 @@
         const chartData = settings.newsmotivationmetrics_activity?.[chartId];
         
         if (!chartData) {
-          console.warn('No chart data found for', chartId);
+          console.warn('❌ No chart data found for', chartId);
+          console.log('Available activity data keys:', Object.keys(settings.newsmotivationmetrics_activity || {}));
           return;
         }
+        
+        console.log('📊 Chart data loaded:', typeof chartData);
+        console.log('Activity data available:', chartData.timelineData?.length || 0, 'datasets');
         
         console.log('Initializing Recent Activity Timeline Chart:', chartId, chartData);
         
@@ -262,27 +280,31 @@
   /**
    * Setup source filtering functionality
    */
-  function setupSourceFiltering(context) {
+  function setupSourceFiltering(canvas, chartData) {
     try {
-      const container = context.querySelector('.recent-activity-timeline-chart-container');
+      // Find the container that holds this canvas
+      const container = canvas.closest('.timeline-chart-container') || 
+                       canvas.closest('.activity-timeline') ||
+                       canvas.parentElement;
+      
       if (!container) {
-        console.warn('Recent Activity Timeline Chart container not found');
+        console.warn('Activity Timeline Chart container not found for canvas:', canvas.id);
         return;
       }
 
       // Source toggle functionality - look for select elements with activity-source-selector prefix
       const sourceSelectors = container.querySelectorAll('select[id^="activity-source-selector"]');
       if (sourceSelectors.length === 0) {
-        console.warn('No source selectors found in Recent Activity Timeline Chart');
+        console.warn('No source selectors found in Activity Timeline Chart for canvas:', canvas.id);
         return;
       }
 
       sourceSelectors.forEach(selector => {
         const chartTarget = selector.getAttribute('data-chart-target');
-        const canvas = container.querySelector(`canvas#${chartTarget}`);
         
+        // Use the canvas directly since we already have it
         if (!canvas || !canvas.chartInstance) {
-          console.error('Canvas or chart instance not found for source filtering:', chartTarget);
+          console.error('Canvas or chart instance not found for source filtering:', canvas.id);
           return;
         }
 
