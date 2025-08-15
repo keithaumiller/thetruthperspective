@@ -309,12 +309,14 @@ class AboutTruthPerspectiveAnalyticsBlock extends BlockBase implements Container
           '#attributes' => ['class' => ['privacy-text']],
         ],
         'details' => [
-          '#theme' => 'item_list',
-          '#items' => [
-            '<strong>Update Frequency:</strong> Metrics refresh in real-time as new articles are processed. Analysis typically completes within minutes of publication.',
-            '<strong>Data Retention:</strong> Historical analysis data enables trend tracking and longitudinal narrative studies.',
-          ],
+          '#type' => 'container',
           '#attributes' => ['class' => ['privacy-details']],
+          'update_frequency' => [
+            '#markup' => '<p><strong>Update Frequency:</strong> Metrics refresh in real-time as new articles are processed. Analysis typically completes within minutes of publication.</p>',
+          ],
+          'data_retention' => [
+            '#markup' => '<p><strong>Data Retention:</strong> Historical analysis data enables trend tracking and longitudinal narrative studies.</p>',
+          ],
         ],
       ];
     }
