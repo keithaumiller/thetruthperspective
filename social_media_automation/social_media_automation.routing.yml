@@ -13,19 +13,3 @@ social_media_automation.settings:
     _title: 'Social Media Automation Settings'
   requirements:
     _permission: 'administer social media automation'
-
-social_media_automation.content_preview:
-  path: '/admin/config/services/social-media-automation/preview'
-  defaults:
-    _controller: '\Drupal\social_media_automation\Controller\ContentPreviewController::preview'
-    _title: 'Content Preview'
-  requirements:
-    _permission: 'administer social media automation'
-
-social_media_automation.test_connection:
-  path: '/admin/config/services/social-media-automation/test/{platform}'
-  defaults:
-    _controller: '\Drupal\social_media_automation\Controller\SocialMediaController::testConnection'
-  requirements:
-    _permission: 'administer social media automation'
-    _csrf_token: 'TRUE'
