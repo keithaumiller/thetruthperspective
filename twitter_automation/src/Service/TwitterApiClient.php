@@ -104,12 +104,27 @@ class TwitterApiClient {
       // Create base string for signature
       $base_params = array_merge($oauth_params, $params);
       ksort($base_params);
-      $base_string = 'POST&' . rawurlencode($url) . '&' . rawurlencode(http_build_query($base_params));
+      
+      // Manually build query string to ensure proper encoding
+      $param_pairs = [];
+      foreach ($base_params as $key => $value) {
+        $param_pairs[] = rawurlencode($key) . '=' . rawurlencode($value);
+      }
+      $param_string = implode('&', $param_pairs);
+      
+      $base_string = 'POST&' . rawurlencode($url) . '&' . rawurlencode($param_string);
 
       // Create signing key and signature
       $signing_key = rawurlencode($api_secret) . '&' . rawurlencode($access_secret);
       $signature = base64_encode(hash_hmac('sha1', $base_string, $signing_key, true));
       $oauth_params['oauth_signature'] = $signature;
+
+      // Debug OAuth signature generation
+      $this->logger->info('OAuth Debug for POST - URL: @url, Base String: @base, Signature: @sig', [
+        '@url' => $url,
+        '@base' => substr($base_string, 0, 200) . '...',
+        '@sig' => $signature
+      ]);
 
       // Build authorization header
       $auth_parts = [];
