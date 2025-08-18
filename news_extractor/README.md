@@ -78,9 +78,11 @@ The module follows a service-oriented architecture with clear separation of conc
 - **File**: `news_extractor.module`
 - **Function**: `news_extractor_cron()` - runs automatically
 - **Actions**:
-  - Finds unpublished articles and runs them through the complete process flow (Stages 1-6)
-  - Deletes unpublished failed articles older than 24 hours (limit 50)
-  - Logs statistics: found, reprocessed successfully, failed, deleted counts
+  1. Checks published articles for post-processor conditions (may unpublish)
+  2. Finds unpublished articles (< 3 days old) and reprocesses them through complete pipeline
+  3. **NEW**: Detects and unlocks stuck feed imports (locked > 30 minutes)
+  4. Deletes unpublished failed articles older than 24 hours (limit 50)
+  - Logs comprehensive statistics: found, reprocessed, stuck feeds, deleted counts
 
 **Note**: Post-processors in Stage 6 run after all processing is complete to make final publishing decisions based on data quality and completeness.
 
@@ -105,6 +107,7 @@ The module follows a service-oriented architecture with clear separation of conc
 - **Taxonomy Integration**: Auto-generates and assigns relevant tags
 - **Batch Processing**: Handles large volumes of articles efficiently
 - **Processing Status Tracking**: Monitors completion status of each processing stage
+- **Feed Lock Management**: Automatically detects and resolves stuck feed imports
 
 ### ⚙️ **Processing Pipeline**
 1. **Feed Import**: RSS/feed integration with validation
@@ -402,6 +405,13 @@ function mymodule_news_extractor_post_ai_analysis($node, $ai_response) {
 - Reduce batch processing limits
 - Check API rate limits and quotas
 - Monitor memory usage during bulk operations
+
+**Stuck feed imports:**
+- **Symptoms**: Feeds appear to stop importing new articles
+- **Cause**: Feed import process gets stuck/locked due to timeouts or errors
+- **Solution**: Cron automatically detects feeds locked > 30 minutes and unlocks them
+- **Manual check**: Look for "stuck feeds" messages in Drupal logs
+- **Prevention**: Monitor feed import frequency and server resources
 
 ### Support
 

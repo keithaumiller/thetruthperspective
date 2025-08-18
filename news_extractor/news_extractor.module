@@ -472,8 +472,32 @@ function news_extractor_cron() {
     }
   }
 
-  // STEP 3: Delete old unpublished articles with persistent failures
-  $logger->info('Step 3: Deleting old unpublished articles with persistent failures');
+  // STEP 3: Check for stuck feed imports and unlock them
+  $logger->info('Step 3: Checking for stuck feed imports');
+  
+  $stuck_feeds = _news_extractor_check_stuck_feeds();
+  $stats['stuck_feeds_found'] = count($stuck_feeds);
+  $stats['stuck_feeds_unlocked'] = 0;
+  
+  foreach ($stuck_feeds as $feed_info) {
+    try {
+      if (_news_extractor_unlock_stuck_feed($feed_info)) {
+        $stats['stuck_feeds_unlocked']++;
+        $logger->info('Unlocked stuck feed: @feed (locked for @duration minutes)', [
+          '@feed' => $feed_info['title'],
+          '@duration' => $feed_info['lock_duration_minutes'],
+        ]);
+      }
+    } catch (\Exception $e) {
+      $logger->error('Error unlocking stuck feed @feed: @error', [
+        '@feed' => $feed_info['title'],
+        '@error' => $e->getMessage(),
+      ]);
+    }
+  }
+
+  // STEP 4: Delete old unpublished articles with persistent failures
+  $logger->info('Step 4: Deleting old unpublished articles with persistent failures');
   
   // Find unpublished articles older than 24 hours
   $one_day_ago = \Drupal::time()->getRequestTime() - (24 * 60 * 60);
@@ -518,12 +542,137 @@ function news_extractor_cron() {
   ]);
 
   // Also log human-readable summary
-  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, deleted @deleted old articles', [
+  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds, deleted @deleted old articles', [
     '@checked' => $stats['published_checked'],
     '@unpublished' => $stats['articles_unpublished'],
     '@found' => $stats['unpublished_found'],
     '@success' => $stats['reprocessed_successfully'],
     '@failed' => $stats['reprocessing_failed'],
+    '@stuck_found' => $stats['stuck_feeds_found'],
+    '@stuck_unlocked' => $stats['stuck_feeds_unlocked'],
     '@deleted' => $stats['old_articles_deleted'],
   ]);
+}
+
+/**
+ * Check for stuck feed imports and return information about them.
+ * 
+ * A feed is considered "stuck" if it has been locked for more than 30 minutes,
+ * which typically indicates a failed or interrupted import process.
+ *
+ * @return array
+ *   Array of feed information for stuck feeds.
+ */
+function _news_extractor_check_stuck_feeds() {
+  $stuck_feeds = [];
+  
+  // Check if Feeds module is available
+  if (!\Drupal::moduleHandler()->moduleExists('feeds')) {
+    return $stuck_feeds;
+  }
+  
+  try {
+    $current_time = \Drupal::time()->getRequestTime();
+    $stuck_threshold = 30 * 60; // 30 minutes in seconds
+    
+    // Query the feeds_feed table for locked feeds
+    $database = \Drupal::database();
+    $query = $database->select('feeds_feed', 'f')
+      ->fields('f', ['fid', 'title', 'locked'])
+      ->condition('f.locked', 0, '>'); // locked > 0 means feed is locked
+    
+    $result = $query->execute();
+    
+    foreach ($result as $feed_data) {
+      $lock_duration = $current_time - $feed_data->locked;
+      
+      // Consider feed stuck if locked for more than threshold
+      if ($lock_duration > $stuck_threshold) {
+        $stuck_feeds[] = [
+          'fid' => $feed_data->fid,
+          'title' => $feed_data->title,
+          'locked_timestamp' => $feed_data->locked,
+          'lock_duration_seconds' => $lock_duration,
+          'lock_duration_minutes' => round($lock_duration / 60, 1),
+        ];
+      }
+    }
+    
+    if (!empty($stuck_feeds)) {
+      \Drupal::logger('news_extractor')->warning('Found @count stuck feeds (locked > 30 minutes)', [
+        '@count' => count($stuck_feeds),
+      ]);
+    }
+    
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error checking for stuck feeds: @error', [
+      '@error' => $e->getMessage(),
+    ]);
+  }
+  
+  return $stuck_feeds;
+}
+
+/**
+ * Unlock a stuck feed by resetting its lock status.
+ * 
+ * @param array $feed_info
+ *   Feed information array from _news_extractor_check_stuck_feeds().
+ *
+ * @return bool
+ *   TRUE if feed was successfully unlocked.
+ */
+function _news_extractor_unlock_stuck_feed($feed_info) {
+  // Check if Feeds module is available
+  if (!\Drupal::moduleHandler()->moduleExists('feeds')) {
+    return FALSE;
+  }
+  
+  try {
+    $database = \Drupal::database();
+    
+    // Reset the locked timestamp to 0 (unlocked)
+    $result = $database->update('feeds_feed')
+      ->fields(['locked' => 0])
+      ->condition('fid', $feed_info['fid'])
+      ->execute();
+    
+    if ($result) {
+      \Drupal::logger('news_extractor')->info('Successfully unlocked stuck feed: @title (FID: @fid, was locked for @duration minutes)', [
+        '@title' => $feed_info['title'],
+        '@fid' => $feed_info['fid'],
+        '@duration' => $feed_info['lock_duration_minutes'],
+      ]);
+      
+      // Optional: Trigger feed import after unlocking
+      // This can help restart the import process automatically
+      try {
+        $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_info['fid']);
+        if ($feed) {
+          // Queue the feed for import on next cron run
+          $feed->startCronImport();
+          \Drupal::logger('news_extractor')->info('Queued unlocked feed for import: @title', [
+            '@title' => $feed_info['title'],
+          ]);
+        }
+      } catch (\Exception $e) {
+        // Log but don't fail if we can't queue the import
+        \Drupal::logger('news_extractor')->warning('Unlocked feed @title but could not queue import: @error', [
+          '@title' => $feed_info['title'],
+          '@error' => $e->getMessage(),
+        ]);
+      }
+      
+      return TRUE;
+    }
+    
+  } catch (\Exception $e) {
+    \Drupal::logger('news_extractor')->error('Error unlocking stuck feed @title (FID: @fid): @error', [
+      '@title' => $feed_info['title'],
+      '@fid' => $feed_info['fid'],
+      '@error' => $e->getMessage(),
+    ]);
+  }
+  
+  return FALSE;
 }
