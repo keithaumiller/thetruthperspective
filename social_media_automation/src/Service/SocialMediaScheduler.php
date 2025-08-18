@@ -192,7 +192,7 @@ class SocialMediaScheduler {
       
       if ($overall_success) {
         // Update tracking state
-        if ($data['type'] === 'daily') {
+        if ($data['type'] === 'daily' || $data['type'] === 'forced_daily') {
           $this->state->set('social_media_automation.last_daily_post', time());
         } elseif ($data['type'] === 'morning') {
           $this->state->set('social_media_automation.last_morning_post', time());
@@ -200,8 +200,9 @@ class SocialMediaScheduler {
           $this->state->set('social_media_automation.last_evening_post', time());
         }
         
+        $type_display = $data['type'] === 'forced_daily' ? 'forced daily' : $data['type'];
         $this->logger->info('Completed @type post to @success/@total platforms', [
-          '@type' => $data['type'],
+          '@type' => $type_display,
           '@success' => $success_count,
           '@total' => $total_platforms,
         ]);
@@ -341,6 +342,93 @@ class SocialMediaScheduler {
       ]);
       return FALSE;
     }
+  }
+
+  /**
+   * Manually force a daily post (bypassing time window check).
+   *
+   * @param string $content_type
+   *   Optional content type to use. If not provided, uses normal rotation.
+   *
+   * @return bool
+   *   TRUE if post was queued and processed successfully, FALSE otherwise.
+   */
+  public function forcePost(string $content_type = NULL): bool {
+    $config = $this->configFactory->get('social_media_automation.settings');
+    
+    if (!$config->get('enabled')) {
+      $this->logger->warning('Cannot force post: automation is disabled');
+      return FALSE;
+    }
+
+    $this->logger->info('=== FORCING DAILY POST (Manual Override) ===');
+    
+    // Determine content type
+    if (!$content_type) {
+      // Use normal rotation
+      $content_types = ['recent_article', 'analytics_summary', 'trending_topics', 'bias_insight'];
+      $last_content_type = $this->state->get('social_media_automation.last_content_type', 'recent_article');
+      
+      // Find next content type in rotation
+      $current_index = array_search($last_content_type, $content_types);
+      $next_index = ($current_index + 1) % count($content_types);
+      $content_type = $content_types[$next_index];
+    }
+    
+    $this->logger->info('Force posting with content type: @type', ['@type' => $content_type]);
+    
+    // Queue the post
+    $queue = $this->queueFactory->get('social_media_automation_posts');
+    
+    $item = [
+      'type' => 'forced_daily',
+      'content_type' => $content_type,
+      'timestamp' => time(),
+      'forced' => TRUE,
+    ];
+    
+    $queue->createItem($item);
+    $this->state->set('social_media_automation.last_content_type', $content_type);
+    $this->logger->info('Forced post queued with type: @type', ['@type' => $content_type]);
+    
+    // Immediately process the queue
+    $processed = FALSE;
+    while ($queued_item = $queue->claimItem()) {
+      if ($queued_item->data['forced'] ?? FALSE) {
+        $this->logger->info('Processing forced post item: @id', ['@id' => $queued_item->item_id]);
+        
+        try {
+          $result = $this->processQueuedPost($queued_item->data);
+          
+          if ($result) {
+            $queue->deleteItem($queued_item);
+            $processed = TRUE;
+            $this->logger->info('✅ Forced post processed successfully');
+            break;
+          } else {
+            $queue->releaseItem($queued_item);
+            $this->logger->error('❌ Failed to process forced post');
+            break;
+          }
+          
+        } catch (\Exception $e) {
+          $queue->releaseItem($queued_item);
+          $this->logger->error('❌ Exception processing forced post: @message', ['@message' => $e->getMessage()]);
+          break;
+        }
+      } else {
+        // Not our forced item, release it back
+        $queue->releaseItem($queued_item);
+      }
+    }
+    
+    if ($processed) {
+      $this->logger->info('=== FORCED POST COMPLETED SUCCESSFULLY ===');
+    } else {
+      $this->logger->error('=== FORCED POST FAILED ===');
+    }
+    
+    return $processed;
   }
 
   /**

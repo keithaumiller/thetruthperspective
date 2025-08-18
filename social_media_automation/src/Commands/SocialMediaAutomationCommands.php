@@ -420,4 +420,75 @@ class SocialMediaAutomationCommands extends DrushCommands {
     }
   }
 
+  /**
+   * Force a social media post immediately (bypassing time window).
+   *
+   * @param string $content_type
+   *   Optional content type: recent_article, analytics_summary, trending_topics, bias_insight
+   *
+   * @command social-media:force-post
+   * @aliases sma:force-post
+   * @usage social-media:force-post
+   *   Force a daily post using normal content rotation
+   * @usage social-media:force-post recent_article
+   *   Force a post with specific content type
+   */
+  public function forcePost($content_type = null) {
+    $valid_types = ['recent_article', 'analytics_summary', 'trending_topics', 'bias_insight'];
+    
+    if ($content_type && !in_array($content_type, $valid_types)) {
+      $this->output()->writeln('<error>Invalid content type. Use: ' . implode(', ', $valid_types) . '</error>');
+      return;
+    }
+
+    try {
+      $config = \Drupal::config('social_media_automation.settings');
+      
+      $this->output()->writeln('<info>=== Forcing Social Media Post ===</info>');
+      $this->output()->writeln('');
+      
+      if (!$config->get('enabled')) {
+        $this->output()->writeln('<error>❌ Automation is disabled. Enable it in the admin settings first.</error>');
+        return;
+      }
+      
+      $enabled_platforms = $this->platformManager->getEnabledPlatforms();
+      if (empty($enabled_platforms)) {
+        $this->output()->writeln('<error>❌ No platforms enabled. Configure platforms in admin settings.</error>');
+        return;
+      }
+      
+      $platform_names = array_map(function($platform) {
+        return $platform->getName();
+      }, $enabled_platforms);
+      
+      $this->output()->writeln('Enabled platforms: ' . implode(', ', $platform_names));
+      $this->output()->writeln('Content type: ' . ($content_type ?: 'Auto-rotation'));
+      $this->output()->writeln('');
+      $this->output()->writeln('<comment>Forcing post (bypassing time window)...</comment>');
+      
+      $result = $this->scheduler->forcePost($content_type);
+      
+      if ($result) {
+        $this->output()->writeln('<info>✅ SUCCESS! Post forced and sent to all enabled platforms.</info>');
+        $this->output()->writeln('');
+        $this->output()->writeln('<comment>Check your social media accounts to verify the post appeared.</comment>');
+        
+        // Show updated stats
+        $stats = $this->scheduler->getStats();
+        $this->output()->writeln('');
+        $this->output()->writeln('Updated statistics:');
+        $this->output()->writeln('Last daily post: ' . $stats['last_daily_date']);
+        $this->output()->writeln('Last content type: ' . ucfirst(str_replace('_', ' ', $stats['last_content_type'] ?? 'unknown')));
+        
+      } else {
+        $this->output()->writeln('<error>❌ FAILED to force post. Check logs for details:</error>');
+        $this->output()->writeln('<comment>drush watchdog:show --filter=social_media_automation</comment>');
+      }
+      
+    } catch (\Exception $e) {
+      $this->output()->writeln('<error>Error forcing post: ' . $e->getMessage() . '</error>');
+    }
+  }
+
 }
