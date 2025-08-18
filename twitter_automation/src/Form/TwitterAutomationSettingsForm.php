@@ -71,53 +71,62 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
       '#open' => TRUE,
     ];
 
-    $form['twitter_api']['bearer_token'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Bearer Token (Optional)'),
-      '#default_value' => $config->get('bearer_token'),
-      '#description' => $this->t('Twitter API v2 Bearer Token. <strong>For testing only - posting requires OAuth credentials below.</strong>'),
-      '#required' => FALSE,
-      '#attributes' => ['autocomplete' => 'off'],
-    ];
-
-    $form['twitter_api']['oauth_credentials'] = [
+    // Consumer Keys section
+    $form['twitter_api']['consumer_keys'] = [
       '#type' => 'details',
-      '#title' => $this->t('OAuth 1.1a Credentials (Required for Posting)'),
+      '#title' => $this->t('Consumer Keys'),
       '#open' => TRUE,
-      '#description' => $this->t('These credentials are required for posting tweets. Get them from your Twitter Developer app.'),
+      '#description' => $this->t('From your Twitter app\'s "Consumer Keys" section.'),
     ];
 
-    $form['twitter_api']['oauth_credentials']['api_key'] = [
+    $form['twitter_api']['consumer_keys']['api_key'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('API Key (Consumer Key)'),
+      '#title' => $this->t('API Key'),
       '#default_value' => $config->get('api_key'),
-      '#description' => $this->t('Also called Consumer Key from your Twitter app.'),
+      '#description' => $this->t('Consumer Key from your Twitter app\'s Consumer Keys section.'),
       '#required' => FALSE,
       '#attributes' => ['autocomplete' => 'off'],
     ];
 
-    $form['twitter_api']['oauth_credentials']['api_secret'] = [
+    $form['twitter_api']['consumer_keys']['api_secret'] = [
       '#type' => 'password',
-      '#title' => $this->t('API Secret (Consumer Secret)'),
+      '#title' => $this->t('API Key Secret'),
       '#default_value' => $config->get('api_secret'),
-      '#description' => $this->t('Also called Consumer Secret from your Twitter app.'),
+      '#description' => $this->t('Consumer Secret from your Twitter app\'s Consumer Keys section.'),
       '#attributes' => ['autocomplete' => 'off'],
     ];
 
-    $form['twitter_api']['oauth_credentials']['access_token'] = [
+    // Authentication Tokens section
+    $form['twitter_api']['auth_tokens'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Authentication Tokens'),
+      '#open' => TRUE,
+      '#description' => $this->t('From your Twitter app\'s "Authentication Tokens" section.'),
+    ];
+
+    $form['twitter_api']['auth_tokens']['bearer_token'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Bearer Token'),
+      '#default_value' => $config->get('bearer_token'),
+      '#description' => $this->t('Bearer Token for read-only operations and testing. <strong>Optional - posting uses Access Token below.</strong>'),
+      '#required' => FALSE,
+      '#attributes' => ['autocomplete' => 'off'],
+    ];
+
+    $form['twitter_api']['auth_tokens']['access_token'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Access Token'),
       '#default_value' => $config->get('access_token'),
-      '#description' => $this->t('OAuth 1.0a Access Token from your Twitter app.'),
+      '#description' => $this->t('Access Token from "Access Token and Secret" section. Required for posting tweets.'),
       '#required' => FALSE,
       '#attributes' => ['autocomplete' => 'off'],
     ];
 
-    $form['twitter_api']['oauth_credentials']['access_secret'] = [
+    $form['twitter_api']['auth_tokens']['access_secret'] = [
       '#type' => 'password',
       '#title' => $this->t('Access Token Secret'),
       '#default_value' => $config->get('access_secret'),
-      '#description' => $this->t('OAuth 1.0a Access Token Secret from your Twitter app.'),
+      '#description' => $this->t('Access Token Secret from "Access Token and Secret" section. Required for posting tweets.'),
       '#attributes' => ['autocomplete' => 'off'],
     ];
 

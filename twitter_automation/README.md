@@ -53,13 +53,32 @@ drush en twitter_automation
 ### Twitter API Setup
 
 1. Create a Twitter Developer account at https://developer.twitter.com
-2. Create a new app and generate API v2 Bearer Token
-3. Ensure your app has "Read and Write" permissions
-4. Add the Bearer Token to the module configuration
+2. Create a new app in the Developer Portal
+3. Configure app permissions to "Read and write" (or "Read, Write, and Direct Messages")
+4. Generate and collect the following credentials:
+
+#### Consumer Keys
+- **API Key**: From the "Consumer Keys" section
+- **API Key Secret**: From the "Consumer Keys" section
+
+#### Authentication Tokens  
+- **Bearer Token**: From "Authentication Tokens" section (optional, for testing)
+- **Access Token**: From "Access Token and Secret" section (required for posting)
+- **Access Token Secret**: From "Access Token and Secret" section (required for posting)
+
+### Module Configuration
+
+1. Go to `/admin/config/services/twitter-automation/settings`
+2. Enter your credentials in the matching sections:
+   - **Consumer Keys**: API Key and API Key Secret
+   - **Authentication Tokens**: Access Token and Access Token Secret
+3. Test the connection using the "Test Connection" button
+4. Enable automated posting if desired
 
 ### Settings
 
-- **Bearer Token**: Twitter API v2 authentication
+- **Consumer Keys**: Required for OAuth 1.0a authentication
+- **Authentication Tokens**: Access Token and Secret required for posting
 - **Enable Automated Posting**: Toggle for automation
 - **Time Windows**: Fixed ranges for morning (8-12) and evening (6-10) posts
 
@@ -131,14 +150,18 @@ All activities are logged to 'twitter_automation' channel:
 ### Common Issues
 
 1. **Connection Failed**
-   - Verify Bearer Token is correct
-   - Check Twitter app permissions (Read and Write)
+   - Verify all four credentials are correct:
+     - Consumer Keys: API Key and API Key Secret
+     - Authentication Tokens: Access Token and Access Token Secret
+   - Check Twitter app permissions include "Read and write" or "Read, Write, and Direct Messages"
+   - Ensure Access Token was generated AFTER setting proper permissions
    - Test connection in admin interface
 
 2. **Posts Not Sending**
    - Confirm automation is enabled
    - Check cron is running regularly
    - Review logs for error messages
+   - Verify Access Token has write permissions
 
 3. **Content Generation Errors**
    - Ensure newsmotivationmetrics module is enabled
