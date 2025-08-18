@@ -13,12 +13,3 @@ social_media_automation.settings:
     _title: 'Social Media Automation Settings'
   requirements:
     _permission: 'administer social media automation'
-
-social_media_automation.content_preview:
-  path: '/admin/config/services/social-media-automation/generate-preview'
-  defaults:
-    _controller: '\Drupal\social_media_automation\Controller\ContentPreviewController::generatePreview'
-  requirements:
-    _permission: 'administer social media automation'
-  options:
-    _admin_route: TRUE

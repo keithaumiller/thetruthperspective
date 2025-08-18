@@ -33,20 +33,27 @@
    */
   Drupal.behaviors.socialMediaContentPreview = {
     attach: function (context, settings) {
+      console.log('🎯 Content preview behavior attached to context:', context);
+      
       // Use the onceFunction for compatibility
       var bodyElements = onceFunction('social-media-content-preview', 'body', context);
       
       if (bodyElements.length > 0) {
+        console.log('✅ Initializing global preview functions');
+        
         // Add global functions for preview interactions
         window.generateNewPreview = function() {
+          console.log('🔄 generateNewPreview called');
           // Find the generate preview button and trigger click
           var $button = $('#edit-generate-preview');
+          console.log('Found button:', $button.length > 0 ? 'YES' : 'NO');
           if ($button.length) {
             $button.trigger('click');
           }
         };
 
         window.clearPreview = function() {
+          console.log('🗑️ clearPreview called');
           // Clear the preview container
           $('#social-media-preview-container').html(
             '<p><em>Click "Generate Social Media Post Preview" to create AI-powered content based on your most recent article.</em></p>'
@@ -57,17 +64,23 @@
       // Add loading state to preview button
       var buttonElements = onceFunction('preview-button-handler', '#edit-generate-preview', context);
       if (buttonElements.length > 0) {
+        console.log('✅ Adding click handler to preview button');
+        
         $(buttonElements[0]).on('click', function() {
+          console.log('🎯 Preview button clicked');
           var $button = $(this);
           var originalText = $button.val();
           
           $button.val('🔄 Generating Preview...').prop('disabled', true);
+          console.log('Button text changed to loading state');
           
           // Reset button after AJAX completes
           $(document).ajaxComplete(function(event, xhr, settings) {
-            if (settings.url && settings.url.indexOf('generate-preview') !== -1) {
+            console.log('AJAX complete:', settings.url);
+            if (settings.url && (settings.url.indexOf('ajax_form=1') !== -1 || settings.url.indexOf('settings') !== -1)) {
               setTimeout(function() {
                 $button.val(originalText).prop('disabled', false);
+                console.log('Button reset to original state');
               }, 500);
             }
           });
@@ -82,6 +95,7 @@
             var text = $(this).text();
             if (navigator.clipboard) {
               navigator.clipboard.writeText(text).then(function() {
+                console.log('✅ Content copied to clipboard');
                 // Show temporary success message
                 var $message = $('<div class="clipboard-success">Content copied to clipboard!</div>');
                 $(element).append($message);
@@ -118,5 +132,24 @@
       }
     }
   };
+
+  // Add AJAX error handling
+  $(document).ajaxError(function(event, xhr, settings, thrownError) {
+    console.error('🚨 AJAX Error:', {
+      status: xhr.status,
+      statusText: xhr.statusText,
+      responseText: xhr.responseText ? xhr.responseText.substring(0, 200) + '...' : '',
+      url: settings.url,
+      error: thrownError
+    });
+    
+    // If it's the content preview AJAX call, show user-friendly error
+    if (settings.url && (settings.url.indexOf('ajax_form=1') !== -1 || settings.url.indexOf('settings') !== -1)) {
+      var $container = $('#social-media-preview-container');
+      if ($container.length) {
+        $container.html('<div class="messages messages--error">❌ An error occurred while generating the preview. Please check the browser console and server logs for details.</div>');
+      }
+    }
+  });
 
 })(jQuery, Drupal, drupalSettings);
