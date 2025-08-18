@@ -231,15 +231,13 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
    * AJAX callback for testing Twitter connection.
    */
   public function testConnectionCallback(array &$form, FormStateInterface $form_state) {
-    // Get values from form (either newly entered or saved) - handle nested structure
-    $twitter_api = $form_state->getValue('twitter_api') ?: [];
-    $consumer_keys = $twitter_api['consumer_keys'] ?? [];
-    $auth_tokens = $twitter_api['auth_tokens'] ?? [];
+    // Get values from form (either newly entered or saved) - form values are flat
+    $values = $form_state->getValues();
     
-    $api_key = $consumer_keys['api_key'] ?: $this->config('twitter_automation.settings')->get('api_key');
-    $api_secret = $consumer_keys['api_secret'] ?: $this->config('twitter_automation.settings')->get('api_secret');
-    $access_token = $auth_tokens['access_token'] ?: $this->config('twitter_automation.settings')->get('access_token');
-    $access_secret = $auth_tokens['access_secret'] ?: $this->config('twitter_automation.settings')->get('access_secret');
+    $api_key = $values['api_key'] ?? $this->config('twitter_automation.settings')->get('api_key');
+    $api_secret = $values['api_secret'] ?? $this->config('twitter_automation.settings')->get('api_secret');
+    $access_token = $values['access_token'] ?? $this->config('twitter_automation.settings')->get('access_token');
+    $access_secret = $values['access_secret'] ?? $this->config('twitter_automation.settings')->get('access_secret');
     
     if (empty($api_key) || empty($api_secret) || empty($access_token) || empty($access_secret)) {
       $message = '<div class="messages messages--error">Please enter all OAuth credentials first.</div>';
@@ -389,32 +387,29 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    // Debug what we're getting from the form
-    $twitter_api = $form_state->getValue('twitter_api');
+    // The form values are actually flat, not nested as expected
+    $values = $form_state->getValues();
     
     // Log for debugging
     \Drupal::logger('twitter_automation')->info('Form submission debug: @data', [
-      '@data' => print_r($form_state->getValues(), TRUE)
+      '@data' => print_r($values, TRUE)
     ]);
-    
-    $consumer_keys = $twitter_api['consumer_keys'] ?? [];
-    $auth_tokens = $twitter_api['auth_tokens'] ?? [];
     
     // Log individual values
     \Drupal::logger('twitter_automation')->info('Credentials extracted: API Key: @api_key, Access Token: @access_token', [
-      '@api_key' => $consumer_keys['api_key'] ?? 'EMPTY',
-      '@access_token' => $auth_tokens['access_token'] ?? 'EMPTY'
+      '@api_key' => $values['api_key'] ?? 'EMPTY',
+      '@access_token' => $values['access_token'] ?? 'EMPTY'
     ]);
     
     $this->config('twitter_automation.settings')
-      ->set('bearer_token', $auth_tokens['bearer_token'] ?? '')
-      ->set('api_key', $consumer_keys['api_key'] ?? '')
-      ->set('api_secret', $consumer_keys['api_secret'] ?? '')
-      ->set('access_token', $auth_tokens['access_token'] ?? '')
-      ->set('access_secret', $auth_tokens['access_secret'] ?? '')
-      ->set('enabled', $form_state->getValue('enabled'))
-      ->set('morning_time', $form_state->getValue('morning_time'))
-      ->set('evening_time', $form_state->getValue('evening_time'))
+      ->set('bearer_token', $values['bearer_token'] ?? '')
+      ->set('api_key', $values['api_key'] ?? '')
+      ->set('api_secret', $values['api_secret'] ?? '')
+      ->set('access_token', $values['access_token'] ?? '')
+      ->set('access_secret', $values['access_secret'] ?? '')
+      ->set('enabled', $values['enabled'] ?? FALSE)
+      ->set('morning_time', $values['morning_time'] ?? '08:00')
+      ->set('evening_time', $values['evening_time'] ?? '18:00')
       ->save();
 
     parent::submitForm($form, $form_state);
