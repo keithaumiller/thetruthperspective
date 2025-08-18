@@ -231,24 +231,24 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
    * AJAX callback for testing Twitter connection.
    */
   public function testConnectionCallback(array &$form, FormStateInterface $form_state) {
-    // Get values from form (either newly entered or saved) - form values are flat
-    $values = $form_state->getValues();
+    // For AJAX callbacks, primarily read from saved config, not form values
+    $config = $this->config('twitter_automation.settings');
     
-    $api_key = $values['api_key'] ?? $this->config('twitter_automation.settings')->get('api_key');
-    $api_secret = $values['api_secret'] ?? $this->config('twitter_automation.settings')->get('api_secret');
-    $access_token = $values['access_token'] ?? $this->config('twitter_automation.settings')->get('access_token');
-    $access_secret = $values['access_secret'] ?? $this->config('twitter_automation.settings')->get('access_secret');
+    $api_key = $config->get('api_key');
+    $api_secret = $config->get('api_secret');
+    $access_token = $config->get('access_token');
+    $access_secret = $config->get('access_secret');
+    
+    // Debug what we have
+    $debug_info = [];
+    $debug_info[] = 'API Key: ' . ($api_key ? 'SET (length: ' . strlen($api_key) . ')' : 'EMPTY');
+    $debug_info[] = 'API Secret: ' . ($api_secret ? 'SET (length: ' . strlen($api_secret) . ')' : 'EMPTY');
+    $debug_info[] = 'Access Token: ' . ($access_token ? 'SET (length: ' . strlen($access_token) . ')' : 'EMPTY');
+    $debug_info[] = 'Access Secret: ' . ($access_secret ? 'SET (length: ' . strlen($access_secret) . ')' : 'EMPTY');
     
     if (empty($api_key) || empty($api_secret) || empty($access_token) || empty($access_secret)) {
-      $message = '<div class="messages messages--error">Please enter all OAuth credentials first.</div>';
+      $message = '<div class="messages messages--error">Please enter all OAuth credentials first.<br><br>Debug Info:<br>' . implode('<br>', $debug_info) . '</div>';
     } else {
-      // Temporarily save credentials for testing
-      $config = \Drupal::service('config.factory')->getEditable('twitter_automation.settings');
-      $config->set('api_key', $api_key)
-        ->set('api_secret', $api_secret)
-        ->set('access_token', $access_token)
-        ->set('access_secret', $access_secret)
-        ->save();
       
       // Detailed OAuth debugging
       $debug_info = [];
@@ -389,17 +389,6 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // The form values are actually flat, not nested as expected
     $values = $form_state->getValues();
-    
-    // Log for debugging
-    \Drupal::logger('twitter_automation')->info('Form submission debug: @data', [
-      '@data' => print_r($values, TRUE)
-    ]);
-    
-    // Log individual values
-    \Drupal::logger('twitter_automation')->info('Credentials extracted: API Key: @api_key, Access Token: @access_token', [
-      '@api_key' => $values['api_key'] ?? 'EMPTY',
-      '@access_token' => $values['access_token'] ?? 'EMPTY'
-    ]);
     
     $this->config('twitter_automation.settings')
       ->set('bearer_token', $values['bearer_token'] ?? '')
