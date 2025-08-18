@@ -235,10 +235,19 @@ class ContentGenerator {
       $title = $article->getTitle();
       $article_url = $article->toUrl('canonical', ['absolute' => TRUE])->toString();
       
+      // Fix URL if it shows as default
+      if (strpos($article_url, 'http://default') !== false) {
+        $article_url = str_replace('http://default', 'https://thetruthperspective.org', $article_url);
+      }
+      
       // Get motivation analysis if available
       $motivation_insight = '';
       if ($article->hasField('field_motivation_analysis') && !$article->get('field_motivation_analysis')->isEmpty()) {
         $motivation_data = $article->get('field_motivation_analysis')->value;
+        
+        // Clean up HTML tags from motivation data
+        $motivation_data = strip_tags($motivation_data);
+        $motivation_data = html_entity_decode($motivation_data, ENT_QUOTES | ENT_HTML5);
         
         // Extract a key insight from the motivation analysis
         if (preg_match('/motivation[s]?[^.]*([^.]{50,150})/i', $motivation_data, $matches)) {
@@ -247,6 +256,10 @@ class ContentGenerator {
           // Fallback: get any substantial sentence
           $motivation_insight = trim($matches[1]);
         }
+        
+        // Further cleanup of the insight
+        $motivation_insight = preg_replace('/\s+/', ' ', $motivation_insight); // normalize whitespace
+        $motivation_insight = trim($motivation_insight);
       }
 
       $templates = [
