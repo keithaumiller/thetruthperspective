@@ -14,7 +14,6 @@ services:
   # Drush commands
   social_media_automation.commands:
     class: Drupal\social_media_automation\Commands\SocialMediaAutomationCommands
-    arguments: ['@social_media_automation.content_generator', '@social_media_automation.platform_manager', '@social_media_automation.scheduler']
     tags:
       - { name: drush.command }
 
