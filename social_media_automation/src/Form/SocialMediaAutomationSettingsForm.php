@@ -77,7 +77,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
 
     $form['overview'] = [
       '#type' => 'markup',
-      '#markup' => '<div class="messages messages--info"><strong>Multi-Platform Social Media Automation</strong><br/>Configure credentials for each platform you want to use. The system will automatically post to all enabled platforms twice daily (morning and evening).</div>',
+      '#markup' => '<div class="messages messages--info"><strong>Multi-Platform Social Media Automation</strong><br/>Configure credentials for each platform you want to use. The system will automatically post to all enabled platforms once daily (between 10 AM - 2 PM), rotating through different content types for variety.</div>',
     ];
 
     // DISABLED FOR TESTING - Global automation settings

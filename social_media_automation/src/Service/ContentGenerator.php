@@ -174,12 +174,73 @@ class ContentGenerator {
   }
 
   /**
-   * Generate insight about AI bias detection.
+   * Generate content featuring the most recent article.
    *
    * @return string
    *   Generated base content.
    */
-  public function generateBiasInsight(): string {
+  public function generateRecentArticle(): string {
+    try {
+      // Get most recent article
+      $node_storage = $this->entityTypeManager->getStorage('node');
+      $query = $node_storage->getQuery()
+        ->condition('type', 'article')
+        ->condition('status', 1)
+        ->sort('created', 'DESC')
+        ->range(0, 1)
+        ->accessCheck(FALSE);
+        
+      $nids = $query->execute();
+      
+      if (empty($nids)) {
+        return $this->getFallbackContent();
+      }
+
+      $nid = reset($nids);
+      $article = $node_storage->load($nid);
+      
+      if (!$article) {
+        return $this->getFallbackContent();
+      }
+
+      $title = $article->getTitle();
+      $article_url = $article->toUrl('canonical', ['absolute' => TRUE])->toString();
+      
+      // Get motivation analysis if available
+      $motivation_insight = '';
+      if ($article->hasField('field_motivation_analysis') && !$article->get('field_motivation_analysis')->isEmpty()) {
+        $motivation_data = $article->get('field_motivation_analysis')->value;
+        
+        // Extract a key insight from the motivation analysis
+        if (preg_match('/motivation[s]?[^.]*([^.]{50,150})/i', $motivation_data, $matches)) {
+          $motivation_insight = trim($matches[1]);
+        }
+      }
+
+      $templates = [
+        "🔍 Latest Analysis: \"{$title}\" - Our AI reveals the underlying motivational patterns in this story. {$motivation_insight}",
+        
+        "📊 New Investigation: Just analyzed \"{$title}\" for narrative structure and bias indicators. {$motivation_insight}",
+        
+        "🤖 Fresh Insights: Our latest article analysis of \"{$title}\" exposes interesting patterns in how this story is constructed. {$motivation_insight}",
+        
+        "⚡ Breaking Analysis: \"{$title}\" - See how AI deconstructs the motivational framework of contemporary news narratives.",
+      ];
+
+      $selected_template = $templates[array_rand($templates)];
+      
+      // Add URL if not already present
+      if (strpos($selected_template, 'thetruthperspective.org') === false) {
+        $selected_template .= "\n\n🔗 " . $article_url;
+      }
+
+      return $selected_template;
+
+    } catch (\Exception $e) {
+      $this->logger->error('Failed to generate recent article content: @message', ['@message' => $e->getMessage()]);
+      return $this->getFallbackContent();
+    }
+  }
     $insights = [
       "🤖 AI Bias Alert: Our analysis shows how LLMs can misinterpret satirical content as legitimate news. The Onion gets similar 'credibility scores' as CNN - highlighting the dangers of algorithmic information ranking.",
       
@@ -265,6 +326,9 @@ class ContentGenerator {
    */
   protected function generateBaseContent(string $type): string {
     switch ($type) {
+      case 'recent_article':
+        return $this->generateRecentArticle();
+        
       case 'analytics_summary':
         return $this->generateAnalyticsSummary();
         
@@ -380,6 +444,10 @@ class ContentGenerator {
     // Add hashtags based on content type and platform features
     $hashtags = [];
     switch ($content_type) {
+      case 'recent_article':
+        $hashtags = ['#LatestAnalysis', '#AIInsights', '#NewsAnalysis', '#TheTruthPerspective'];
+        break;
+        
       case 'analytics_summary':
         $hashtags = ['#AIAnalysis', '#MediaBias', '#NewsAnalysis', '#DataTransparency'];
         break;

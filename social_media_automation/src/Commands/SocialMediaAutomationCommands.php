@@ -69,9 +69,16 @@ class SocialMediaAutomationCommands extends DrushCommands {
       
       // Recent activity
       $this->output()->writeln('<comment>Recent Activity:</comment>');
-      $this->output()->writeln('Last Morning Post: ' . $stats['last_morning_date']);
-      $this->output()->writeln('Last Evening Post: ' . $stats['last_evening_date']);
-      $this->output()->writeln('Last Evening Type: ' . ucfirst(str_replace('_', ' ', $stats['last_evening_type'])));
+      $this->output()->writeln('Last Daily Post: ' . ($stats['last_daily_date'] ?? 'Never'));
+      $this->output()->writeln('Last Content Type: ' . ucfirst(str_replace('_', ' ', $stats['last_content_type'] ?? 'recent_article')));
+      
+      // Legacy info for backward compatibility
+      if (isset($stats['last_morning_date']) && $stats['last_morning_date'] !== 'Never') {
+        $this->output()->writeln('Last Morning Post (Legacy): ' . $stats['last_morning_date']);
+      }
+      if (isset($stats['last_evening_date']) && $stats['last_evening_date'] !== 'Never') {
+        $this->output()->writeln('Last Evening Post (Legacy): ' . $stats['last_evening_date']);
+      }
       $this->output()->writeln('');
       
       // Platform details
@@ -109,17 +116,19 @@ class SocialMediaAutomationCommands extends DrushCommands {
    * Test content generation for all enabled platforms.
    *
    * @param string $type
-   *   Content type: analytics_summary, trending_topics, bias_insight
+   *   Content type: recent_article, analytics_summary, trending_topics, bias_insight
    *
    * @command social-media:test-content
    * @aliases sma:test-content
+   * @usage social-media:test-content recent_article
+   *   Generate test content featuring the most recent article
    * @usage social-media:test-content analytics_summary
    *   Generate test analytics summary content for all platforms
    * @usage social-media:test-content trending_topics
    *   Generate test trending topics content for all platforms
    */
-  public function testContent($type = 'analytics_summary') {
-    $valid_types = ['analytics_summary', 'trending_topics', 'bias_insight'];
+  public function testContent($type = 'recent_article') {
+    $valid_types = ['recent_article', 'analytics_summary', 'trending_topics', 'bias_insight'];
     
     if (!in_array($type, $valid_types)) {
       $this->output()->writeln('<error>Invalid content type. Use: ' . implode(', ', $valid_types) . '</error>');
@@ -260,6 +269,154 @@ class SocialMediaAutomationCommands extends DrushCommands {
       
     } catch (\Exception $e) {
       $this->output()->writeln('<error>Error testing connections: ' . $e->getMessage() . '</error>');
+    }
+  }
+
+  /**
+   * Manually trigger cron execution for social media automation.
+   *
+   * @command social-media:cron
+   * @aliases sma:cron
+   * @usage social-media:cron
+   *   Manually run the social media automation cron to check if posts should be scheduled
+   */
+  public function cronRun() {
+    try {
+      $config = \Drupal::config('social_media_automation.settings');
+      
+      $this->output()->writeln('<info>=== Manual Cron Execution ===</info>');
+      $this->output()->writeln('');
+      
+      // Show current time and settings
+      $current_time = time();
+      $current_hour = (int) date('H', $current_time);
+      $today = date('Y-m-d', $current_time);
+      $enabled = $config->get('enabled');
+      
+      $this->output()->writeln('Current time: ' . date('Y-m-d H:i:s T', $current_time));
+      $this->output()->writeln('Current hour: ' . $current_hour);
+      $this->output()->writeln('Automation enabled: ' . ($enabled ? 'Yes' : 'No'));
+      $this->output()->writeln('Daily posting window: 10 AM - 2 PM (hours 10-13)');
+      $this->output()->writeln('');
+      
+      if (!$enabled) {
+        $this->output()->writeln('<comment>Automation is disabled. Enable it in the admin settings.</comment>');
+        return;
+      }
+      
+      // Check last daily post
+      $last_daily_post = \Drupal::state()->get('social_media_automation.last_daily_post', 0);
+      $last_post_date = $last_daily_post ? date('Y-m-d', $last_daily_post) : 'Never';
+      $last_content_type = \Drupal::state()->get('social_media_automation.last_content_type', 'recent_article');
+      
+      $this->output()->writeln('Last daily post: ' . ($last_daily_post ? date('Y-m-d H:i:s', $last_daily_post) : 'Never'));
+      $this->output()->writeln('Last content type: ' . $last_content_type);
+      $this->output()->writeln('');
+      
+      // Show queue status before
+      $queue = \Drupal::service('queue')->get('social_media_automation_posts');
+      $queue_count_before = $queue->numberOfItems();
+      $this->output()->writeln('Queue items before cron: ' . $queue_count_before);
+      
+      // Execute cron
+      $this->output()->writeln('<comment>Executing cron...</comment>');
+      $this->scheduler->executeCronPosts();
+      
+      // Show queue status after
+      $queue_count_after = $queue->numberOfItems();
+      $this->output()->writeln('Queue items after cron: ' . $queue_count_after);
+      
+      if ($queue_count_after > $queue_count_before) {
+        $this->output()->writeln('<info>✅ Post was queued! New items added to queue.</info>');
+        
+        // Show next content type
+        $next_content_type = \Drupal::state()->get('social_media_automation.last_content_type', 'recent_article');
+        $this->output()->writeln('Next content type will be: ' . $next_content_type);
+      } else {
+        if ($current_hour >= 10 && $current_hour < 14) {
+          if ($last_post_date === $today) {
+            $this->output()->writeln('<comment>⏸️ Post already sent today (' . $last_post_date . ').</comment>');
+          } else {
+            $this->output()->writeln('<comment>⚠️ In posting window but no post queued. Check platform configuration.</comment>');
+          }
+        } else {
+          $this->output()->writeln('<comment>⏰ Outside posting window (current hour: ' . $current_hour . ').</comment>');
+          if ($current_hour < 10) {
+            $this->output()->writeln('Next posting window starts at 10 AM.');
+          } else {
+            $this->output()->writeln('Posting window ended at 2 PM. Next window starts tomorrow at 10 AM.');
+          }
+        }
+      }
+      
+      $this->output()->writeln('');
+      $this->output()->writeln('<comment>To process the queue manually: drush queue:run social_media_automation_posts</comment>');
+      
+    } catch (\Exception $e) {
+      $this->output()->writeln('<error>Error running cron: ' . $e->getMessage() . '</error>');
+    }
+  }
+
+  /**
+   * Process queued social media posts.
+   *
+   * @command social-media:process-queue
+   * @aliases sma:process-queue
+   * @usage social-media:process-queue
+   *   Process any queued social media posts immediately
+   */
+  public function processQueue() {
+    try {
+      $queue = \Drupal::service('queue')->get('social_media_automation_posts');
+      $queue_count = $queue->numberOfItems();
+      
+      $this->output()->writeln('<info>=== Processing Social Media Queue ===</info>');
+      $this->output()->writeln('Queue items: ' . $queue_count);
+      $this->output()->writeln('');
+      
+      if ($queue_count === 0) {
+        $this->output()->writeln('<comment>No items in queue to process.</comment>');
+        return;
+      }
+      
+      $processed = 0;
+      $failed = 0;
+      
+      while ($item = $queue->claimItem()) {
+        $this->output()->writeln('<comment>Processing item: ' . $item->item_id . '</comment>');
+        
+        try {
+          $data = $item->data;
+          $this->output()->writeln('Type: ' . ($data['type'] ?? 'unknown'));
+          $this->output()->writeln('Content Type: ' . ($data['content_type'] ?? 'unknown'));
+          
+          $result = $this->scheduler->processQueuedPost($data);
+          
+          if ($result) {
+            $queue->deleteItem($item);
+            $processed++;
+            $this->output()->writeln('<info>✅ Successfully processed and posted</info>');
+          } else {
+            $queue->releaseItem($item);
+            $failed++;
+            $this->output()->writeln('<error>❌ Failed to process, item released back to queue</error>');
+          }
+          
+        } catch (\Exception $e) {
+          $queue->releaseItem($item);
+          $failed++;
+          $this->output()->writeln('<error>❌ Exception: ' . $e->getMessage() . '</error>');
+        }
+        
+        $this->output()->writeln('');
+      }
+      
+      $this->output()->writeln('<info>Processing complete:</info>');
+      $this->output()->writeln('Processed successfully: ' . $processed);
+      $this->output()->writeln('Failed: ' . $failed);
+      
+    } catch (\Exception $e) {
+      $this->output()->writeln('<error>Error processing queue: ' . $e->getMessage() . '</error>');
     }
   }
 

@@ -87,67 +87,45 @@ class SocialMediaScheduler {
       return;
     }
 
-    $last_morning_post = $this->state->get('social_media_automation.last_morning_post', 0);
-    $last_evening_post = $this->state->get('social_media_automation.last_evening_post', 0);
+    $last_daily_post = $this->state->get('social_media_automation.last_daily_post', 0);
     
     $current_time = time();
     $current_hour = (int) date('H', $current_time);
     $today = date('Y-m-d', $current_time);
     
-    // Morning post (8 AM - 12 PM)
-    if ($current_hour >= 8 && $current_hour < 12) {
-      $last_morning_date = date('Y-m-d', $last_morning_post);
-      if ($last_morning_date !== $today) {
-        $this->queueMorningPost();
-      }
-    }
-    
-    // Evening post (6 PM - 10 PM)
-    if ($current_hour >= 18 && $current_hour < 22) {
-      $last_evening_date = date('Y-m-d', $last_evening_post);
-      if ($last_evening_date !== $today) {
-        $this->queueEveningPost();
+    // Daily post (10 AM - 2 PM)
+    if ($current_hour >= 10 && $current_hour < 14) {
+      $last_post_date = date('Y-m-d', $last_daily_post);
+      if ($last_post_date !== $today) {
+        $this->queueDailyPost();
       }
     }
   }
 
   /**
-   * Queue morning post.
+   * Queue daily post.
    */
-  protected function queueMorningPost(): void {
+  protected function queueDailyPost(): void {
     $queue = $this->queueFactory->get('social_media_automation_posts');
     
-    $item = [
-      'type' => 'morning',
-      'content_type' => 'analytics_summary',
-      'timestamp' => time(),
-    ];
+    // Rotate through different content types for variety
+    $content_types = ['recent_article', 'analytics_summary', 'trending_topics', 'bias_insight'];
+    $last_content_type = $this->state->get('social_media_automation.last_content_type', 'recent_article');
     
-    $queue->createItem($item);
-    $this->logger->info('Morning social media post queued');
-  }
-
-  /**
-   * Queue evening post.
-   */
-  protected function queueEveningPost(): void {
-    $queue = $this->queueFactory->get('social_media_automation_posts');
-    
-    // Alternate between different content types for evening posts
-    $evening_types = ['trending_topics', 'bias_insight'];
-    $last_evening_type = $this->state->get('social_media_automation.last_evening_type', 'trending_topics');
-    
-    $next_type = ($last_evening_type === 'trending_topics') ? 'bias_insight' : 'trending_topics';
+    // Find next content type in rotation
+    $current_index = array_search($last_content_type, $content_types);
+    $next_index = ($current_index + 1) % count($content_types);
+    $next_type = $content_types[$next_index];
     
     $item = [
-      'type' => 'evening',
+      'type' => 'daily',
       'content_type' => $next_type,
       'timestamp' => time(),
     ];
     
     $queue->createItem($item);
-    $this->state->set('social_media_automation.last_evening_type', $next_type);
-    $this->logger->info('Evening social media post queued with type: @type', ['@type' => $next_type]);
+    $this->state->set('social_media_automation.last_content_type', $next_type);
+    $this->logger->info('Daily social media post queued with type: @type', ['@type' => $next_type]);
   }
 
   /**
@@ -214,7 +192,9 @@ class SocialMediaScheduler {
       
       if ($overall_success) {
         // Update tracking state
-        if ($data['type'] === 'morning') {
+        if ($data['type'] === 'daily') {
+          $this->state->set('social_media_automation.last_daily_post', time());
+        } elseif ($data['type'] === 'morning') {
           $this->state->set('social_media_automation.last_morning_post', time());
         } elseif ($data['type'] === 'evening') {
           $this->state->set('social_media_automation.last_evening_post', time());
@@ -370,6 +350,10 @@ class SocialMediaScheduler {
    *   Array of statistics.
    */
   public function getStats(): array {
+    $last_daily_post = $this->state->get('social_media_automation.last_daily_post', 0);
+    $last_content_type = $this->state->get('social_media_automation.last_content_type', 'recent_article');
+    
+    // Keep legacy stats for backward compatibility
     $last_morning_post = $this->state->get('social_media_automation.last_morning_post', 0);
     $last_evening_post = $this->state->get('social_media_automation.last_evening_post', 0);
     $last_evening_type = $this->state->get('social_media_automation.last_evening_type', 'trending_topics');
@@ -386,10 +370,14 @@ class SocialMediaScheduler {
     return [
       'enabled_platforms' => $platform_names,
       'enabled_platform_count' => count($enabled_platforms),
+      'last_daily_post' => $last_daily_post,
+      'last_content_type' => $last_content_type,
+      'queue_count' => $queue_count,
+      'last_daily_date' => $last_daily_post ? date('Y-m-d H:i:s', $last_daily_post) : 'Never',
+      // Legacy stats for backward compatibility
       'last_morning_post' => $last_morning_post,
       'last_evening_post' => $last_evening_post,
       'last_evening_type' => $last_evening_type,
-      'queue_count' => $queue_count,
       'last_morning_date' => $last_morning_post ? date('Y-m-d H:i:s', $last_morning_post) : 'Never',
       'last_evening_date' => $last_evening_post ? date('Y-m-d H:i:s', $last_evening_post) : 'Never',
     ];
