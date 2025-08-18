@@ -123,6 +123,25 @@ class PlatformManager {
   }
 
   /**
+   * Get all registered platform instances.
+   *
+   * @return array
+   *   Array of platform instances keyed by machine name.
+   */
+  public function getAllPlatforms(): array {
+    $all_platforms = [];
+
+    foreach ($this->getAvailablePlatforms() as $platform_name) {
+      $platform = $this->getPlatform($platform_name);
+      if ($platform) {
+        $all_platforms[$platform_name] = $platform;
+      }
+    }
+
+    return $all_platforms;
+  }
+
+  /**
    * Get all enabled platforms.
    *
    * @return array
