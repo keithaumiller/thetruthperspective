@@ -90,11 +90,21 @@ class PlatformManager {
     }
 
     if (!isset($this->instances[$machine_name])) {
-      $class_name = $this->platforms[$machine_name];
-      if (class_exists($class_name)) {
-        $this->instances[$machine_name] = \Drupal::service('class_resolver')->getInstanceFromDefinition($class_name);
-      } else {
-        $this->logger->error('Platform client class not found: @class', ['@class' => $class_name]);
+      // Use the service container to get properly configured platform instances
+      $service_id = "social_media_automation.platform.{$machine_name}";
+      
+      try {
+        if (\Drupal::hasService($service_id)) {
+          $this->instances[$machine_name] = \Drupal::service($service_id);
+        } else {
+          $this->logger->warning('Platform service not found: @service_id', ['@service_id' => $service_id]);
+          return NULL;
+        }
+      } catch (\Exception $e) {
+        $this->logger->error('Error getting platform service @service_id: @error', [
+          '@service_id' => $service_id,
+          '@error' => $e->getMessage()
+        ]);
         return NULL;
       }
     }
