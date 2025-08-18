@@ -223,6 +223,52 @@ class MastodonClient implements PlatformInterface {
   }
 
   /**
+   * Test Mastodon by posting a "Hello World" message.
+   * 
+   * @return bool
+   *   TRUE if the test post was successful, FALSE otherwise.
+   */
+  public function testPost(): bool {
+    $this->logger->info('=== Starting Mastodon test post ===');
+    
+    // Step 1: Test connection first
+    if (!$this->testConnection()) {
+      $this->logger->error('Connection test failed, cannot proceed with test post');
+      return FALSE;
+    }
+    
+    // Step 2: Create test message
+    $timestamp = date('Y-m-d H:i:s T');
+    $test_message = "🤖 Hello World from The Truth Perspective!\n\nThis is a test post to verify Mastodon integration is working.\n\nTimestamp: {$timestamp}\n\n#TestPost #TheTruthPerspective";
+    
+    $this->logger->info('Step 2: Posting test message (length: @length chars)', [
+      '@length' => strlen($test_message)
+    ]);
+    
+    // Step 3: Post the message
+    $result = $this->postContent($test_message, [
+      'visibility' => 'public'
+    ]);
+    
+    if ($result === FALSE) {
+      $this->logger->error('Test post failed');
+      return FALSE;
+    }
+    
+    // Step 4: Success
+    $this->logger->info('✅ Test post successful!');
+    if (isset($result['url'])) {
+      $this->logger->info('Post URL: @url', ['@url' => $result['url']]);
+    }
+    if (isset($result['id'])) {
+      $this->logger->info('Post ID: @id', ['@id' => $result['id']]);
+    }
+    
+    $this->logger->info('=== Mastodon test post completed successfully ===');
+    return TRUE;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function getCharacterLimit(): int {

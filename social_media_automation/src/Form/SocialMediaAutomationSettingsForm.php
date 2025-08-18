@@ -144,10 +144,14 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       // Add platform-specific credential fields
       $this->addPlatformCredentialFields($form['platforms'][$platform_name], $platform, $config, $platform_name);
 
-      // Add test connection button
+      // Add test connection button (test post for Mastodon)
+      $button_text = ($platform_name === 'mastodon') 
+        ? $this->t('Test @platform (Send Hello World Post)', ['@platform' => $platform->getName()])
+        : $this->t('Test @platform Connection', ['@platform' => $platform->getName()]);
+        
       $form['platforms'][$platform_name]['test_connection'] = [
         '#type' => 'button',
-        '#value' => $this->t('Test @platform Connection', ['@platform' => $platform->getName()]),
+        '#value' => $button_text,
         '#ajax' => [
           'callback' => '::testPlatformConnectionCallback',
           'wrapper' => $platform_name . '-connection-status',
@@ -450,15 +454,29 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       $message = '<div class="messages messages--error">Platform not found: ' . $platform_name . '</div>';
     } else {
       try {
-        $result = $platform->testConnection();
-        
-        if ($result) {
-          $message = '<div class="messages messages--status">✅ <strong>SUCCESS!</strong> Connected to ' . $platform->getName() . '</div>';
+        // For Mastodon, do a test post; for others, just test connection
+        if ($platform_name === 'mastodon' && method_exists($platform, 'testPost')) {
+          $this->logger->info('Testing Mastodon with test post...');
+          $result = $platform->testPost();
+          
+          if ($result) {
+            $message = '<div class="messages messages--status">✅ <strong>SUCCESS!</strong> Test post sent to ' . $platform->getName() . '! Check your Mastodon account.</div>';
+          } else {
+            $message = '<div class="messages messages--error">❌ <strong>Failed</strong> to post to ' . $platform->getName() . '. Check your credentials and logs.</div>';
+          }
         } else {
-          $message = '<div class="messages messages--error">❌ <strong>Failed</strong> to connect to ' . $platform->getName() . '. Check your credentials.</div>';
+          // Regular connection test for other platforms
+          $result = $platform->testConnection();
+          
+          if ($result) {
+            $message = '<div class="messages messages--status">✅ <strong>SUCCESS!</strong> Connected to ' . $platform->getName() . '</div>';
+          } else {
+            $message = '<div class="messages messages--error">❌ <strong>Failed</strong> to connect to ' . $platform->getName() . '. Check your credentials.</div>';
+          }
         }
       } catch (\Exception $e) {
         $message = '<div class="messages messages--error">❌ <strong>Connection Error:</strong> ' . $e->getMessage() . '</div>';
+        $this->logger->error('Test platform callback error: @error', ['@error' => $e->getMessage()]);
       }
     }
 
