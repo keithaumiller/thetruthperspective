@@ -132,6 +132,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
         '#default_value' => $config->get($platform_name . '.enabled'),
         '#description' => $this->t('Enable posting to @platform.', ['@platform' => $platform->getName()]),
         '#id' => 'edit-' . $platform_name . '-enabled',
+        '#name' => 'platforms[' . $platform_name . '][enabled]',
       ];
 
       // Add platform-specific credential fields
@@ -314,6 +315,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('The URL of your Mastodon server (e.g., https://mastodon.social)'),
           '#placeholder' => 'https://mastodon.social',
           '#id' => 'edit-mastodon-server-url',
+          '#name' => 'platforms[mastodon][server_url]',
         ];
 
         $form_section['access_token'] = [
@@ -323,6 +325,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('Generate this in your Mastodon account under Preferences → Development → New Application'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-mastodon-access-token',
+          '#name' => 'platforms[mastodon][access_token]',
         ];
         break;
 
@@ -334,6 +337,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('From your LinkedIn app in the LinkedIn Developer Portal'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-linkedin-client-id',
+          '#name' => 'platforms[linkedin][client_id]',
         ];
 
         $form_section['client_secret'] = [
@@ -343,6 +347,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('Client Secret from your LinkedIn app'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-linkedin-client-secret',
+          '#name' => 'platforms[linkedin][client_secret]',
         ];
 
         $form_section['access_token'] = [
@@ -352,6 +357,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('OAuth 2.0 access token for posting'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-linkedin-access-token',
+          '#name' => 'platforms[linkedin][access_token]',
         ];
         break;
 
@@ -362,6 +368,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#default_value' => $config->get($platform_name . '.page_id'),
           '#description' => $this->t('The ID of the Facebook page to post to'),
           '#id' => 'edit-facebook-page-id',
+          '#name' => 'platforms[facebook][page_id]',
         ];
 
         $form_section['access_token'] = [
@@ -371,6 +378,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('Page access token from Facebook Developer Portal'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-facebook-access-token',
+          '#name' => 'platforms[facebook][access_token]',
         ];
         break;
 
@@ -387,6 +395,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('Consumer Key from your Twitter app'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-twitter-api-key',
+          '#name' => 'platforms[twitter][api_key]',
         ];
 
         $form_section['api_secret'] = [
@@ -396,6 +405,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('Consumer Secret from your Twitter app'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-twitter-api-secret',
+          '#name' => 'platforms[twitter][api_secret]',
         ];
 
         $form_section['access_token'] = [
@@ -405,6 +415,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('Access Token for posting'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-twitter-access-token',
+          '#name' => 'platforms[twitter][access_token]',
         ];
 
         $form_section['access_secret'] = [
@@ -414,6 +425,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('Access Token Secret for posting'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-twitter-access-secret',
+          '#name' => 'platforms[twitter][access_secret]',
         ];
         break;
     }
