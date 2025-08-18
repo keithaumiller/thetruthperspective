@@ -520,11 +520,28 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       $this->logger->info('🔧 DEBUG TEST - test_nested: @nested', ['@nested' => print_r($values['test_nested'], TRUE)]);
     }
     
-    // Check for server_url and access_token at top level
-    $this->logger->info('🔧 TOP LEVEL - server_url: "@url"', ['@url' => $values['server_url'] ?? 'NOT_SET']);
-    $this->logger->info('🔧 TOP LEVEL - access_token: "@token"', ['@token' => $values['access_token'] ?? 'NOT_SET']);
-    
-    // Save global settings
+      // Check for server_url and access_token at top level
+      $this->logger->info('🔧 TOP LEVEL - server_url: "@url"', ['@url' => $values['server_url'] ?? 'NOT_SET']);
+      $this->logger->info('🔧 TOP LEVEL - access_token: "@token"', ['@token' => $values['access_token'] ?? 'NOT_SET']);
+      
+      // Check for nested mastodon fields
+      if (isset($values['mastodon'])) {
+        $this->logger->info('🔧 NESTED MASTODON FOUND: @mastodon', ['@mastodon' => print_r($values['mastodon'], TRUE)]);
+      } else {
+        $this->logger->warning('🔧 NO NESTED MASTODON STRUCTURE FOUND');
+      }
+      
+      // Check each platform structure
+      foreach (['mastodon', 'linkedin', 'facebook', 'twitter'] as $platform) {
+        if (isset($values[$platform])) {
+          $this->logger->info('🔧 PLATFORM STRUCTURE - @platform: @data', [
+            '@platform' => $platform,
+            '@data' => print_r($values[$platform], TRUE)
+          ]);
+        } else {
+          $this->logger->warning('🔧 MISSING PLATFORM STRUCTURE: @platform', ['@platform' => $platform]);
+        }
+      }    // Save global settings
     $config->set('enabled', $values['enabled'] ?? FALSE);
     $config->set('morning_time', $values['morning_time'] ?? '8 AM - 12 PM');
     $config->set('evening_time', $values['evening_time'] ?? '6 PM - 10 PM');
