@@ -14,24 +14,24 @@ services:
   # Platform clients
   social_media_automation.platform.mastodon:
     class: Drupal\social_media_automation\Service\Platform\MastodonClient
-    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
     tags:
       - { name: social_media_platform, platform: mastodon }
 
   social_media_automation.platform.linkedin:
     class: Drupal\social_media_automation\Service\Platform\LinkedInClient
-    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
     tags:
       - { name: social_media_platform, platform: linkedin }
 
   social_media_automation.platform.facebook:
     class: Drupal\social_media_automation\Service\Platform\FacebookClient
-    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
     tags:
       - { name: social_media_platform, platform: facebook }
 
   social_media_automation.platform.twitter:
     class: Drupal\social_media_automation\Service\Platform\TwitterClient
-    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
     tags:
       - { name: social_media_platform, platform: twitter }
