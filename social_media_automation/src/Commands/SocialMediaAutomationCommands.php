@@ -168,36 +168,55 @@ class SocialMediaAutomationCommands extends DrushCommands {
    */
   public function listPlatforms() {
     try {
-      $all_platforms = $this->platformManager->getAvailablePlatforms();
+      $available_platform_names = $this->platformManager->getAvailablePlatforms();
       $enabled_platforms = $this->platformManager->getEnabledPlatforms();
       
       $this->output()->writeln('<info>=== Available Platforms ===</info>');
       $this->output()->writeln('');
       
-      foreach ($all_platforms as $platform_name => $platform) {
+      if (empty($available_platform_names)) {
+        $this->output()->writeln('<comment>No platforms registered. Platform services may not be configured.</comment>');
+        $this->output()->writeln('<comment>Expected platforms: Mastodon, LinkedIn, Facebook, Twitter</comment>');
+        return;
+      }
+      
+      foreach ($available_platform_names as $platform_name) {
+        $platform = $this->platformManager->getPlatform($platform_name);
         $is_enabled = isset($enabled_platforms[$platform_name]);
         $status = $is_enabled ? 'Enabled' : 'Disabled';
         $status_color = $is_enabled ? 'info' : 'comment';
         
-        $this->output()->writeln('<comment>' . $platform->getName() . ' (' . $platform_name . ')</comment>');
-        $this->output()->writeln('  Status: <' . $status_color . '>' . $status . '</' . $status_color . '>');
-        $this->output()->writeln('  Character Limit: ' . $platform->getCharacterLimit());
+        if ($platform) {
+          $this->output()->writeln('<comment>' . $platform->getName() . ' (' . $platform_name . ')</comment>');
+          $this->output()->writeln('  Status: <' . $status_color . '>' . $status . '</' . $status_color . '>');
+          $this->output()->writeln('  Character Limit: ' . $platform->getCharacterLimit());
+          
+          try {
+            $features = $platform->getSupportedFeatures();
+            $feature_list = [];
+            if (!empty($features['hashtags'])) $feature_list[] = 'Hashtags';
+            if (!empty($features['mentions'])) $feature_list[] = 'Mentions';
+            if (!empty($features['media'])) $feature_list[] = 'Media';
+            if (!empty($features['threads'])) $feature_list[] = 'Threads';
+            if (!empty($features['content_warnings'])) $feature_list[] = 'Content Warnings';
+            
+            $this->output()->writeln('  Features: ' . (!empty($feature_list) ? implode(', ', $feature_list) : 'Basic text'));
+          } catch (\Exception $e) {
+            $this->output()->writeln('  Features: Basic text (error getting features)');
+          }
+        } else {
+          $this->output()->writeln('<comment>' . ucfirst($platform_name) . ' (' . $platform_name . ')</comment>');
+          $this->output()->writeln('  Status: <error>Not Available</error>');
+          $this->output()->writeln('  Error: Platform service not found');
+        }
         
-        $features = $platform->getSupportedFeatures();
-        $feature_list = [];
-        if (!empty($features['hashtags'])) $feature_list[] = 'Hashtags';
-        if (!empty($features['mentions'])) $feature_list[] = 'Mentions';
-        if (!empty($features['media'])) $feature_list[] = 'Media';
-        if (!empty($features['threads'])) $feature_list[] = 'Threads';
-        if (!empty($features['content_warnings'])) $feature_list[] = 'Content Warnings';
-        
-        $this->output()->writeln('  Features: ' . (!empty($feature_list) ? implode(', ', $feature_list) : 'Basic text'));
         $this->output()->writeln('');
       }
       
     } catch (\Exception $e) {
       $this->output()->writeln('<error>Error loading platforms: ' . $e->getMessage() . '</error>');
-      $this->output()->writeln('<comment>Platforms: Mastodon, LinkedIn, Facebook, Twitter (configure in admin)</comment>');
+      $this->output()->writeln('<comment>Expected platforms: Mastodon, LinkedIn, Facebook, Twitter</comment>');
+      $this->output()->writeln('<comment>Configure platforms at: /admin/config/services/social-media-automation</comment>');
     }
   }
 
