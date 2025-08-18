@@ -66,7 +66,42 @@ Interactive conversational AI interface with persistent history and real-time re
 
 ---
 
-### 4. 🤖 Job Application Automation ⚠️ **DEVELOPMENT**
+### 4. 📱 Social Media Automation ✅ **DEPLOYED**
+**Version**: 1.0.0 | **Location**: [`/social_media_automation/`](./social_media_automation/README.md)
+
+Unified multi-platform social media automation system for automated content distribution.
+
+**✅ Production Features**:
+- ✅ **Multi-Platform Support**: Mastodon, LinkedIn, Facebook, Twitter (unified architecture)
+- ✅ **Intelligent Content Generation**: AI-powered content creation with platform-specific formatting
+- ✅ **Automated Scheduling**: Queue-based posting system with configurable timing
+- ✅ **Free Platform Focus**: Mastodon (primary), LinkedIn (secondary) for cost-effective automation
+- ✅ **Complete Drush Commands**: Full command suite for testing, status monitoring, and management
+- ✅ **OAuth Integration**: Complete authentication workflows for all supported platforms
+
+**Core Capabilities**:
+- **Platform Management**: Unified interface supporting 4 major social media platforms
+- **Content Adaptation**: Platform-specific character limits, formatting, and feature support
+- **Rate Limiting**: Intelligent rate limit management for each platform's API constraints
+- **Queue Processing**: Background processing with Drupal's queue system
+- **Admin Interface**: Configuration management at `/admin/config/services/social-media-automation`
+
+**Technical Architecture**:
+- Service-based architecture with dependency injection
+- PlatformInterface for consistent multi-platform implementation
+- OAuth 1.0a (Twitter) and OAuth 2.0 (Mastodon, LinkedIn, Facebook) support
+- Queue worker system for reliable background processing
+- Comprehensive error handling and logging
+
+**Available Platforms**:
+- **🟢 Mastodon**: Free, decentralized platform (500 chars, media support)
+- **🟡 LinkedIn**: Professional network (3000 chars, article sharing)
+- **🔵 Facebook**: Social platform (63,206 chars, requires page review)
+- **⚪ Twitter**: Microblogging platform (280 chars, requires $100/month API access)
+
+---
+
+### 5. 🤖 Job Application Automation ⚠️ **DEVELOPMENT**
 **Version**: 1.0.0 | **Location**: [`/job_application_automation/`](./job_application_automation/README.md)
 
 Automated job search and application processing system (development framework).
@@ -87,6 +122,32 @@ Automated job search and application processing system (development framework).
 - ✅ **API Integration**: Stable Diffbot and AWS Bedrock connectivity
 
 ## 🔧 Comprehensive Drush Command Suite
+
+### Social Media Automation Commands
+
+#### Platform Management
+```bash
+drush social-media:platforms        # List all configured platforms with details
+drush social-media:status           # System status and configuration overview
+```
+**Output**: Platform capabilities, character limits, authentication status, rate limits
+
+#### Content Operations  
+```bash
+drush social-media:test-content     # Generate and display test content for all platforms
+drush social-media:test-connections # Test API connectivity for configured platforms
+drush social-media:post "message"   # Post content to all enabled platforms
+```
+**Options**:
+- `--platform=mastodon`: Target specific platform
+- `--schedule="+1 hour"`: Schedule for future posting
+
+#### Configuration Management
+```bash
+drush social-media:enable mastodon  # Enable specific platform
+drush social-media:disable twitter  # Disable platform
+drush social-media:queue-status     # Check posting queue status
+```
 
 ### News Extractor Commands
 
@@ -183,7 +244,7 @@ cd /path/to/drupal/modules/custom/
 cp -r thetruthperspective/* .
 
 # Enable production modules
-drush en news_extractor newsmotivationmetrics ai_conversation
+drush en news_extractor newsmotivationmetrics ai_conversation social_media_automation
 ```
 
 ### Configuration
@@ -194,6 +255,15 @@ drush en news_extractor newsmotivationmetrics ai_conversation
 - AWS Bedrock with Anthropic Claude model access
 - IAM permissions for bedrock:InvokeModel
 - Supported regions: us-east-1, us-west-2, eu-west-1
+```
+
+#### Social Media Automation Setup (Optional)
+```bash
+# Platform API Keys (configure as needed)
+- Mastodon: Instance URL + Access Token (free)
+- LinkedIn: Client ID + Client Secret + OAuth (free tier)
+- Facebook: App ID + App Secret + Page Token (requires review)
+- Twitter: Consumer Key + Secret + OAuth (requires $100/month)
 ```
 
 #### Production Commands
@@ -209,7 +279,115 @@ drush ne:pop-url
 
 # Test specific URL extraction
 drush ne:test https://cnn.com/article
+
+# Check social media automation status
+drush social-media:status
+
+# Test platform connections
+drush social-media:test-connections
+
+# Generate test content for all platforms
+drush social-media:test-content
 ```
+
+## Social Media Automation System
+
+### Multi-Platform Architecture
+
+#### Supported Platforms
+```
+🟢 Mastodon (Primary Free Platform)
+- Character Limit: 500
+- Features: Media uploads, polls, content warnings
+- Authentication: Access token per instance
+- Rate Limits: 300 requests per 5 minutes
+- Cost: Free
+
+🟡 LinkedIn (Secondary Free Platform)  
+- Character Limit: 3,000
+- Features: Article sharing, professional posts
+- Authentication: OAuth 2.0 
+- Rate Limits: 100 requests per day (free tier)
+- Cost: Free tier available
+
+🔵 Facebook (Page Posts)
+- Character Limit: 63,206
+- Features: Media, links, reactions
+- Authentication: App + Page tokens
+- Rate Limits: 200 requests per hour
+- Cost: Free (requires app review)
+
+⚪ Twitter (Optional Paid)
+- Character Limit: 280 (threads for longer)
+- Features: Media, polls, threads
+- Authentication: OAuth 1.0a
+- Rate Limits: 50 posts per day (paid tier)
+- Cost: $100/month for API access
+```
+
+### Content Generation System
+
+#### AI-Powered Content Creation
+- **Source Integration**: Generate posts from News Extractor articles
+- **Platform Adaptation**: Automatic formatting for each platform's constraints
+- **Content Variations**: Multiple versions to avoid duplicate content
+- **Hashtag Generation**: Platform-appropriate hashtag strategies
+- **Media Integration**: Automatic image and link handling
+
+#### Content Examples
+```
+Mastodon (500 chars):
+🗞️ New analysis reveals concerning trends in media coverage...
+#MediaAnalysis #TruthPerspective #NewsAnalysis
+[Auto-generated link]
+
+LinkedIn (3000 chars):
+📊 In-Depth Analysis: Our latest investigation into media narrative patterns...
+[Full professional summary with insights]
+#MediaResearch #Journalism #DataAnalysis
+
+Twitter (280 chars):
+📈 Breaking: Latest media analysis shows...
+[Concise summary with thread continuation]
+#News #MediaBias
+```
+
+### Automated Posting Workflow
+
+#### Queue-Based Processing
+```
+Content Generation → Platform Formatting → Queue Storage → Scheduled Posting
+                                                      ↓
+                                            Rate Limit Management
+                                                      ↓
+                                              Error Handling & Retry
+```
+
+#### Scheduling Options
+- **Immediate Posting**: Direct API calls for urgent content
+- **Scheduled Posts**: Queue-based posting with time delays
+- **Batch Processing**: Multiple platforms simultaneously
+- **Rate Limit Respect**: Automatic spacing to avoid API limits
+
+### Platform Management Interface
+
+#### Admin Configuration
+**Location**: `/admin/config/services/social-media-automation`
+
+**Features**:
+- Platform enable/disable toggles
+- API credential management
+- Posting schedule configuration
+- Rate limit monitoring
+- Error log viewing
+- Test content generation
+
+#### Platform Status Dashboard
+- Connection status indicators
+- API quota usage tracking
+- Recent posting history
+- Error rate monitoring
+- Performance metrics
 
 ## News Source Population System
 
@@ -266,6 +444,7 @@ drush ne:test https://cnn.com/article
 
 Each module contains detailed technical documentation:
 
+- **[Social Media Automation README](./social_media_automation/README.md)** - Multi-platform automation system
 - **[News Extractor README](./news_extractor/README.md)** - Content extraction and AI analysis
 - **[News Motivation Metrics README](./newsmotivationmetrics/README.md)** - Analytics dashboard
 - **[AI Conversation README](./ai_conversation/README.md)** - Conversational AI interface
@@ -274,14 +453,17 @@ Each module contains detailed technical documentation:
 
 ## Version History
 
-### v1.2.0 (August 12, 2025) - **CURRENT PRODUCTION**
+### v1.2.0 (August 18, 2025) - **CURRENT PRODUCTION**
+- ✅ **Social Media Automation**: Complete multi-platform automation system deployed
+- ✅ **Platform Support**: Mastodon, LinkedIn, Facebook, Twitter with unified architecture
+- ✅ **Drush Commands**: Full command suite for platform management and testing
+- ✅ **OAuth Integration**: Complete authentication workflows for all platforms
+- ✅ **Content Generation**: AI-powered platform-specific content creation
+- ✅ **Queue System**: Background processing with rate limit management
 - ✅ **News Source Population**: Complete multi-stage extraction system
 - ✅ **Database Optimization**: Proper NULL handling in all queries
-- ✅ **Drush Commands**: Comprehensive command suite with debugging
 - ✅ **Field Architecture**: 20+ specialized fields fully documented
 - ✅ **Processing Pipeline**: Multi-stage automation with cron integration
-- ✅ **Error Handling**: Robust error recovery and logging
-- ✅ **Performance**: Batch processing and memory optimization
 
 ### v1.1.1 (August 2025)
 - ✅ Enhanced news source extraction from JSON scraped data
@@ -331,8 +513,9 @@ GPL-2.0+ (Drupal compatible)
 **🔧 Processing**: 50 articles/hour automated with multi-stage source population  
 **📊 Coverage**: 132 articles with JSON data, 20+ specialized fields per article  
 **🚀 Commands**: Complete Drush suite for statistics, processing, and testing  
+**📱 Social Media**: Multi-platform automation with 4 platform support ready
 
-**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 12, 2025
+**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 18, 2025
 
 ## 🚀 Live Production Modules
 
@@ -461,6 +644,7 @@ drush en key_metric_management ai_conversation
 ```
 
 #### Module Configuration Paths
+- **Social Media**: Configure platforms at `/admin/config/services/social-media-automation`
 - **Key Metrics**: Auto-configured, place block at `/admin/structure/block`
 - **AI Conversation**: Configure models at `/admin/config/ai-conversation`
 - **News Extractor**: Setup at `/admin/config/news-extractor` (maintenance mode)
@@ -532,6 +716,7 @@ Each module contains comprehensive technical documentation:
 ## 🔧 Development Status
 
 ### ✅ Production Ready
+- **Social Media Automation**: Multi-platform system with 4 platform support
 - **Key Metric Management**: Fully operational with live data
 - **AI Conversation**: Real-time chat system deployed
 - **News Extractor**: Stable with enhanced news source data processing
@@ -592,5 +777,6 @@ GPL-2.0+ (Drupal compatible)
 **🔗 Live URLs**: [Key Metrics Dashboard](https://thetruthperspective.org/key-metrics) | [AI Chat](https://thetruthperspective.org/ai-conversation)  
 **📊 Current Data**: 18 metrics, 20 articles, real-time analytics  
 **🚀 Deployment**: Automated CI/CD with GitHub Actions  
+**📱 Social Media**: Multi-platform automation system deployed and ready
 
-**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 12, 2025
+**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 18, 2025
