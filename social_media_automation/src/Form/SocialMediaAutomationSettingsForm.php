@@ -114,13 +114,19 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     $platforms = $this->platformManager->getAllPlatforms();
     
     foreach ($platforms as $platform_name => $platform) {
-      $form[$platform_name] = [
+      $form['platforms'] = $form['platforms'] ?? [
+        '#type' => 'details',
+        '#title' => $this->t('Platform Configurations'),
+        '#open' => TRUE,
+      ];
+      
+      $form['platforms'][$platform_name] = [
         '#type' => 'details',
         '#title' => $platform->getName() . ' Configuration',
-        '#open' => FALSE,
+        '#open' => $platform_name === 'mastodon', // Open Mastodon by default
       ];
 
-      $form[$platform_name]['enabled'] = [
+      $form['platforms'][$platform_name]['enabled'] = [
         '#type' => 'checkbox',
         '#title' => $this->t('Enable @platform', ['@platform' => $platform->getName()]),
         '#default_value' => $config->get($platform_name . '.enabled'),
@@ -128,10 +134,10 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       ];
 
       // Add platform-specific credential fields
-      $this->addPlatformCredentialFields($form[$platform_name], $platform, $config, $platform_name);
+      $this->addPlatformCredentialFields($form['platforms'][$platform_name], $platform, $config, $platform_name);
 
       // Add test connection button
-      $form[$platform_name]['test_connection'] = [
+      $form['platforms'][$platform_name]['test_connection'] = [
         '#type' => 'button',
         '#value' => $this->t('Test @platform Connection', ['@platform' => $platform->getName()]),
         '#ajax' => [
@@ -141,7 +147,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
         '#attributes' => ['data-platform' => $platform_name],
       ];
 
-      $form[$platform_name]['connection_status'] = [
+      $form['platforms'][$platform_name]['connection_status'] = [
         '#type' => 'markup',
         '#markup' => '<div id="' . $platform_name . '-connection-status"></div>',
       ];
@@ -531,15 +537,23 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
         $this->logger->warning('🔧 NO NESTED MASTODON STRUCTURE FOUND');
       }
       
-      // Check each platform structure
+      // Check each platform structure (new platforms[platform] structure)
       foreach (['mastodon', 'linkedin', 'facebook', 'twitter'] as $platform) {
+        if (isset($values['platforms'][$platform])) {
+          $this->logger->info('🔧 PLATFORM STRUCTURE - platforms[@platform]: @data', [
+            '@platform' => $platform,
+            '@data' => print_r($values['platforms'][$platform], TRUE)
+          ]);
+        } else {
+          $this->logger->warning('🔧 MISSING PLATFORM STRUCTURE: platforms[@platform]', ['@platform' => $platform]);
+        }
+        
+        // Also check old structure for comparison
         if (isset($values[$platform])) {
-          $this->logger->info('🔧 PLATFORM STRUCTURE - @platform: @data', [
+          $this->logger->info('🔧 OLD PLATFORM STRUCTURE - @platform: @data', [
             '@platform' => $platform,
             '@data' => print_r($values[$platform], TRUE)
           ]);
-        } else {
-          $this->logger->warning('🔧 MISSING PLATFORM STRUCTURE: @platform', ['@platform' => $platform]);
         }
       }    // Save global settings
     $config->set('enabled', $values['enabled'] ?? FALSE);
@@ -555,15 +569,23 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     foreach ($platforms as $platform_name => $platform) {
       $this->logger->info('Processing platform: @platform', ['@platform' => $platform_name]);
       
-      // Check if platform data exists in nested form values (correct structure)
-      if (isset($values[$platform_name]) && is_array($values[$platform_name])) {
+      // Check for new nested structure (platforms[platform_name])
+      if (isset($values['platforms'][$platform_name]) && is_array($values['platforms'][$platform_name])) {
+        $platform_values = $values['platforms'][$platform_name];
+        $this->logger->info('Found NEW nested platform @platform values: @values', [
+          '@platform' => $platform_name,
+          '@values' => print_r($platform_values, TRUE),
+        ]);
+      }
+      // Check if platform data exists in old nested form values (platform_name directly)
+      elseif (isset($values[$platform_name]) && is_array($values[$platform_name])) {
         $platform_values = $values[$platform_name];
-        $this->logger->info('Found nested platform @platform values: @values', [
+        $this->logger->info('Found OLD nested platform @platform values: @values', [
           '@platform' => $platform_name,
           '@values' => print_r($platform_values, TRUE),
         ]);
       } 
-      // Handle flattened form structure (current issue)
+      // Handle flattened form structure (fallback)
       else {
         $this->logger->info('Using flattened form structure for @platform', ['@platform' => $platform_name]);
         
