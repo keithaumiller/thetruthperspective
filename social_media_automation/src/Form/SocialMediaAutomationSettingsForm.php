@@ -118,7 +118,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       ];
 
       // Add platform-specific credential fields
-      $this->addPlatformCredentialFields($form[$platform_name], $platform, $config);
+      $this->addPlatformCredentialFields($form[$platform_name], $platform, $config, $platform_name);
 
       // Add test connection button
       $form[$platform_name]['test_connection'] = [
@@ -237,8 +237,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
   /**
    * Add platform-specific credential fields.
    */
-  protected function addPlatformCredentialFields(array &$form_section, $platform, $config) {
-    $platform_name = $platform->getMachineName();
+  protected function addPlatformCredentialFields(array &$form_section, $platform, $config, $platform_name) {
     
     switch ($platform_name) {
       case 'mastodon':
@@ -453,31 +452,31 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     $platforms = $this->platformManager->getAllPlatforms();
     
     foreach ($platforms as $platform_name => $platform) {
-      $config->set($platform_name . '.enabled', $values['enabled'] ?? FALSE);
+      $config->set($platform_name . '.enabled', $values[$platform_name]['enabled'] ?? FALSE);
       
       // Save platform-specific credentials
       switch ($platform_name) {
         case 'mastodon':
-          $config->set($platform_name . '.server_url', $values['server_url'] ?? '');
-          $config->set($platform_name . '.access_token', $values['access_token'] ?? '');
+          $config->set($platform_name . '.server_url', $values[$platform_name]['server_url'] ?? '');
+          $config->set($platform_name . '.access_token', $values[$platform_name]['access_token'] ?? '');
           break;
 
         case 'linkedin':
-          $config->set($platform_name . '.client_id', $values['client_id'] ?? '');
-          $config->set($platform_name . '.client_secret', $values['client_secret'] ?? '');
-          $config->set($platform_name . '.access_token', $values['access_token'] ?? '');
+          $config->set($platform_name . '.client_id', $values[$platform_name]['client_id'] ?? '');
+          $config->set($platform_name . '.client_secret', $values[$platform_name]['client_secret'] ?? '');
+          $config->set($platform_name . '.access_token', $values[$platform_name]['access_token'] ?? '');
           break;
 
         case 'facebook':
-          $config->set($platform_name . '.page_id', $values['page_id'] ?? '');
-          $config->set($platform_name . '.access_token', $values['access_token'] ?? '');
+          $config->set($platform_name . '.page_id', $values[$platform_name]['page_id'] ?? '');
+          $config->set($platform_name . '.access_token', $values[$platform_name]['access_token'] ?? '');
           break;
 
         case 'twitter':
-          $config->set($platform_name . '.api_key', $values['api_key'] ?? '');
-          $config->set($platform_name . '.api_secret', $values['api_secret'] ?? '');
-          $config->set($platform_name . '.access_token', $values['access_token'] ?? '');
-          $config->set($platform_name . '.access_secret', $values['access_secret'] ?? '');
+          $config->set($platform_name . '.api_key', $values[$platform_name]['api_key'] ?? '');
+          $config->set($platform_name . '.api_secret', $values[$platform_name]['api_secret'] ?? '');
+          $config->set($platform_name . '.access_token', $values[$platform_name]['access_token'] ?? '');
+          $config->set($platform_name . '.access_secret', $values[$platform_name]['access_secret'] ?? '');
           break;
       }
     }
