@@ -1,0 +1,13 @@
+name: 'Social Media Automation'
+type: module
+description: 'Multi-platform social media automation for The Truth Perspective. Supports Mastodon, LinkedIn, Facebook, and content dashboard for manual posting.'
+core_version_requirement: ^11
+package: 'The Truth Perspective'
+
+dependencies:
+  - drupal:user
+  - drupal:system
+  - drupal:field
+  - newsmotivationmetrics
+
+configure: social_media_automation.settings

@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * @file
+ * Social Media Automation module for The Truth Perspective.
+ * 
+ * Provides automated posting to multiple social media platforms including
+ * Mastodon, LinkedIn, Facebook, and content dashboard for manual posting.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function social_media_automation_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.social_media_automation':
+      return '<p>' . t('Social Media Automation provides automated posting to multiple social media platforms. Configure platform credentials and enable automated posting to reach your audience across Mastodon, LinkedIn, Facebook, and more.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function social_media_automation_cron() {
+  $config = \Drupal::config('social_media_automation.settings');
+  
+  if (!$config->get('enabled')) {
+    return;
+  }
+
+  $scheduler = \Drupal::service('social_media_automation.scheduler');
+  $scheduler->processScheduledPosts();
+}
+
+/**
+ * Implements hook_theme().
+ */
+function social_media_automation_theme() {
+  return [
+    'social_media_dashboard' => [
+      'template' => 'social-media-dashboard',
+      'variables' => [
+        'platforms' => [],
+        'recent_posts' => [],
+        'pending_posts' => [],
+        'statistics' => [],
+      ],
+    ],
+    'social_media_content_preview' => [
+      'template' => 'social-media-content-preview',
+      'variables' => [
+        'content' => [],
+        'platforms' => [],
+        'character_counts' => [],
+      ],
+    ],
+  ];
+}

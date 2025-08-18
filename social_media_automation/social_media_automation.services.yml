@@ -1,0 +1,29 @@
+services:
+  social_media_automation.platform_manager:
+    class: Drupal\social_media_automation\Service\PlatformManager
+    arguments: ['@config.factory', '@logger.factory']
+
+  social_media_automation.content_generator:
+    class: Drupal\social_media_automation\Service\ContentGenerator
+    arguments: ['@config.factory', '@logger.factory', '@social_media_automation.platform_manager', '@newsmotivationmetrics.metrics_service']
+
+  social_media_automation.scheduler:
+    class: Drupal\social_media_automation\Service\SocialMediaScheduler
+    arguments: ['@config.factory', '@logger.factory', '@queue', '@social_media_automation.platform_manager', '@social_media_automation.content_generator']
+
+  # Platform clients
+  social_media_automation.mastodon_client:
+    class: Drupal\social_media_automation\Service\Platform\MastodonClient
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
+
+  social_media_automation.linkedin_client:
+    class: Drupal\social_media_automation\Service\Platform\LinkedInClient
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
+
+  social_media_automation.facebook_client:
+    class: Drupal\social_media_automation\Service\Platform\FacebookClient
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
+
+  social_media_automation.twitter_client:
+    class: Drupal\social_media_automation\Service\Platform\TwitterClient
+    arguments: ['@config.factory', '@logger.factory', '@http_client']
