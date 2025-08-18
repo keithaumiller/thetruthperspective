@@ -180,30 +180,53 @@ class ContentGenerator {
   }
 
   /**
-   * Generate content featuring the most recent article.
+   * Generate content featuring a random recent article.
    *
    * @return string
    *   Generated base content.
    */
   public function generateRecentArticle(): string {
     try {
-      // Get most recent article
+      // Get random article from last 48 hours
       $node_storage = $this->entityTypeManager->getStorage('node');
+      
+      // Calculate 48 hours ago timestamp
+      $forty_eight_hours_ago = time() - (48 * 60 * 60);
+      
       $query = $node_storage->getQuery()
         ->condition('type', 'article')
         ->condition('status', 1)
-        ->sort('created', 'DESC')
-        ->range(0, 1)
+        ->condition('created', $forty_eight_hours_ago, '>')
         ->accessCheck(FALSE);
         
       $nids = $query->execute();
       
       if (empty($nids)) {
-        return $this->getFallbackContent();
+        // Fallback to any recent article if none in last 48 hours
+        $this->logger->info('No articles found in last 48 hours, falling back to most recent');
+        $query = $node_storage->getQuery()
+          ->condition('type', 'article')
+          ->condition('status', 1)
+          ->sort('created', 'DESC')
+          ->range(0, 10)
+          ->accessCheck(FALSE);
+        $nids = $query->execute();
+        
+        if (empty($nids)) {
+          return $this->getFallbackContent();
+        }
       }
-
-      $nid = reset($nids);
-      $article = $node_storage->load($nid);
+      
+      // Pick a random article from the results
+      $nids_array = array_values($nids);
+      $random_nid = $nids_array[array_rand($nids_array)];
+      
+      $this->logger->info('Selected random article @nid from @count articles in last 48 hours', [
+        '@nid' => $random_nid,
+        '@count' => count($nids)
+      ]);
+      
+      $article = $node_storage->load($random_nid);
       
       if (!$article) {
         return $this->getFallbackContent();
@@ -220,17 +243,22 @@ class ContentGenerator {
         // Extract a key insight from the motivation analysis
         if (preg_match('/motivation[s]?[^.]*([^.]{50,150})/i', $motivation_data, $matches)) {
           $motivation_insight = trim($matches[1]);
+        } elseif (preg_match('/([^.]{50,150}\.)/i', $motivation_data, $matches)) {
+          // Fallback: get any substantial sentence
+          $motivation_insight = trim($matches[1]);
         }
       }
 
       $templates = [
-        "🔍 Latest Analysis: \"{$title}\" - Our AI reveals the underlying motivational patterns in this story. {$motivation_insight}",
+        "🔍 Random Deep Dive: \"{$title}\" - Our AI reveals the underlying motivational patterns in this story. {$motivation_insight}",
         
-        "📊 New Investigation: Just analyzed \"{$title}\" for narrative structure and bias indicators. {$motivation_insight}",
+        "📊 Featured Analysis: Just examined \"{$title}\" for narrative structure and bias indicators. {$motivation_insight}",
         
-        "🤖 Fresh Insights: Our latest article analysis of \"{$title}\" exposes interesting patterns in how this story is constructed. {$motivation_insight}",
+        "🤖 AI Spotlight: Our latest examination of \"{$title}\" exposes interesting patterns in how this story is constructed. {$motivation_insight}",
         
-        "⚡ Breaking Analysis: \"{$title}\" - See how AI deconstructs the motivational framework of contemporary news narratives.",
+        "⚡ Story Breakdown: \"{$title}\" - See how AI deconstructs the motivational framework of contemporary news narratives.",
+        
+        "🎯 Random Pick: From our recent analysis of \"{$title}\" - discover the hidden motivational drivers shaping this narrative. {$motivation_insight}",
       ];
 
       $selected_template = $templates[array_rand($templates)];
@@ -243,7 +271,7 @@ class ContentGenerator {
       return $selected_template;
 
     } catch (\Exception $e) {
-      $this->logger->error('Failed to generate recent article content: @message', ['@message' => $e->getMessage()]);
+      $this->logger->error('Failed to generate random recent article content: @message', ['@message' => $e->getMessage()]);
       return $this->getFallbackContent();
     }
   }
@@ -459,7 +487,7 @@ class ContentGenerator {
     $hashtags = [];
     switch ($content_type) {
       case 'recent_article':
-        $hashtags = ['#LatestAnalysis', '#AIInsights', '#NewsAnalysis', '#TheTruthPerspective'];
+        $hashtags = ['#AIAnalysis', '#NewsBreakdown', '#MediaInsights', '#TheTruthPerspective'];
         break;
         
       case 'analytics_summary':
