@@ -57,7 +57,7 @@ class ContentGenerator {
     ConfigFactoryInterface $config_factory,
     LoggerChannelFactoryInterface $logger_factory,
     PlatformManager $platform_manager,
-    MetricsDataServiceInterface $metrics_data_service,
+    MetricsDataServiceInterface $metrics_data_service = NULL,
     EntityTypeManagerInterface $entity_type_manager
   ) {
     $this->configFactory = $config_factory;
@@ -75,6 +75,12 @@ class ContentGenerator {
    */
   public function generateAnalyticsSummary(): string {
     try {
+      // Check if metrics service is available
+      if (!$this->metricsDataService) {
+        $this->logger->warning('Metrics data service not available, using fallback content');
+        return $this->getFallbackContent();
+      }
+      
       // Get recent metrics data
       $daily_articles = $this->metricsDataService->getDailyArticlesBySource();
       $total_articles = 0;
@@ -241,6 +247,14 @@ class ContentGenerator {
       return $this->getFallbackContent();
     }
   }
+
+  /**
+   * Generate insight about AI bias detection.
+   *
+   * @return string
+   *   Generated base content.
+   */
+  public function generateBiasInsight(): string {
     $insights = [
       "🤖 AI Bias Alert: Our analysis shows how LLMs can misinterpret satirical content as legitimate news. The Onion gets similar 'credibility scores' as CNN - highlighting the dangers of algorithmic information ranking.",
       

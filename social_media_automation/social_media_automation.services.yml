@@ -5,7 +5,7 @@ services:
 
   social_media_automation.content_generator:
     class: Drupal\social_media_automation\Service\ContentGenerator
-    arguments: ['@config.factory', '@logger.factory', '@social_media_automation.platform_manager', '@newsmotivationmetrics.metrics_data_service', '@entity_type.manager']
+    arguments: ['@config.factory', '@logger.factory', '@social_media_automation.platform_manager', '@?newsmotivationmetrics.metrics_data_service', '@entity_type.manager']
 
   social_media_automation.scheduler:
     class: Drupal\social_media_automation\Service\SocialMediaScheduler
