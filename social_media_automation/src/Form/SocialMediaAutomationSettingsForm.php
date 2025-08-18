@@ -310,6 +310,35 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       '#markup' => '<div id="test-posts-status"></div>',
     ];
 
+    // Content Preview Section
+    $form['content_preview'] = [
+      '#type' => 'details',
+      '#title' => $this->t('🎯 AI Content Preview'),
+      '#open' => TRUE,
+      '#description' => $this->t('Generate social media post content using AI analysis of the most recent article. This will NOT post content - only preview what would be posted.'),
+    ];
+
+    $form['content_preview']['generate_preview'] = [
+      '#type' => 'button',
+      '#value' => $this->t('🤖 Generate Social Media Post Preview'),
+      '#ajax' => [
+        'callback' => '::generateContentPreviewCallback',
+        'wrapper' => 'social-media-preview-container',
+        'effect' => 'fade',
+      ],
+      '#attributes' => [
+        'class' => ['button--primary'],
+      ],
+    ];
+
+    $form['content_preview']['preview_container'] = [
+      '#type' => 'markup',
+      '#markup' => '<div id="social-media-preview-container"><p><em>Click "Generate Social Media Post Preview" to create AI-powered content based on your most recent article.</em></p></div>',
+    ];
+
+    // Add JavaScript for preview interactions
+    $form['#attached']['library'][] = 'social_media_automation/content-preview';
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -547,6 +576,36 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     $form['testing']['test_posts_status']['#markup'] = '<div id="test-posts-status">' . $message . '</div>';
     
     return $form['testing']['test_posts_status'];
+  }
+
+  /**
+   * AJAX callback for generating content preview.
+   */
+  public function generateContentPreviewCallback(array &$form, FormStateInterface $form_state) {
+    // Make a request to our content preview controller
+    $request = \Drupal::request();
+    $content_preview_controller = \Drupal::service('class_resolver')->getInstanceFromDefinition('\Drupal\social_media_automation\Controller\ContentPreviewController');
+    
+    try {
+      $response = $content_preview_controller->generatePreview($request);
+      
+      // Extract the HTML from the AJAX response
+      $commands = $response->getCommands();
+      foreach ($commands as $command) {
+        if ($command['command'] === 'insert' && isset($command['data'])) {
+          $form['content_preview']['preview_container']['#markup'] = $command['data'];
+          break;
+        }
+      }
+    } catch (\Exception $e) {
+      \Drupal::logger('social_media_automation')->error('Preview generation failed in form: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      
+      $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Failed to generate preview. Please check the logs for details.</div>';
+    }
+
+    return $form['content_preview']['preview_container'];
   }
 
   /**
