@@ -29,7 +29,8 @@
    - **Mastodon Server URL**: https://mastodon.social (or your chosen server)
    - **Access Token**: Paste the token from Step 3
    - **Enable Mastodon**: Check the box
-4. Click "Test Mastodon Connection" to verify
+   - **Note**: The test button will now send an actual "Hello World" post to verify everything works
+4. Click "Test Mastodon (Send Hello World Post)" to verify AND post a test message
 5. **Most Important**: Click "Save configuration" and then check the logs:
    ```bash
    sudo -u www-data drush watchdog:show --count=20 --type=social_media_automation | grep -E "(DEBUG TEST|PLATFORM STRUCTURE|MASTODON)"
@@ -62,10 +63,24 @@
    ```
 
 **Expected Success Output:**
+- `✅ Test post sent to Mastodon! Check your Mastodon account.` (in browser)
 - `🔧 ENABLED DEBUG - Final platform_values[enabled]: "1"`
 - `🔧 URL CLEANUP - Original: "https://www.mastodon.social", Cleaned: "https://mastodon.social"`
 - `🔍 DB CHECK - mastodon.enabled: "TRUE"`
-- `=== Mastodon connection test completed ===` (without 401 errors)
+- `✅ Test post successful!` and `Post URL: https://mastodon.social/...` (in logs)
+
+### Step 6: Verify Your Test Post
+1. Check your Mastodon account at your server (e.g., mastodon.social)
+2. You should see a post like:
+   ```
+   🤖 Hello World from The Truth Perspective!
+   
+   This is a test post to verify Mastodon integration is working.
+   
+   Timestamp: 2025-08-18 12:25:00 UTC
+   
+   #TestPost #TheTruthPerspective
+   ```
 1. In the admin interface, scroll to "Testing" section
 2. Select content type (Analytics Summary recommended)
 3. Click "Test Mastodon Only"
