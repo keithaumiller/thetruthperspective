@@ -69,12 +69,22 @@ class MastodonClient implements PlatformInterface {
     $config = $this->configFactory->get('social_media_automation.settings');
     $credentials = $this->getRequiredCredentials();
     
+    $this->logger->debug('Checking Mastodon configuration...');
+    
     foreach ($credentials as $credential) {
-      if (empty($config->get("mastodon.{$credential}"))) {
+      $value = $config->get("mastodon.{$credential}");
+      if (empty($value)) {
+        $this->logger->debug('Missing credential: mastodon.@credential', ['@credential' => $credential]);
         return FALSE;
+      } else {
+        $this->logger->debug('Credential present: mastodon.@credential (@length chars)', [
+          '@credential' => $credential,
+          '@length' => strlen($value),
+        ]);
       }
     }
     
+    $this->logger->debug('All Mastodon credentials present');
     return TRUE;
   }
 
@@ -82,7 +92,18 @@ class MastodonClient implements PlatformInterface {
    * {@inheritdoc}
    */
   public function testConnection(): bool {
+    $this->logger->info('=== Starting Mastodon connection test ===');
+    
+    // Step 1: Check if configured
     if (!$this->isConfigured()) {
+      $config = $this->configFactory->get('social_media_automation.settings');
+      $server_url = $config->get('mastodon.server_url');
+      $access_token = $config->get('mastodon.access_token');
+      
+      $this->logger->error('Mastodon not configured. Missing credentials:');
+      $this->logger->error('- server_url: @server_url', ['@server_url' => $server_url ? 'Present' : 'MISSING']);
+      $this->logger->error('- access_token: @access_token', ['@access_token' => $access_token ? 'Present (' . strlen($access_token) . ' chars)' : 'MISSING']);
+      
       return FALSE;
     }
 
@@ -90,19 +111,114 @@ class MastodonClient implements PlatformInterface {
     $server_url = $config->get('mastodon.server_url');
     $access_token = $config->get('mastodon.access_token');
 
+    $this->logger->info('Step 1: Configuration check passed');
+    $this->logger->info('- Server URL: @server', ['@server' => $server_url]);
+    $this->logger->info('- Access Token: @token_length chars, ends with @token_end', [
+      '@token_length' => strlen($access_token),
+      '@token_end' => substr($access_token, -8),
+    ]);
+
+    // Step 2: Validate URL format
+    if (!filter_var($server_url, FILTER_VALIDATE_URL)) {
+      $this->logger->error('Step 2 FAILED: Invalid server URL format: @url', ['@url' => $server_url]);
+      return FALSE;
+    }
+    $this->logger->info('Step 2: URL format validation passed');
+
+    // Step 3: Check if URL is accessible
+    $test_url = rtrim($server_url, '/') . '/api/v1/accounts/verify_credentials';
+    $this->logger->info('Step 3: Testing API endpoint: @url', ['@url' => $test_url]);
+
     try {
-      $response = $this->httpClient->get($server_url . '/api/v1/accounts/verify_credentials', [
+      $this->logger->info('Step 4: Making HTTP request...');
+      
+      $response = $this->httpClient->get($test_url, [
         'headers' => [
           'Authorization' => 'Bearer ' . $access_token,
+          'Accept' => 'application/json',
+          'User-Agent' => 'TruthPerspective/1.0 (+https://thetruthperspective.org)',
         ],
         'timeout' => 10,
+        'allow_redirects' => true,
       ]);
 
-      return $response->getStatusCode() === 200;
+      $status = $response->getStatusCode();
+      $this->logger->info('Step 5: HTTP response received');
+      $this->logger->info('- Status Code: @status', ['@status' => $status]);
+      $this->logger->info('- Content Type: @type', ['@type' => $response->getHeaderLine('Content-Type')]);
+      
+      if ($status === 200) {
+        // Try to decode the response to verify it's valid JSON
+        try {
+          $body = $response->getBody()->getContents();
+          $data = json_decode($body, true);
+          
+          if (json_last_error() === JSON_ERROR_NONE && isset($data['id'])) {
+            $this->logger->info('Step 6: SUCCESS! Valid account data received');
+            $this->logger->info('- Account ID: @id', ['@id' => $data['id']]);
+            $this->logger->info('- Username: @username', ['@username' => $data['username'] ?? 'Unknown']);
+            $this->logger->info('- Display Name: @name', ['@name' => $data['display_name'] ?? 'Unknown']);
+            return TRUE;
+          } else {
+            $this->logger->error('Step 6 FAILED: Invalid JSON response or missing account ID');
+            $this->logger->error('- JSON Error: @error', ['@error' => json_last_error_msg()]);
+            $this->logger->error('- Response body (first 200 chars): @body', ['@body' => substr($body, 0, 200)]);
+            return FALSE;
+          }
+        } catch (\Exception $e) {
+          $this->logger->error('Step 6 FAILED: Error parsing response: @message', ['@message' => $e->getMessage()]);
+          return FALSE;
+        }
+      } else {
+        $this->logger->error('Step 5 FAILED: HTTP error status @status', ['@status' => $status]);
+        
+        // Try to get error details from response
+        try {
+          $body = $response->getBody()->getContents();
+          $error_data = json_decode($body, true);
+          if (json_last_error() === JSON_ERROR_NONE && isset($error_data['error'])) {
+            $this->logger->error('- Mastodon error: @error', ['@error' => $error_data['error']]);
+          } else {
+            $this->logger->error('- Response body: @body', ['@body' => substr($body, 0, 500)]);
+          }
+        } catch (\Exception $e) {
+          $this->logger->error('- Could not parse error response: @message', ['@message' => $e->getMessage()]);
+        }
+        
+        return FALSE;
+      }
 
     } catch (RequestException $e) {
-      $this->logger->error('Mastodon connection test failed: @message', ['@message' => $e->getMessage()]);
+      $this->logger->error('Step 4 FAILED: HTTP request exception');
+      $this->logger->error('- Exception type: @type', ['@type' => get_class($e)]);
+      $this->logger->error('- Message: @message', ['@message' => $e->getMessage()]);
+      
+      if ($e->hasResponse()) {
+        $response = $e->getResponse();
+        $this->logger->error('- Response status: @status', ['@status' => $response->getStatusCode()]);
+        $this->logger->error('- Response headers: @headers', ['@headers' => json_encode($response->getHeaders())]);
+        
+        try {
+          $body = $response->getBody()->getContents();
+          $this->logger->error('- Response body: @body', ['@body' => substr($body, 0, 500)]);
+        } catch (\Exception $body_error) {
+          $this->logger->error('- Could not read response body: @error', ['@error' => $body_error->getMessage()]);
+        }
+      } else {
+        $this->logger->error('- No response received (connection/DNS issue?)');
+      }
+      
       return FALSE;
+      
+    } catch (\Exception $e) {
+      $this->logger->error('Step 4 FAILED: Unexpected exception');
+      $this->logger->error('- Exception type: @type', ['@type' => get_class($e)]);
+      $this->logger->error('- Message: @message', ['@message' => $e->getMessage()]);
+      $this->logger->error('- File: @file:@line', ['@file' => $e->getFile(), '@line' => $e->getLine()]);
+      
+      return FALSE;
+    } finally {
+      $this->logger->info('=== Mastodon connection test completed ===');
     }
   }
 
@@ -224,8 +340,6 @@ class MastodonClient implements PlatformInterface {
   public function getRequiredCredentials(): array {
     return [
       'server_url',
-      'client_id',
-      'client_secret', 
       'access_token',
     ];
   }
