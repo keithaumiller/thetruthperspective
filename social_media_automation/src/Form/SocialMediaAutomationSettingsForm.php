@@ -4,6 +4,7 @@ namespace Drupal\social_media_automation\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\social_media_automation\Service\PlatformManager;
 use Drupal\social_media_automation\Service\SocialMediaScheduler;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -28,11 +29,19 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
   protected $socialMediaScheduler;
 
   /**
+   * The logger service.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
+  protected $logger;
+
+  /**
    * Constructor.
    */
-  public function __construct(PlatformManager $platform_manager, SocialMediaScheduler $social_media_scheduler) {
+  public function __construct(PlatformManager $platform_manager, SocialMediaScheduler $social_media_scheduler, LoggerChannelFactoryInterface $logger_factory) {
     $this->platformManager = $platform_manager;
     $this->socialMediaScheduler = $social_media_scheduler;
+    $this->logger = $logger_factory->get('social_media_automation');
   }
 
   /**
@@ -41,7 +50,8 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('social_media_automation.platform_manager'),
-      $container->get('social_media_automation.scheduler')
+      $container->get('social_media_automation.scheduler'),
+      $container->get('logger.factory')
     );
   }
 
@@ -443,45 +453,83 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     $values = $form_state->getValues();
     $config = $this->config('social_media_automation.settings');
     
+    // Debug: Log all form values to help troubleshoot
+    $this->logger->info('=== Form submission debug ===');
+    $this->logger->info('All form values: @values', ['@values' => print_r($values, TRUE)]);
+    
     // Save global settings
     $config->set('enabled', $values['enabled'] ?? FALSE);
     $config->set('morning_time', $values['morning_time'] ?? '8 AM - 12 PM');
     $config->set('evening_time', $values['evening_time'] ?? '6 PM - 10 PM');
     
+    $this->logger->info('Global settings saved:');
+    $this->logger->info('- enabled: @enabled', ['@enabled' => $values['enabled'] ?? 'FALSE']);
+    
     // Save platform-specific settings
     $platforms = $this->platformManager->getAllPlatforms();
     
     foreach ($platforms as $platform_name => $platform) {
-      $config->set($platform_name . '.enabled', $values[$platform_name]['enabled'] ?? FALSE);
+      $this->logger->info('Processing platform: @platform', ['@platform' => $platform_name]);
       
-      // Save platform-specific credentials
-      switch ($platform_name) {
-        case 'mastodon':
-          $config->set($platform_name . '.server_url', $values[$platform_name]['server_url'] ?? '');
-          $config->set($platform_name . '.access_token', $values[$platform_name]['access_token'] ?? '');
-          break;
+      // Check if platform data exists in form values
+      if (isset($values[$platform_name])) {
+        $platform_values = $values[$platform_name];
+        $this->logger->info('Platform @platform values: @values', [
+          '@platform' => $platform_name,
+          '@values' => print_r($platform_values, TRUE),
+        ]);
+        
+        $config->set($platform_name . '.enabled', $platform_values['enabled'] ?? FALSE);
+        $this->logger->info('Set @platform.enabled = @value', [
+          '@platform' => $platform_name,
+          '@value' => $platform_values['enabled'] ?? 'FALSE',
+        ]);
+        
+        // Save platform-specific credentials
+        switch ($platform_name) {
+          case 'mastodon':
+            $config->set($platform_name . '.server_url', $platform_values['server_url'] ?? '');
+            $config->set($platform_name . '.access_token', $platform_values['access_token'] ?? '');
+            $this->logger->info('Saved Mastodon credentials:');
+            $this->logger->info('- server_url: @url', ['@url' => $platform_values['server_url'] ?? 'EMPTY']);
+            $this->logger->info('- access_token: @token_length chars', ['@token_length' => strlen($platform_values['access_token'] ?? '')]);
+            break;
 
-        case 'linkedin':
-          $config->set($platform_name . '.client_id', $values[$platform_name]['client_id'] ?? '');
-          $config->set($platform_name . '.client_secret', $values[$platform_name]['client_secret'] ?? '');
-          $config->set($platform_name . '.access_token', $values[$platform_name]['access_token'] ?? '');
-          break;
+          case 'linkedin':
+            $config->set($platform_name . '.client_id', $platform_values['client_id'] ?? '');
+            $config->set($platform_name . '.client_secret', $platform_values['client_secret'] ?? '');
+            $config->set($platform_name . '.access_token', $platform_values['access_token'] ?? '');
+            break;
 
-        case 'facebook':
-          $config->set($platform_name . '.page_id', $values[$platform_name]['page_id'] ?? '');
-          $config->set($platform_name . '.access_token', $values[$platform_name]['access_token'] ?? '');
-          break;
+          case 'facebook':
+            $config->set($platform_name . '.page_id', $platform_values['page_id'] ?? '');
+            $config->set($platform_name . '.access_token', $platform_values['access_token'] ?? '');
+            break;
 
-        case 'twitter':
-          $config->set($platform_name . '.api_key', $values[$platform_name]['api_key'] ?? '');
-          $config->set($platform_name . '.api_secret', $values[$platform_name]['api_secret'] ?? '');
-          $config->set($platform_name . '.access_token', $values[$platform_name]['access_token'] ?? '');
-          $config->set($platform_name . '.access_secret', $values[$platform_name]['access_secret'] ?? '');
-          break;
+          case 'twitter':
+            $config->set($platform_name . '.api_key', $platform_values['api_key'] ?? '');
+            $config->set($platform_name . '.api_secret', $platform_values['api_secret'] ?? '');
+            $config->set($platform_name . '.access_token', $platform_values['access_token'] ?? '');
+            $config->set($platform_name . '.access_secret', $platform_values['access_secret'] ?? '');
+            break;
+        }
+      } else {
+        $this->logger->warning('No form values found for platform: @platform', ['@platform' => $platform_name]);
       }
     }
     
+    // Save the configuration
     $config->save();
+    $this->logger->info('Configuration saved successfully');
+    
+    // Verify the saved configuration
+    $saved_config = $this->configFactory->get('social_media_automation.settings');
+    $this->logger->info('Verification - Mastodon server_url after save: @url', [
+      '@url' => $saved_config->get('mastodon.server_url') ?? 'NULL',
+    ]);
+    $this->logger->info('Verification - Mastodon access_token length after save: @length', [
+      '@length' => strlen($saved_config->get('mastodon.access_token') ?? ''),
+    ]);
 
     parent::submitForm($form, $form_state);
   }
