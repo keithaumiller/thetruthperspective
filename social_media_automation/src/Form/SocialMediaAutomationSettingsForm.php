@@ -615,8 +615,8 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       
       // Extract motivation analysis field only
       $motivation_analysis = '';
-      if ($article->hasField('field_ai_response') && !$article->get('field_ai_response')->isEmpty()) {
-        $motivation_analysis = $article->get('field_ai_response')->value;
+      if ($article->hasField('field_motivation_analysis') && !$article->get('field_motivation_analysis')->isEmpty()) {
+        $motivation_analysis = $article->get('field_motivation_analysis')->value;
         \Drupal::logger('social_media_automation')->info('Found motivation analysis: @length characters', ['@length' => strlen($motivation_analysis)]);
       }
       
@@ -968,7 +968,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
    * @param string $article_url
    *   The article URL.
    * @param string $motivation_analysis
-   *   The existing motivation analysis data from field_ai_response.
+   *   The existing motivation analysis data from field_motivation_analysis.
    *
    * @return string
    *   The prompt for AI social media generation.
