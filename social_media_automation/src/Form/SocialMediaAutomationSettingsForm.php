@@ -201,6 +201,55 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       '#open' => FALSE,
     ];
 
+    // Add debug test form section
+    $form['debug_test'] = [
+      '#type' => 'details',
+      '#title' => $this->t('🔧 Debug Test Form'),
+      '#open' => TRUE,
+      '#description' => $this->t('<strong>Instructions:</strong> These fields are pre-filled with test values. Click "Save configuration" and then check the logs with:<br><code>sudo -u www-data drush watchdog:show --count=20 --type=social_media_automation | grep "DEBUG TEST"</code><br><br>This will help identify if the form submission is working properly.'),
+    ];
+
+    $form['debug_test']['test_server_url'] = [
+      '#type' => 'url',
+      '#title' => $this->t('Test Server URL'),
+      '#default_value' => 'https://mastodon.social',
+      '#description' => $this->t('Pre-filled test URL - should appear in form submission logs'),
+    ];
+
+    $form['debug_test']['test_access_token'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Test Access Token'),
+      '#default_value' => 'test_token_12345_should_appear_in_logs',
+      '#description' => $this->t('Pre-filled test token - should appear in form submission logs'),
+    ];
+
+    $form['debug_test']['test_checkbox'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Test Checkbox'),
+      '#default_value' => TRUE,
+      '#description' => $this->t('Pre-checked checkbox - should show as 1 in logs'),
+    ];
+
+    $form['debug_test']['test_nested'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Test Nested Fields'),
+      '#open' => TRUE,
+    ];
+
+    $form['debug_test']['test_nested']['nested_field1'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Nested Field 1'),
+      '#default_value' => 'nested_value_1',
+      '#description' => $this->t('Should appear as test_nested[nested_field1] in logs'),
+    ];
+
+    $form['debug_test']['test_nested']['nested_field2'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Nested Field 2'),  
+      '#default_value' => 'nested_value_2',
+      '#description' => $this->t('Should appear as test_nested[nested_field2] in logs'),
+    ];
+
     $form['testing']['test_content_type'] = [
       '#type' => 'select',
       '#title' => $this->t('Test Content Type'),
@@ -456,6 +505,24 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     // Debug: Log all form values to help troubleshoot
     $this->logger->info('=== Form submission debug ===');
     $this->logger->info('All form values: @values', ['@values' => print_r($values, TRUE)]);
+    
+    // Special debug test logging
+    if (isset($values['test_server_url'])) {
+      $this->logger->info('🔧 DEBUG TEST - test_server_url: @url', ['@url' => $values['test_server_url']]);
+    }
+    if (isset($values['test_access_token'])) {
+      $this->logger->info('🔧 DEBUG TEST - test_access_token: @token', ['@token' => $values['test_access_token']]);
+    }
+    if (isset($values['test_checkbox'])) {
+      $this->logger->info('🔧 DEBUG TEST - test_checkbox: @checkbox', ['@checkbox' => $values['test_checkbox']]);
+    }
+    if (isset($values['test_nested'])) {
+      $this->logger->info('🔧 DEBUG TEST - test_nested: @nested', ['@nested' => print_r($values['test_nested'], TRUE)]);
+    }
+    
+    // Check for server_url and access_token at top level
+    $this->logger->info('🔧 TOP LEVEL - server_url: "@url"', ['@url' => $values['server_url'] ?? 'NOT_SET']);
+    $this->logger->info('🔧 TOP LEVEL - access_token: "@token"', ['@token' => $values['access_token'] ?? 'NOT_SET']);
     
     // Save global settings
     $config->set('enabled', $values['enabled'] ?? FALSE);
