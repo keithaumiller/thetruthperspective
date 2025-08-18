@@ -641,15 +641,19 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
         // For Mastodon, map the top-level fields
         if ($platform_name === 'mastodon') {
           $platform_values = [
-            'enabled' => $values['mastodon']['enabled'] ?? FALSE,  // Look for nested first
+            'enabled' => $values['enabled'] ?? FALSE,  // Check top-level enabled field
             'server_url' => $values['server_url'] ?? '',
             'access_token' => $values['access_token'] ?? '',
           ];
           
-          // If nested structure exists, use it instead
-          if (isset($values['mastodon']) && is_array($values['mastodon'])) {
-            $platform_values = $values['mastodon'];
+          // Also check if there's a platforms[mastodon] structure
+          if (isset($values['platforms']['mastodon'])) {
+            $platform_values = array_merge($platform_values, $values['platforms']['mastodon']);
           }
+          
+          // Debug the enabled field specifically
+          $this->logger->info('🔧 ENABLED DEBUG - values[enabled]: "@enabled"', ['@enabled' => $values['enabled'] ?? 'NOT_SET']);
+          $this->logger->info('🔧 ENABLED DEBUG - Final platform_values[enabled]: "@enabled"', ['@enabled' => $platform_values['enabled'] ?? 'NOT_SET']);
         } else {
           // For other platforms, skip if no nested structure
           $this->logger->warning('No form values found for platform: @platform', ['@platform' => $platform_name]);
@@ -672,10 +676,25 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
         // Save platform-specific credentials
         switch ($platform_name) {
           case 'mastodon':
-            $config->set($platform_name . '.server_url', $platform_values['server_url'] ?? '');
+            // Clean up server URL - remove www. if present and ensure it's valid
+            $server_url = $platform_values['server_url'] ?? '';
+            if (!empty($server_url)) {
+              // Remove www. prefix if present
+              $server_url = preg_replace('/^https?:\/\/www\./', 'https://', $server_url);
+              // Ensure https://
+              if (!preg_match('/^https?:\/\//', $server_url)) {
+                $server_url = 'https://' . $server_url;
+              }
+              $this->logger->info('🔧 URL CLEANUP - Original: "@original", Cleaned: "@cleaned"', [
+                '@original' => $platform_values['server_url'] ?? '',
+                '@cleaned' => $server_url
+              ]);
+            }
+            
+            $config->set($platform_name . '.server_url', $server_url);
             $config->set($platform_name . '.access_token', $platform_values['access_token'] ?? '');
             $this->logger->info('Saved Mastodon credentials:');
-            $this->logger->info('- server_url: @url', ['@url' => $platform_values['server_url'] ?? 'EMPTY']);
+            $this->logger->info('- server_url: @url', ['@url' => $server_url]);
             $this->logger->info('- access_token: @token_length chars', ['@token_length' => strlen($platform_values['access_token'] ?? '')]);
             break;
 
