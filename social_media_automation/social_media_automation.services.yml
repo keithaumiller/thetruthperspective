@@ -11,12 +11,6 @@ services:
     class: Drupal\social_media_automation\Service\SocialMediaScheduler
     arguments: ['@config.factory', '@social_media_automation.platform_manager', '@social_media_automation.content_generator', '@queue', '@state', '@logger.factory']
 
-  # Drush commands
-  social_media_automation.commands:
-    class: Drupal\social_media_automation\Commands\SocialMediaAutomationCommands
-    tags:
-      - { name: drush.command }
-
   # Platform clients
   social_media_automation.platform.mastodon:
     class: Drupal\social_media_automation\Service\Platform\MastodonClient

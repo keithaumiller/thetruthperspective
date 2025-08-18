@@ -1,0 +1,5 @@
+services:
+  social_media_automation.commands:
+    class: \Drupal\social_media_automation\Commands\SocialMediaAutomationCommands
+    tags:
+      - { name: drush.command }
