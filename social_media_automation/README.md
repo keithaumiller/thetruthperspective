@@ -4,6 +4,28 @@
 
 Unified social media automation system for The Truth Perspective platform. Provides automated content generation and posting across multiple social media platforms with a single configuration interface and shared scheduling logic.
 
+## 🎉 Current Status: Mastodon Integration WORKING!
+
+**✅ Fully Functional:**
+- Mastodon platform integration
+- Form-based credential configuration 
+- Test posting with "Hello World" messages
+- Database persistence of settings
+- Enhanced debugging and logging
+- Complete end-to-end posting pipeline
+
+**📍 Current Focus:** Mastodon is the primary platform (free, decentralized, no API costs)
+
+**🔄 Next Steps:** LinkedIn and Facebook integration (when needed)
+
+## Quick Start
+
+1. **Install the module** (already done)
+2. **Configure Mastodon credentials**: See `docs/MASTODON_SETUP.md`
+3. **Test the integration**: Use the "Test Mastodon (Send Hello World Post)" button
+4. **Verify**: Check your Mastodon account for the test post
+5. **Enable automation**: Check the "Enable Mastodon" box and save
+
 ## Architecture
 
 ### Core Design Principles
@@ -20,38 +42,37 @@ Unified social media automation system for The Truth Perspective platform. Provi
 social_media_automation/
 ├── src/
 │   ├── Controller/
-│   │   ├── SocialMediaController.php         # Main dashboard and management
-│   │   └── ContentPreviewController.php      # Content preview and testing
+│   │   └── SocialMediaController.php         # Main dashboard and management
 │   ├── Form/
-│   │   ├── SocialMediaSettingsForm.php       # Unified platform configuration
-│   │   └── ContentGenerationForm.php         # Manual content creation
+│   │   └── SocialMediaAutomationSettingsForm.php  # Unified platform configuration
 │   ├── Service/
 │   │   ├── ContentGenerator.php              # Platform-agnostic content creation
 │   │   ├── SocialMediaScheduler.php          # Unified scheduling and queue management
 │   │   ├── Platform/
 │   │   │   ├── PlatformInterface.php         # Common interface for all platforms
-│   │   │   ├── MastodonClient.php            # Mastodon API integration
+│   │   │   ├── MastodonClient.php            # ✅ Mastodon API integration (WORKING)
 │   │   │   ├── LinkedInClient.php            # LinkedIn API integration
 │   │   │   ├── FacebookClient.php            # Facebook API integration
 │   │   │   └── TwitterClient.php             # Twitter API integration (legacy/paid)
 │   │   └── PlatformManager.php               # Platform registry and factory
-│   ├── Plugin/
-│   │   └── QueueWorker/
-│   │       └── SocialMediaPostWorker.php     # Queue processing for posts
-│   └── Commands/
-│       └── SocialMediaCommands.php           # Drush commands for testing
+│   ├── Commands/
+│   │   └── SocialMediaCommands.php           # Drush commands for testing and management
+│   └── EventSubscriber/
+│       └── CronSubscriber.php                # Automated posting scheduler
+├── docs/
+│   ├── MASTODON_SETUP.md                     # ✅ Complete Mastodon setup guide
+│   └── README.md                             # This file
+├── scripts/
+│   ├── debug_mastodon.sh                     # Mastodon debugging utilities
+│   ├── enhanced_debug.sh                     # Form submission debugging
+│   └── test_form_submission.sh               # Form testing scripts
 ├── templates/
-│   ├── social-media-dashboard.html.twig      # Admin dashboard
-│   ├── content-preview.html.twig             # Content preview interface
-│   └── platform-status.html.twig             # Platform connection status
+│   └── (template files for admin interface)
 ├── css/
-│   └── social-media-admin.css                # Admin interface styling
+│   └── (styling for admin interface)
 ├── js/
-│   ├── content-preview.js                    # Live content preview
-│   └── platform-manager.js                   # Platform status management
-└── config/
-    └── install/
-        └── social_media_automation.settings.yml
+│   └── (JavaScript for admin interface)
+└── social_media_automation.info.yml
 ```
 
 ## Platform Integration
@@ -60,8 +81,8 @@ social_media_automation/
 
 | Platform | Status | API Cost | Authentication | Character Limit | Features |
 |----------|--------|----------|---------------|-----------------|----------|
-| **Mastodon** | ✅ Primary | Free | OAuth 2.0 | 500 chars | Full automation |
-| **LinkedIn** | ✅ Secondary | Free (Personal) | OAuth 2.0 | 3000 chars | Personal posts |
+| **Mastodon** | ✅ **WORKING** | Free | OAuth 2.0 | 500 chars | Full automation, test posts |
+| **LinkedIn** | 🔄 Planned | Free (Personal) | OAuth 2.0 | 3000 chars | Personal posts |
 | **Facebook** | 🔄 Planned | Free (with review) | OAuth 2.0 | 63,206 chars | Page posts |
 | **Twitter** | 💰 Optional | $100/month | OAuth 1.0a | 280 chars | Full features |
 | **Reddit** | 🔄 Future | Free | OAuth 2.0 | 40,000 chars | Subreddit posts |
@@ -219,33 +240,42 @@ class SocialMediaPostItem {
 
 ## Installation & Setup
 
-### 1. Enable Module
+### 1. Enable Module ✅ DONE
 ```bash
 drush en social_media_automation
 ```
 
-### 2. Configure Platforms
-1. Go to `/admin/config/services/social-media-automation`
-2. Configure credentials for each desired platform
-3. Test connections using the "Test Connection" buttons
-4. Enable automated posting
+### 2. Configure Mastodon ✅ WORKING
+1. Go to `/admin/config/services/social-media-automation/settings`
+2. Follow the complete setup guide: `social_media_automation/docs/MASTODON_SETUP.md`
+3. Test connection using "Test Mastodon (Send Hello World Post)" button
+4. Save configuration to enable automated posting
 
-### 3. Platform-Specific Setup
+### 3. Debugging Tools ✅ AVAILABLE
+Use the provided debugging scripts in `social_media_automation/scripts/`:
+- `debug_mastodon.sh` - Monitor Mastodon operations
+- `enhanced_debug.sh` - Form submission debugging  
+- `test_form_submission.sh` - Form testing utilities
 
-#### Mastodon Setup
+### 4. Platform-Specific Setup
+
+#### ✅ Mastodon Setup (WORKING)
+See complete guide: `social_media_automation/docs/MASTODON_SETUP.md`
+
 1. Choose a Mastodon server (mastodon.social, mastodon.world, etc.)
 2. Create account on chosen server
 3. Go to Preferences > Development > New Application
-4. Copy Client ID, Client Secret, and Access Token
-5. Enter in module configuration
+4. Copy Access Token
+5. Enter server URL and token in module configuration
+6. Test with "Hello World" post
 
-#### LinkedIn Setup
+#### 🔄 LinkedIn Setup (Future)
 1. Create LinkedIn Developer App
 2. Set up OAuth 2.0 with appropriate scopes
 3. Generate access token for personal posting
 4. Configure in module settings
 
-#### Facebook Setup (Optional)
+#### 🔄 Facebook Setup (Future)
 1. Create Facebook App in Meta Developers
 2. Request pages_manage_posts permission
 3. Complete app review process
