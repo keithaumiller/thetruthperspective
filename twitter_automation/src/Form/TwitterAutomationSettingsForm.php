@@ -229,7 +229,7 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
     $access_secret = $form_state->getValue('access_secret') ?: $this->config('twitter_automation.settings')->get('access_secret');
     
     if (empty($api_key) || empty($api_secret) || empty($access_token) || empty($access_secret)) {
-      $message = '<div class="messages messages--error">' . $this->t('Please enter all OAuth credentials (API Key, API Secret, Access Token, Access Token Secret) and save first.') . '</div>';
+      $message = '<div class="messages messages--error">Please enter all OAuth credentials first.</div>';
     } else {
       // Temporarily save credentials for testing
       $config = \Drupal::service('config.factory')->getEditable('twitter_automation.settings');
@@ -239,33 +239,81 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
         ->set('access_secret', $access_secret)
         ->save();
       
-      // Test OAuth connection using Twitter API 1.1
+      // Detailed OAuth debugging
+      $debug_info = [];
+      $debug_info[] = '<strong>Credential Analysis:</strong>';
+      $debug_info[] = 'API Key: ' . substr($api_key, 0, 10) . '... (length: ' . strlen($api_key) . ')';
+      $debug_info[] = 'API Secret: ' . substr($api_secret, 0, 10) . '... (length: ' . strlen($api_secret) . ')';
+      $debug_info[] = 'Access Token: ' . substr($access_token, 0, 15) . '... (length: ' . strlen($access_token) . ')';
+      $debug_info[] = 'Access Secret: ' . substr($access_secret, 0, 10) . '... (length: ' . strlen($access_secret) . ')';
+      $debug_info[] = '';
+      
+      // Check token format
+      $token_format = strpos($access_token, '-') !== false ? 'CORRECT (has dash)' : 'INCORRECT (missing dash)';
+      $debug_info[] = 'Access Token Format: ' . $token_format;
+      $debug_info[] = '';
+      
       try {
         $client = \Drupal::httpClient();
         $url = 'https://api.twitter.com/1.1/account/verify_credentials.json';
+        $method = 'GET';
+        $timestamp = (string) time();
+        $nonce = bin2hex(random_bytes(16));
         
-        // Build OAuth header
+        $debug_info[] = '<strong>OAuth Generation:</strong>';
+        $debug_info[] = 'Timestamp: ' . $timestamp;
+        $debug_info[] = 'Nonce: ' . $nonce;
+        $debug_info[] = 'Method: ' . $method;
+        $debug_info[] = 'URL: ' . $url;
+        $debug_info[] = '';
+        
+        // Build OAuth parameters
         $oauth_params = [
           'oauth_consumer_key' => $api_key,
-          'oauth_token' => $access_token,
+          'oauth_nonce' => $nonce,
           'oauth_signature_method' => 'HMAC-SHA1',
-          'oauth_timestamp' => time(),
-          'oauth_nonce' => bin2hex(random_bytes(16)),
+          'oauth_timestamp' => $timestamp,
+          'oauth_token' => $access_token,
           'oauth_version' => '1.0',
         ];
         
-        // Create signature
-        $base_string = 'GET&' . rawurlencode($url) . '&' . rawurlencode(http_build_query($oauth_params));
+        ksort($oauth_params);
+        $param_string = http_build_query($oauth_params);
+        $debug_info[] = '<strong>Parameters:</strong>';
+        $debug_info[] = 'Sorted params: ' . $param_string;
+        $debug_info[] = '';
+        
+        // Create base string
+        $base_string = $method . '&' . rawurlencode($url) . '&' . rawurlencode($param_string);
+        $debug_info[] = '<strong>Base String:</strong>';
+        $debug_info[] = substr($base_string, 0, 200) . '...';
+        $debug_info[] = '';
+        
+        // Create signing key
         $signing_key = rawurlencode($api_secret) . '&' . rawurlencode($access_secret);
-        $oauth_params['oauth_signature'] = base64_encode(hash_hmac('sha1', $base_string, $signing_key, true));
+        $debug_info[] = '<strong>Signing Key:</strong>';
+        $debug_info[] = substr($signing_key, 0, 30) . '... (length: ' . strlen($signing_key) . ')';
+        $debug_info[] = '';
+        
+        // Generate signature
+        $signature = base64_encode(hash_hmac('sha1', $base_string, $signing_key, true));
+        $oauth_params['oauth_signature'] = $signature;
+        $debug_info[] = '<strong>Signature:</strong>';
+        $debug_info[] = $signature;
+        $debug_info[] = '';
         
         // Build authorization header
-        $auth_header = 'OAuth ';
+        $auth_parts = [];
         foreach ($oauth_params as $key => $value) {
-          $auth_header .= $key . '="' . rawurlencode($value) . '", ';
+          $auth_parts[] = $key . '="' . rawurlencode($value) . '"';
         }
-        $auth_header = rtrim($auth_header, ', ');
+        $auth_header = 'OAuth ' . implode(', ', $auth_parts);
+        $debug_info[] = '<strong>Authorization Header:</strong>';
+        $debug_info[] = substr($auth_header, 0, 200) . '...';
+        $debug_info[] = '';
         
+        // Make the request
+        $debug_info[] = '<strong>Making Request...</strong>';
         $response = $client->get($url, [
           'headers' => [
             'Authorization' => $auth_header,
@@ -275,12 +323,28 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
         if ($response->getStatusCode() === 200) {
           $data = json_decode($response->getBody(), true);
           $username = $data['screen_name'] ?? 'Unknown';
-          $message = '<div class="messages messages--status">' . $this->t('Connection successful! Connected as @username', ['@username' => '@' . $username]) . '</div>';
+          $message = '<div class="messages messages--status">✅ <strong>SUCCESS!</strong> Connected as @' . $username . '</div>';
         } else {
-          $message = '<div class="messages messages--error">' . $this->t('Connection failed. HTTP Status: @status', ['@status' => $response->getStatusCode()]) . '</div>';
+          $debug_info[] = 'HTTP Status: ' . $response->getStatusCode();
+          $debug_info[] = 'Response: ' . $response->getBody();
+          $message = '<div class="messages messages--error">❌ <strong>Failed:</strong> HTTP ' . $response->getStatusCode() . '<br><br><details><summary>Debug Info</summary><pre>' . implode("\n", $debug_info) . '</pre></details></div>';
         }
+        
       } catch (\Exception $e) {
-        $message = '<div class="messages messages--error">' . $this->t('Connection failed: @error', ['@error' => $e->getMessage()]) . '</div>';
+        $debug_info[] = '<strong>Exception:</strong>';
+        $debug_info[] = $e->getMessage();
+        $debug_info[] = '';
+        
+        // Check for specific error patterns
+        if (strpos($e->getMessage(), '401') !== false) {
+          $debug_info[] = '<strong>401 Unauthorized Analysis:</strong>';
+          $debug_info[] = '• Check if app has Read/Write permissions';
+          $debug_info[] = '• Verify access token was generated AFTER setting permissions';
+          $debug_info[] = '• Confirm credentials are correctly mapped';
+          $debug_info[] = '• Look for extra spaces or characters in credentials';
+        }
+        
+        $message = '<div class="messages messages--error">❌ <strong>Connection Failed</strong><br><br><details><summary>Debug Info</summary><pre>' . implode("\n", $debug_info) . '</pre></details></div>';
       }
     }
 
