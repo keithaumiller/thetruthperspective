@@ -391,8 +391,20 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Debug what we're getting from the form
     $twitter_api = $form_state->getValue('twitter_api');
+    
+    // Log for debugging
+    \Drupal::logger('twitter_automation')->info('Form submission debug: @data', [
+      '@data' => print_r($form_state->getValues(), TRUE)
+    ]);
+    
     $consumer_keys = $twitter_api['consumer_keys'] ?? [];
     $auth_tokens = $twitter_api['auth_tokens'] ?? [];
+    
+    // Log individual values
+    \Drupal::logger('twitter_automation')->info('Credentials extracted: API Key: @api_key, Access Token: @access_token', [
+      '@api_key' => $consumer_keys['api_key'] ?? 'EMPTY',
+      '@access_token' => $auth_tokens['access_token'] ?? 'EMPTY'
+    ]);
     
     $this->config('twitter_automation.settings')
       ->set('bearer_token', $auth_tokens['bearer_token'] ?? '')
