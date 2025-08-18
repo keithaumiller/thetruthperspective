@@ -1,4 +1,18 @@
+social_media_automation.dashboard:
+  path: '/admin/config/services/social-media-automation'
+  defaults:
+    _controller: '\Drupal\social_media_automation\Controller\SocialMediaAutomationController::dashboard'
+    _title: 'Social Media Automation Dashboard'
+  requirements:
+    _permission: 'administer social media automation'
+
 social_media_automation.settings:
+  path: '/admin/config/services/social-media-automation/settings'
+  defaults:
+    _form: '\Drupal\social_media_automation\Form\SocialMediaAutomationSettingsForm'
+    _title: 'Social Media Automation Settings'
+  requirements:
+    _permission: 'administer social media automation'media_automation.settings:
   path: '/admin/config/services/social-media-automation'
   defaults:
     _form: '\Drupal\social_media_automation\Form\SocialMediaSettingsForm'

@@ -5,25 +5,40 @@ services:
 
   social_media_automation.content_generator:
     class: Drupal\social_media_automation\Service\ContentGenerator
-    arguments: ['@config.factory', '@logger.factory', '@social_media_automation.platform_manager', '@newsmotivationmetrics.metrics_service']
+    arguments: ['@config.factory', '@logger.factory', '@social_media_automation.platform_manager', '@newsmotivationmetrics.metrics_data_service', '@entity_type.manager']
 
   social_media_automation.scheduler:
     class: Drupal\social_media_automation\Service\SocialMediaScheduler
-    arguments: ['@config.factory', '@logger.factory', '@queue', '@social_media_automation.platform_manager', '@social_media_automation.content_generator']
+    arguments: ['@config.factory', '@social_media_automation.platform_manager', '@social_media_automation.content_generator', '@queue', '@state', '@logger.factory']
+
+  # Drush commands
+  social_media_automation.commands:
+    class: Drupal\social_media_automation\Commands\SocialMediaAutomationCommands
+    arguments: ['@social_media_automation.content_generator', '@social_media_automation.platform_manager', '@social_media_automation.scheduler']
+    tags:
+      - { name: drush.command }
 
   # Platform clients
-  social_media_automation.mastodon_client:
+  social_media_automation.platform.mastodon:
     class: Drupal\social_media_automation\Service\Platform\MastodonClient
-    arguments: ['@config.factory', '@logger.factory', '@http_client']
+    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    tags:
+      - { name: social_media_platform, platform: mastodon }
 
-  social_media_automation.linkedin_client:
+  social_media_automation.platform.linkedin:
     class: Drupal\social_media_automation\Service\Platform\LinkedInClient
-    arguments: ['@config.factory', '@logger.factory', '@http_client']
+    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    tags:
+      - { name: social_media_platform, platform: linkedin }
 
-  social_media_automation.facebook_client:
+  social_media_automation.platform.facebook:
     class: Drupal\social_media_automation\Service\Platform\FacebookClient
-    arguments: ['@config.factory', '@logger.factory', '@http_client']
+    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    tags:
+      - { name: social_media_platform, platform: facebook }
 
-  social_media_automation.twitter_client:
+  social_media_automation.platform.twitter:
     class: Drupal\social_media_automation\Service\Platform\TwitterClient
-    arguments: ['@config.factory', '@logger.factory', '@http_client']
+    arguments: ['@config.factory', '@http_client', '@logger.factory']
+    tags:
+      - { name: social_media_platform, platform: twitter }

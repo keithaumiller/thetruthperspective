@@ -1,0 +1,13 @@
+social_media_automation.admin:
+  title: 'Social Media Automation'
+  route_name: social_media_automation.dashboard
+  description: 'Configure automated posting to multiple social media platforms'
+  parent: system.admin_config_services
+  weight: 10
+
+social_media_automation.settings:
+  title: 'Settings'
+  route_name: social_media_automation.settings
+  description: 'Configure platform credentials and posting settings'
+  parent: social_media_automation.admin
+  weight: 0

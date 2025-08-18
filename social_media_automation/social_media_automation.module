@@ -31,7 +31,7 @@ function social_media_automation_cron() {
   }
 
   $scheduler = \Drupal::service('social_media_automation.scheduler');
-  $scheduler->processScheduledPosts();
+  $scheduler->executeCronPosts();
 }
 
 /**

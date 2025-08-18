@@ -70,7 +70,7 @@ class MastodonClient implements PlatformInterface {
     $credentials = $this->getRequiredCredentials();
     
     foreach ($credentials as $credential) {
-      if (empty($config->get("platforms.mastodon.{$credential}"))) {
+      if (empty($config->get("mastodon.{$credential}"))) {
         return FALSE;
       }
     }
@@ -87,8 +87,8 @@ class MastodonClient implements PlatformInterface {
     }
 
     $config = $this->configFactory->get('social_media_automation.settings');
-    $server_url = $config->get('platforms.mastodon.server_url');
-    $access_token = $config->get('platforms.mastodon.access_token');
+    $server_url = $config->get('mastodon.server_url');
+    $access_token = $config->get('mastodon.access_token');
 
     try {
       $response = $this->httpClient->get($server_url . '/api/v1/accounts/verify_credentials', [
@@ -123,8 +123,8 @@ class MastodonClient implements PlatformInterface {
     }
 
     $config = $this->configFactory->get('social_media_automation.settings');
-    $server_url = $config->get('platforms.mastodon.server_url');
-    $access_token = $config->get('platforms.mastodon.access_token');
+    $server_url = $config->get('mastodon.server_url');
+    $access_token = $config->get('mastodon.access_token');
 
     // Prepare post data
     $post_data = [
@@ -213,7 +213,7 @@ class MastodonClient implements PlatformInterface {
    */
   public function getAuthenticationUrl(): string {
     $config = $this->configFactory->get('social_media_automation.settings');
-    $server_url = $config->get('platforms.mastodon.server_url', 'https://mastodon.social');
+    $server_url = $config->get('mastodon.server_url', 'https://mastodon.social');
     
     return $server_url . '/settings/applications';
   }
