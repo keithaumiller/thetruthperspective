@@ -471,9 +471,38 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     foreach ($platforms as $platform_name => $platform) {
       $this->logger->info('Processing platform: @platform', ['@platform' => $platform_name]);
       
-      // Check if platform data exists in form values
-      if (isset($values[$platform_name])) {
+      // Check if platform data exists in nested form values (correct structure)
+      if (isset($values[$platform_name]) && is_array($values[$platform_name])) {
         $platform_values = $values[$platform_name];
+        $this->logger->info('Found nested platform @platform values: @values', [
+          '@platform' => $platform_name,
+          '@values' => print_r($platform_values, TRUE),
+        ]);
+      } 
+      // Handle flattened form structure (current issue)
+      else {
+        $this->logger->info('Using flattened form structure for @platform', ['@platform' => $platform_name]);
+        
+        // For Mastodon, map the top-level fields
+        if ($platform_name === 'mastodon') {
+          $platform_values = [
+            'enabled' => $values['mastodon']['enabled'] ?? FALSE,  // Look for nested first
+            'server_url' => $values['server_url'] ?? '',
+            'access_token' => $values['access_token'] ?? '',
+          ];
+          
+          // If nested structure exists, use it instead
+          if (isset($values['mastodon']) && is_array($values['mastodon'])) {
+            $platform_values = $values['mastodon'];
+          }
+        } else {
+          // For other platforms, skip if no nested structure
+          $this->logger->warning('No form values found for platform: @platform', ['@platform' => $platform_name]);
+          continue;
+        }
+      }
+      
+      if (!empty($platform_values)) {
         $this->logger->info('Platform @platform values: @values', [
           '@platform' => $platform_name,
           '@values' => print_r($platform_values, TRUE),
@@ -513,8 +542,6 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
             $config->set($platform_name . '.access_secret', $platform_values['access_secret'] ?? '');
             break;
         }
-      } else {
-        $this->logger->warning('No form values found for platform: @platform', ['@platform' => $platform_name]);
       }
     }
     
