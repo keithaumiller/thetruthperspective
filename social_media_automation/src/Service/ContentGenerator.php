@@ -249,6 +249,11 @@ class ContentGenerator {
         $motivation_data = strip_tags($motivation_data);
         $motivation_data = html_entity_decode($motivation_data, ENT_QUOTES | ENT_HTML5);
         
+        // Fix common formatting issues
+        $motivation_data = preg_replace('/([a-z])([A-Z])/', '$1 $2', $motivation_data); // Add space between camelCase
+        $motivation_data = preg_replace('/(\d+)([A-Z])/', '$1 $2', $motivation_data); // Add space after numbers
+        $motivation_data = preg_replace('/([a-z]:)([A-Z])/', '$1 $2', $motivation_data); // Add space after colons
+        
         // Extract a key insight from the motivation analysis
         if (preg_match('/motivation[s]?[^.]*([^.]{50,150})/i', $motivation_data, $matches)) {
           $motivation_insight = trim($matches[1]);
