@@ -168,7 +168,7 @@ class SocialMediaAutomationCommands extends DrushCommands {
    */
   public function listPlatforms() {
     try {
-      $all_platforms = $this->platformManager->getAllPlatforms();
+      $all_platforms = $this->platformManager->getAvailablePlatforms();
       $enabled_platforms = $this->platformManager->getEnabledPlatforms();
       
       $this->output()->writeln('<info>=== Available Platforms ===</info>');
