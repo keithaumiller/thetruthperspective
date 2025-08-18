@@ -651,29 +651,24 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       $ai_service = $container->get('news_extractor.ai_processing');
       \Drupal::logger('social_media_automation')->info('AI service loaded successfully');
       
+      // Get AI analysis data for enhanced social media content
+      $ai_analysis_data = null;
+      if ($article->hasField('field_ai_response') && !$article->get('field_ai_response')->isEmpty()) {
+        $ai_response = $article->get('field_ai_response')->value;
+        $ai_analysis_data = json_decode($ai_response, TRUE);
+        \Drupal::logger('social_media_automation')->info('Found AI analysis data with keys: @keys', [
+          '@keys' => is_array($ai_analysis_data) ? implode(', ', array_keys($ai_analysis_data)) : 'Invalid JSON'
+        ]);
+      }
+      
       // Generate social media content
       $article_title = $article->getTitle();
       $article_url = $article->toUrl('canonical', ['absolute' => TRUE])->toString();
       
-      $prompt = "Generate a compelling social media post for Mastodon based on this news article analysis. 
-
-ARTICLE TITLE: {$article_title}
-
-ARTICLE ANALYSIS: {$ai_summary}
-
-ARTICLE URL: {$article_url}
-
-REQUIREMENTS:
-- Keep under 500 characters (Mastodon limit)
-- Include relevant hashtags (2-4 maximum)
-- Be engaging and informative
-- Include the article URL
-- Maintain journalistic credibility
-- Focus on key insights from the analysis
-
-Please respond with ONLY the social media post text, ready to publish. Do not include any additional commentary or explanation.";
-
-      \Drupal::logger('social_media_automation')->info('Calling AI service with prompt');
+      // Build enhanced prompt using AI analysis data
+      $prompt = $this->buildSocialMediaPrompt($article_title, $ai_summary, $article_url, $ai_analysis_data);
+      
+      \Drupal::logger('social_media_automation')->info('Calling AI service with enhanced social media prompt');
       
       // The generateAnalysis method expects ($article_text, $article_title) but we're calling it with a custom prompt
       // So let's use a different approach or create a custom method for social media generation
@@ -716,6 +711,39 @@ Please respond with ONLY the social media post text, ready to publish. Do not in
       $html .= '<div class="post-text">' . nl2br(htmlspecialchars($social_media_post)) . '</div>';
       $html .= '<div class="character-count">' . $this->t('Character count: @count', ['@count' => strlen($social_media_post)]) . '</div>';
       $html .= '</div>';
+      
+      // Show analytical insights used
+      if (is_array($ai_analysis_data)) {
+        $html .= '<div class="analysis-insights">';
+        $html .= '<h4>' . $this->t('Analytical Insights Used:') . '</h4>';
+        
+        if (isset($ai_analysis_data['entities']) && is_array($ai_analysis_data['entities'])) {
+          $html .= '<strong>Key Players:</strong> ';
+          $entities = [];
+          foreach ($ai_analysis_data['entities'] as $entity) {
+            if (is_array($entity) && isset($entity['name'])) {
+              $entities[] = htmlspecialchars($entity['name']);
+            }
+          }
+          $html .= implode(', ', $entities) . '<br>';
+        }
+        
+        if (isset($ai_analysis_data['key_metric'])) {
+          $html .= '<strong>Impact Metric:</strong> ' . htmlspecialchars($ai_analysis_data['key_metric']) . '<br>';
+        }
+        
+        if (isset($ai_analysis_data['credibility_score'])) {
+          $credibility = $ai_analysis_data['credibility_score'];
+          $html .= '<strong>Credibility:</strong> ' . $credibility . '/100<br>';
+        }
+        
+        if (isset($ai_analysis_data['bias_rating'])) {
+          $bias = $ai_analysis_data['bias_rating'];
+          $html .= '<strong>Bias Rating:</strong> ' . $bias . '/100<br>';
+        }
+        
+        $html .= '</div>';
+      }
       
       $html .= '<div class="source-article">';
       $html .= '<h4>' . $this->t('Source Article:') . '</h4>';
@@ -1040,6 +1068,100 @@ Please respond with ONLY the social media post text, ready to publish. Do not in
       ]);
       throw new \Exception('Failed to generate social media content: ' . $e->getMessage());
     }
+  }
+
+  /**
+   * Build enhanced social media prompt using AI analysis data.
+   *
+   * @param string $article_title
+   *   The article title.
+   * @param string $ai_summary
+   *   The AI analysis summary.
+   * @param string $article_url
+   *   The article URL.
+   * @param array|null $ai_analysis_data
+   *   Structured AI analysis data from the article.
+   *
+   * @return string
+   *   The enhanced prompt for social media content generation.
+   */
+  protected function buildSocialMediaPrompt($article_title, $ai_summary, $article_url, $ai_analysis_data = null) {
+    $prompt = "As a social scientist, generate a compelling social media post for Mastodon that highlights the motivational analysis insights from this news article.\n\n";
+    
+    $prompt .= "ARTICLE TITLE: {$article_title}\n\n";
+    $prompt .= "ARTICLE URL: {$article_url}\n\n";
+    
+    if (is_array($ai_analysis_data)) {
+      // Extract key insights from the AI analysis
+      $prompt .= "ANALYTICAL INSIGHTS:\n";
+      
+      // Include entities and their motivations
+      if (isset($ai_analysis_data['entities']) && is_array($ai_analysis_data['entities'])) {
+        $prompt .= "Key Players & Motivations:\n";
+        foreach ($ai_analysis_data['entities'] as $entity) {
+          if (is_array($entity) && isset($entity['name']) && isset($entity['motivations'])) {
+            $motivations = is_array($entity['motivations']) ? implode(', ', $entity['motivations']) : $entity['motivations'];
+            $prompt .= "- {$entity['name']}: {$motivations}\n";
+          }
+        }
+        $prompt .= "\n";
+      }
+      
+      // Include key metric analysis
+      if (isset($ai_analysis_data['key_metric'])) {
+        $prompt .= "Impact Metric: {$ai_analysis_data['key_metric']}\n";
+      }
+      
+      if (isset($ai_analysis_data['analysis'])) {
+        $prompt .= "Analysis: {$ai_analysis_data['analysis']}\n\n";
+      }
+      
+      // Include credibility and bias context
+      if (isset($ai_analysis_data['credibility_score'])) {
+        $credibility = $ai_analysis_data['credibility_score'];
+        $credibility_level = $credibility >= 80 ? 'Highly credible' : 
+                           ($credibility >= 60 ? 'Generally reliable' : 
+                           ($credibility >= 40 ? 'Mixed reliability' : 'Questionable'));
+        $prompt .= "Source Credibility: {$credibility_level} ({$credibility}/100)\n";
+      }
+      
+      if (isset($ai_analysis_data['bias_rating'])) {
+        $bias = $ai_analysis_data['bias_rating'];
+        $bias_direction = $bias >= 80 ? 'Extreme Right' :
+                         ($bias >= 60 ? 'Lean Right' :
+                         ($bias >= 40 ? 'Center' :
+                         ($bias >= 20 ? 'Lean Left' : 'Extreme Left')));
+        $prompt .= "Bias Assessment: {$bias_direction} ({$bias}/100)\n";
+      }
+      
+      if (isset($ai_analysis_data['sentiment_score'])) {
+        $sentiment = $ai_analysis_data['sentiment_score'];
+        $sentiment_tone = $sentiment >= 80 ? 'Very positive' :
+                         ($sentiment >= 60 ? 'Positive' :
+                         ($sentiment >= 40 ? 'Neutral' :
+                         ($sentiment >= 20 ? 'Negative' : 'Very negative')));
+        $prompt .= "Sentiment: {$sentiment_tone} ({$sentiment}/100)\n\n";
+      }
+      
+    } else {
+      // Fallback to basic analysis if structured data not available
+      $prompt .= "ARTICLE ANALYSIS: {$ai_summary}\n\n";
+    }
+    
+    $prompt .= "REQUIREMENTS FOR SOCIAL MEDIA POST:\n";
+    $prompt .= "- Write from a social scientist's analytical perspective\n";
+    $prompt .= "- Keep under 500 characters (Mastodon limit)\n";
+    $prompt .= "- Highlight the most compelling motivational insights\n";
+    $prompt .= "- Include 2-4 relevant hashtags (e.g., #MotivationAnalysis #SocialScience #NewsAnalysis #PoliticalMotivations)\n";
+    $prompt .= "- Include the article URL\n";
+    $prompt .= "- Make it engaging while maintaining analytical credibility\n";
+    $prompt .= "- Focus on what drives the key players and what this reveals about societal patterns\n\n";
+    
+    $prompt .= "TONE: Professional yet accessible, insightful, thought-provoking\n\n";
+    
+    $prompt .= "Please respond with ONLY the social media post text, ready to publish. Do not include any additional commentary or explanation.";
+    
+    return $prompt;
   }
 
 }

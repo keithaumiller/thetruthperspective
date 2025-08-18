@@ -3,12 +3,17 @@
  * Styles for Social Media Content Preview functionality.
  */
 
+/**
+ * @file
+ * CSS for Social Media Content Preview functionality.
+ */
+
 .social-media-preview {
-  background: #f9f9f9;
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 20px;
   margin: 20px 0;
+  background: #f9f9f9;
 }
 
 .social-media-preview h3 {
@@ -20,9 +25,147 @@
 
 .preview-content {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
+  grid-gap: 20px;
   margin: 20px 0;
+}
+
+.post-preview {
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  border-left: 4px solid #0073aa;
+}
+
+.post-text {
+  background: #f8f8f8;
+  padding: 15px;
+  border-radius: 4px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.post-text:hover {
+  background: #e8f4f8;
+}
+
+.post-text:hover::after {
+  content: " 📋 Click to copy";
+  font-size: 0.8em;
+  color: #666;
+  font-style: italic;
+}
+
+.character-count {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 10px;
+}
+
+.character-count.warning {
+  color: #e69500;
+  font-weight: bold;
+}
+
+.character-count.over-limit {
+  color: #d63384;
+  font-weight: bold;
+}
+
+.analysis-insights {
+  background: #e8f4f8;
+  padding: 15px;
+  border-radius: 4px;
+  border-left: 4px solid #28a745;
+  font-size: 0.9em;
+}
+
+.analysis-insights h4 {
+  margin-top: 0;
+  color: #155724;
+}
+
+.analysis-insights strong {
+  color: #155724;
+}
+
+.source-article {
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  border-left: 4px solid #6c757d;
+}
+
+.source-article h4 {
+  margin-top: 0;
+  color: #495057;
+}
+
+.article-info {
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+.article-info a {
+  color: #0073aa;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.article-info a:hover {
+  text-decoration: underline;
+}
+
+.preview-actions {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.preview-actions .button {
+  margin: 0 10px;
+}
+
+.clipboard-success {
+  position: absolute;
+  background: #28a745;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  z-index: 1000;
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .social-media-preview {
+    padding: 15px;
+    margin: 15px 0;
+  }
+  
+  .preview-content {
+    grid-gap: 15px;
+  }
+  
+  .post-preview,
+  .analysis-insights,
+  .source-article {
+    padding: 12px;
+  }
+  
+  .preview-actions .button {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+  }
 }
 
 @media (max-width: 768px) {
