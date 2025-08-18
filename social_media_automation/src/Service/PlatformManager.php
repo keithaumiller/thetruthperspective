@@ -152,7 +152,7 @@ class PlatformManager {
     $enabled_platforms = [];
 
     foreach ($this->getAvailablePlatforms() as $platform_name) {
-      if ($config->get("platforms.{$platform_name}.enabled")) {
+      if ($config->get("{$platform_name}.enabled")) {
         $platform = $this->getPlatform($platform_name);
         if ($platform && $platform->isConfigured()) {
           $enabled_platforms[$platform_name] = $platform;
@@ -178,7 +178,7 @@ class PlatformManager {
       if ($platform) {
         $status[$platform_name] = [
           'name' => $platform->getName(),
-          'enabled' => $config->get("platforms.{$platform_name}.enabled", FALSE),
+          'enabled' => $config->get("{$platform_name}.enabled", FALSE),
           'configured' => $platform->isConfigured(),
           'connected' => $platform->isConfigured() ? $platform->testConnection() : FALSE,
           'character_limit' => $platform->getCharacterLimit(),
