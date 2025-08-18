@@ -328,10 +328,10 @@ function _news_extractor_has_invalid_title($title) {
 /**
  * Implements hook_cron().
  * 
- * Automated reprocessing of failed articles:
- * 1. Find unpublished articles with processing failures
- * 2. Run them through the complete processing pipeline (Stages 1-6)
- * 3. Delete old unpublished articles that remain failed after 24 hours
+ * Automated reprocessing of failed articles and feed maintenance:
+ * 1. Check published articles for post-processor conditions
+ * 2. Find unpublished articles with processing failures and reprocess them
+ * 3. Detect and unlock stuck feed imports (locked > 30 minutes)
  */
 function news_extractor_cron() {
   $logger = \Drupal::logger('news_extractor');
@@ -347,7 +347,6 @@ function news_extractor_cron() {
     'unpublished_found' => 0,
     'reprocessed_successfully' => 0,
     'reprocessing_failed' => 0,
-    'old_articles_deleted' => 0,
   ];
 
   // STEP 1: Check published articles for post-processor conditions
@@ -496,53 +495,13 @@ function news_extractor_cron() {
     }
   }
 
-  // STEP 4: Delete old unpublished articles with persistent failures
-  $logger->info('Step 4: Deleting old unpublished articles with persistent failures');
-  
-  // Find unpublished articles older than 24 hours
-  $one_day_ago = \Drupal::time()->getRequestTime() - (24 * 60 * 60);
-  
-  $old_unpublished_query = \Drupal::entityQuery('node')
-    ->condition('type', 'article')
-    ->condition('status', 0) // Only unpublished articles
-    ->condition('created', $one_day_ago, '<') // Older than 24 hours
-    ->accessCheck(FALSE);
-  
-  $old_unpublished_nids = $old_unpublished_query->execute();
-  
-  if (!empty($old_unpublished_nids)) {
-    // Limit deletions to prevent timeouts (max 50 per run)
-    $delete_limit = min(50, count($old_unpublished_nids));
-    $old_unpublished_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple(array_slice($old_unpublished_nids, 0, $delete_limit));
-    
-    foreach ($old_unpublished_nodes as $node) {
-      $title = $node->getTitle();
-      $nid = $node->id();
-      
-      try {
-        $node->delete();
-        $stats['old_articles_deleted']++;
-        
-        $logger->info('Deleted old unpublished article @nid: @title', [
-          '@nid' => $nid,
-          '@title' => $title,
-        ]);
-      } catch (\Exception $e) {
-        $logger->error('Error deleting old article @nid: @error', [
-          '@nid' => $nid,
-          '@error' => $e->getMessage(),
-        ]);
-      }
-    }
-  }
-
   // Log final statistics
   $logger->info('News extractor cron job completed. Statistics: @stats', [
     '@stats' => json_encode($stats),
   ]);
 
   // Also log human-readable summary
-  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds, deleted @deleted old articles', [
+  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds', [
     '@checked' => $stats['published_checked'],
     '@unpublished' => $stats['articles_unpublished'],
     '@found' => $stats['unpublished_found'],
@@ -550,7 +509,6 @@ function news_extractor_cron() {
     '@failed' => $stats['reprocessing_failed'],
     '@stuck_found' => $stats['stuck_feeds_found'],
     '@stuck_unlocked' => $stats['stuck_feeds_unlocked'],
-    '@deleted' => $stats['old_articles_deleted'],
   ]);
 }
 

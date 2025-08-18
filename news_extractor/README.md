@@ -81,8 +81,7 @@ The module follows a service-oriented architecture with clear separation of conc
   1. Checks published articles for post-processor conditions (may unpublish)
   2. Finds unpublished articles (< 3 days old) and reprocesses them through complete pipeline
   3. **NEW**: Detects and unlocks stuck feed imports (locked > 30 minutes)
-  4. Deletes unpublished failed articles older than 24 hours (limit 50)
-  - Logs comprehensive statistics: found, reprocessed, stuck feeds, deleted counts
+  - Logs comprehensive statistics: found, reprocessed, stuck feeds counts
 
 **Note**: Post-processors in Stage 6 run after all processing is complete to make final publishing decisions based on data quality and completeness.
 
