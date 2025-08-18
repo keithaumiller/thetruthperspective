@@ -218,4 +218,40 @@ class FacebookClient implements PlatformInterface {
     ];
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function validateCredentials(array $credentials): array {
+    $errors = [];
+    
+    if (empty($credentials['app_id'])) {
+      $errors[] = 'App ID is required';
+    }
+    
+    if (empty($credentials['app_secret'])) {
+      $errors[] = 'App Secret is required';
+    }
+    
+    if (empty($credentials['access_token'])) {
+      $errors[] = 'Access Token is required';
+    }
+    
+    if (empty($credentials['page_id'])) {
+      $errors[] = 'Page ID is required';
+    }
+    
+    return $errors;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getRateLimits(): array {
+    return [
+      'posts_per_hour' => 25,   // Facebook Graph API limits
+      'posts_per_day' => 200,
+      'burst_limit' => 1,       // Posts per minute
+    ];
+  }
+
 }

@@ -232,4 +232,40 @@ class LinkedInClient implements PlatformInterface {
     ];
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function validateCredentials(array $credentials): array {
+    $errors = [];
+    
+    if (empty($credentials['client_id'])) {
+      $errors[] = 'Client ID is required';
+    }
+    
+    if (empty($credentials['client_secret'])) {
+      $errors[] = 'Client Secret is required';
+    }
+    
+    if (empty($credentials['access_token'])) {
+      $errors[] = 'Access Token is required';
+    }
+    
+    if (empty($credentials['person_id'])) {
+      $errors[] = 'Person ID is required';
+    }
+    
+    return $errors;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getRateLimits(): array {
+    return [
+      'posts_per_hour' => 25,   // LinkedIn API limits
+      'posts_per_day' => 100,
+      'burst_limit' => 2,       // Posts per minute
+    ];
+  }
+
 }
