@@ -613,32 +613,21 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
         return $form['content_preview']['preview_container'];
       }
       
-      // Get AI summary
-      $ai_summary = '';
+      // Extract motivation analysis field only
+      $motivation_analysis = '';
       if ($article->hasField('field_ai_response') && !$article->get('field_ai_response')->isEmpty()) {
-        $ai_response = $article->get('field_ai_response')->value;
-        $ai_data = json_decode($ai_response, TRUE);
-        if (is_array($ai_data) && isset($ai_data['summary'])) {
-          $ai_summary = $ai_data['summary'];
-        } elseif (is_string($ai_response) && !empty($ai_response)) {
-          $ai_summary = $ai_response;
-        }
-        \Drupal::logger('social_media_automation')->info('Found AI summary: @length characters', ['@length' => strlen($ai_summary)]);
+        $motivation_analysis = $article->get('field_ai_response')->value;
+        \Drupal::logger('social_media_automation')->info('Found motivation analysis: @length characters', ['@length' => strlen($motivation_analysis)]);
       }
       
-      // Fallback to body if no AI summary
-      if (empty($ai_summary)) {
-        if ($article->hasField('body') && !$article->get('body')->isEmpty()) {
-          $body = $article->get('body')->value;
-          $ai_summary = substr(strip_tags($body), 0, 500) . '...';
-          \Drupal::logger('social_media_automation')->info('Using body fallback: @length characters', ['@length' => strlen($ai_summary)]);
-        }
-      }
-      
-      if (empty($ai_summary)) {
-        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--warning">No content available to generate social media post from.</div>';
+      if (empty($motivation_analysis)) {
+        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--warning">No motivation analysis data found for social media post generation.</div>';
         return $form['content_preview']['preview_container'];
       }
+      
+      // Get article details for AI prompt
+      $article_title = $article->getTitle();
+      $article_url = $article->toUrl('canonical', ['absolute' => TRUE])->toString();
       
       // Check if AI service is available
       $container = \Drupal::getContainer();
@@ -651,39 +640,32 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       $ai_service = $container->get('news_extractor.ai_processing');
       \Drupal::logger('social_media_automation')->info('AI service loaded successfully');
       
-      // Get AI analysis data for enhanced social media content
-      $ai_analysis_data = null;
-      if ($article->hasField('field_ai_response') && !$article->get('field_ai_response')->isEmpty()) {
-        $ai_response = $article->get('field_ai_response')->value;
-        $ai_analysis_data = json_decode($ai_response, TRUE);
-        \Drupal::logger('social_media_automation')->info('Found AI analysis data with keys: @keys', [
-          '@keys' => is_array($ai_analysis_data) ? implode(', ', array_keys($ai_analysis_data)) : 'Invalid JSON'
-        ]);
-      }
+      // Build prompt for social media generation
+      $social_media_prompt = $this->buildSocialMediaPrompt($article_title, $article_url, $motivation_analysis);
       
-      // Generate social media content
-      $article_title = $article->getTitle();
-      $article_url = $article->toUrl('canonical', ['absolute' => TRUE])->toString();
+      \Drupal::logger('social_media_automation')->info('Calling AI service for social media generation');
       
-      // Build enhanced prompt using AI analysis data
-      $prompt = $this->buildSocialMediaPrompt($article_title, $ai_summary, $article_url, $ai_analysis_data);
-      
-      \Drupal::logger('social_media_automation')->info('Calling AI service with enhanced social media prompt');
-      
-      // The generateAnalysis method expects ($article_text, $article_title) but we're calling it with a custom prompt
-      // So let's use a different approach or create a custom method for social media generation
       try {
-        // Create a simulated AI call for social media content generation
-        $social_media_post = $this->generateSocialMediaContent($prompt, $ai_service);
+        // Call AI service to generate social media post using motivation analysis
+        $social_media_post = $ai_service->generateAnalysis($social_media_prompt, $article_title);
         
         if (empty($social_media_post)) {
           throw new \Exception('AI service returned empty response for social media generation');
         }
         
-        \Drupal::logger('social_media_automation')->info('AI service response type: @type, length: @length', [
+        \Drupal::logger('social_media_automation')->info('AI service response received: @type, length: @length', [
           '@type' => gettype($social_media_post),
           '@length' => is_string($social_media_post) ? strlen($social_media_post) : 'N/A'
         ]);
+        
+        // Parse AI response if it's JSON
+        if (is_string($social_media_post) && (strpos($social_media_post, '{') === 0)) {
+          $parsed = json_decode($social_media_post, TRUE);
+          if (json_last_error() === JSON_ERROR_NONE && isset($parsed['content'])) {
+            $social_media_post = $parsed['content'];
+          }
+        }
+        
       } catch (\Exception $e) {
         \Drupal::logger('social_media_automation')->error('AI service call failed: @error', [
           '@error' => $e->getMessage()
@@ -711,39 +693,6 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       $html .= '<div class="post-text">' . nl2br(htmlspecialchars($social_media_post)) . '</div>';
       $html .= '<div class="character-count">' . $this->t('Character count: @count', ['@count' => strlen($social_media_post)]) . '</div>';
       $html .= '</div>';
-      
-      // Show analytical insights used
-      if (is_array($ai_analysis_data)) {
-        $html .= '<div class="analysis-insights">';
-        $html .= '<h4>' . $this->t('Analytical Insights Used:') . '</h4>';
-        
-        if (isset($ai_analysis_data['entities']) && is_array($ai_analysis_data['entities'])) {
-          $html .= '<strong>Key Players:</strong> ';
-          $entities = [];
-          foreach ($ai_analysis_data['entities'] as $entity) {
-            if (is_array($entity) && isset($entity['name'])) {
-              $entities[] = htmlspecialchars($entity['name']);
-            }
-          }
-          $html .= implode(', ', $entities) . '<br>';
-        }
-        
-        if (isset($ai_analysis_data['key_metric'])) {
-          $html .= '<strong>Impact Metric:</strong> ' . htmlspecialchars($ai_analysis_data['key_metric']) . '<br>';
-        }
-        
-        if (isset($ai_analysis_data['credibility_score'])) {
-          $credibility = $ai_analysis_data['credibility_score'];
-          $html .= '<strong>Credibility:</strong> ' . $credibility . '/100<br>';
-        }
-        
-        if (isset($ai_analysis_data['bias_rating'])) {
-          $bias = $ai_analysis_data['bias_rating'];
-          $html .= '<strong>Bias Rating:</strong> ' . $bias . '/100<br>';
-        }
-        
-        $html .= '</div>';
-      }
       
       $html .= '<div class="source-article">';
       $html .= '<h4>' . $this->t('Source Article:') . '</h4>';
@@ -1012,154 +961,37 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
   }
 
   /**
-   * Generate social media content using AI service.
-   *
-   * @param string $prompt
-   *   The prompt for social media generation.
-   * @param \Drupal\news_extractor\Service\AIProcessingService $ai_service
-   *   The AI processing service.
-   *
-   * @return string
-   *   The generated social media content.
-   *
-   * @throws \Exception
-   *   If the AI service fails to generate content.
-   */
-  protected function generateSocialMediaContent($prompt, $ai_service) {
-    try {
-      // Since the original generateAnalysis method expects article_text and article_title,
-      // we'll call it with our prompt as the article_text and a dummy title
-      $social_media_post = $ai_service->generateAnalysis($prompt, 'Social Media Generation');
-      
-      if (empty($social_media_post)) {
-        throw new \Exception('AI service returned empty response');
-      }
-      
-      // If the response is JSON (as the original method returns), try to parse it
-      if (is_string($social_media_post) && (strpos($social_media_post, '{') === 0 || strpos($social_media_post, '[') === 0)) {
-        $parsed = json_decode($social_media_post, TRUE);
-        if (json_last_error() === JSON_ERROR_NONE) {
-          // Look for common fields that might contain our social media content
-          if (isset($parsed['social_media_post'])) {
-            return $parsed['social_media_post'];
-          } elseif (isset($parsed['content'])) {
-            return $parsed['content'];
-          } elseif (isset($parsed['text'])) {
-            return $parsed['text'];
-          } elseif (isset($parsed['summary'])) {
-            return $parsed['summary'];
-          } else {
-            // If it's a structured response but no clear content field, use the first string value
-            foreach ($parsed as $value) {
-              if (is_string($value) && strlen(trim($value)) > 10) {
-                return $value;
-              }
-            }
-          }
-        }
-      }
-      
-      // If not JSON or parsing failed, return the raw response
-      return is_string($social_media_post) ? $social_media_post : json_encode($social_media_post);
-      
-    } catch (\Exception $e) {
-      \Drupal::logger('social_media_automation')->error('Social media content generation failed: @error', [
-        '@error' => $e->getMessage(),
-      ]);
-      throw new \Exception('Failed to generate social media content: ' . $e->getMessage());
-    }
-  }
-
-  /**
-   * Build enhanced social media prompt using AI analysis data.
+   * Build prompt for AI social media generation using motivation analysis.
    *
    * @param string $article_title
    *   The article title.
-   * @param string $ai_summary
-   *   The AI analysis summary.
    * @param string $article_url
    *   The article URL.
-   * @param array|null $ai_analysis_data
-   *   Structured AI analysis data from the article.
+   * @param string $motivation_analysis
+   *   The existing motivation analysis data from field_ai_response.
    *
    * @return string
-   *   The enhanced prompt for social media content generation.
+   *   The prompt for AI social media generation.
    */
-  protected function buildSocialMediaPrompt($article_title, $ai_summary, $article_url, $ai_analysis_data = null) {
-    $prompt = "As a social scientist, generate a compelling social media post for Mastodon that highlights the motivational analysis insights from this news article.\n\n";
+  protected function buildSocialMediaPrompt($article_title, $article_url, $motivation_analysis) {
+    $prompt = "As a social scientist, create a compelling social media post for Mastodon based on the motivation analysis below.\n\n";
     
     $prompt .= "ARTICLE TITLE: {$article_title}\n\n";
     $prompt .= "ARTICLE URL: {$article_url}\n\n";
+    $prompt .= "MOTIVATION ANALYSIS DATA:\n{$motivation_analysis}\n\n";
     
-    if (is_array($ai_analysis_data)) {
-      // Extract key insights from the AI analysis
-      $prompt .= "ANALYTICAL INSIGHTS:\n";
-      
-      // Include entities and their motivations
-      if (isset($ai_analysis_data['entities']) && is_array($ai_analysis_data['entities'])) {
-        $prompt .= "Key Players & Motivations:\n";
-        foreach ($ai_analysis_data['entities'] as $entity) {
-          if (is_array($entity) && isset($entity['name']) && isset($entity['motivations'])) {
-            $motivations = is_array($entity['motivations']) ? implode(', ', $entity['motivations']) : $entity['motivations'];
-            $prompt .= "- {$entity['name']}: {$motivations}\n";
-          }
-        }
-        $prompt .= "\n";
-      }
-      
-      // Include key metric analysis
-      if (isset($ai_analysis_data['key_metric'])) {
-        $prompt .= "Impact Metric: {$ai_analysis_data['key_metric']}\n";
-      }
-      
-      if (isset($ai_analysis_data['analysis'])) {
-        $prompt .= "Analysis: {$ai_analysis_data['analysis']}\n\n";
-      }
-      
-      // Include credibility and bias context
-      if (isset($ai_analysis_data['credibility_score'])) {
-        $credibility = $ai_analysis_data['credibility_score'];
-        $credibility_level = $credibility >= 80 ? 'Highly credible' : 
-                           ($credibility >= 60 ? 'Generally reliable' : 
-                           ($credibility >= 40 ? 'Mixed reliability' : 'Questionable'));
-        $prompt .= "Source Credibility: {$credibility_level} ({$credibility}/100)\n";
-      }
-      
-      if (isset($ai_analysis_data['bias_rating'])) {
-        $bias = $ai_analysis_data['bias_rating'];
-        $bias_direction = $bias >= 80 ? 'Extreme Right' :
-                         ($bias >= 60 ? 'Lean Right' :
-                         ($bias >= 40 ? 'Center' :
-                         ($bias >= 20 ? 'Lean Left' : 'Extreme Left')));
-        $prompt .= "Bias Assessment: {$bias_direction} ({$bias}/100)\n";
-      }
-      
-      if (isset($ai_analysis_data['sentiment_score'])) {
-        $sentiment = $ai_analysis_data['sentiment_score'];
-        $sentiment_tone = $sentiment >= 80 ? 'Very positive' :
-                         ($sentiment >= 60 ? 'Positive' :
-                         ($sentiment >= 40 ? 'Neutral' :
-                         ($sentiment >= 20 ? 'Negative' : 'Very negative')));
-        $prompt .= "Sentiment: {$sentiment_tone} ({$sentiment}/100)\n\n";
-      }
-      
-    } else {
-      // Fallback to basic analysis if structured data not available
-      $prompt .= "ARTICLE ANALYSIS: {$ai_summary}\n\n";
-    }
-    
-    $prompt .= "REQUIREMENTS FOR SOCIAL MEDIA POST:\n";
+    $prompt .= "REQUIREMENTS:\n";
     $prompt .= "- Write from a social scientist's analytical perspective\n";
-    $prompt .= "- Keep under 500 characters (Mastodon limit)\n";
-    $prompt .= "- Highlight the most compelling motivational insights\n";
-    $prompt .= "- Include 2-4 relevant hashtags (e.g., #MotivationAnalysis #SocialScience #NewsAnalysis #PoliticalMotivations)\n";
+    $prompt .= "- Keep under 500 characters total (Mastodon limit)\n";
+    $prompt .= "- Highlight the most compelling motivational insights from the analysis\n";
+    $prompt .= "- Include 2-4 relevant hashtags (e.g., #MotivationAnalysis #SocialScience #NewsAnalysis)\n";
     $prompt .= "- Include the article URL\n";
-    $prompt .= "- Make it engaging while maintaining analytical credibility\n";
-    $prompt .= "- Focus on what drives the key players and what this reveals about societal patterns\n\n";
+    $prompt .= "- Focus on what drives the key players and what this reveals about societal patterns\n";
+    $prompt .= "- Make it engaging while maintaining analytical credibility\n\n";
     
     $prompt .= "TONE: Professional yet accessible, insightful, thought-provoking\n\n";
     
-    $prompt .= "Please respond with ONLY the social media post text, ready to publish. Do not include any additional commentary or explanation.";
+    $prompt .= "Please respond with ONLY the social media post text, ready to publish. Do not include any additional commentary, explanation, or JSON formatting.";
     
     return $prompt;
   }
