@@ -22,16 +22,50 @@
 2. Copy the **Access token** - this is what you'll paste into the Drupal admin
 3. Note the **Server URL** (e.g., https://mastodon.social)
 
-### Step 4: Configure in Drupal
+### Step 4: Configure in Drupal (DEBUGGING MODE)
 1. Go to https://thetruthperspective.org/admin/config/services/social-media-automation/settings
-2. Under "Mastodon Configuration":
+2. **Current Status**: Form is simplified to show only Mastodon and testing sections for debugging
+3. Under "Mastodon Configuration":
    - **Mastodon Server URL**: https://mastodon.social (or your chosen server)
    - **Access Token**: Paste the token from Step 3
    - **Enable Mastodon**: Check the box
-3. Click "Test Mastodon Connection" to verify
-4. If successful, click "Save configuration"
+4. Click "Test Mastodon Connection" to verify
+5. **Most Important**: Click "Save configuration" and then check the logs:
+   ```bash
+   sudo -u www-data drush watchdog:show --count=20 --type=social_media_automation | grep -E "(DEBUG TEST|PLATFORM STRUCTURE|MASTODON)"
+   ```
+6. **Console Debugging**: Open browser console (F12) to see any JavaScript errors
 
-### Step 5: Test Posting
+### Step 5: Debugging Form Submission (FIXED ISSUES)
+**Recent fixes applied:**
+- ✅ **Form submission working**: Data IS being saved to database
+- ✅ **Enabled checkbox**: Fixed to properly save enabled status  
+- ✅ **URL validation**: Automatically removes `www.` prefix from server URLs
+
+**Check these after submission:**
+1. **Form Values**: Should now show proper enabled status and clean URLs
+   ```bash
+   # Check the comprehensive debug output
+   sudo -u www-data drush watchdog:show --count=20 --type=social_media_automation | grep -E "(ENABLED DEBUG|URL CLEANUP)"
+   ```
+
+2. **Database Verification**: Should show enabled=true and clean URL
+   ```bash
+   # Check what's actually saved
+   sudo -u www-data drush watchdog:show --count=10 --type=social_media_automation | grep "DB CHECK"
+   ```
+
+3. **Connection Test**: Should now work with proper credentials
+   ```bash
+   # Look for successful connection
+   sudo -u www-data drush watchdog:show --count=10 --type=social_media_automation | grep "connection test"
+   ```
+
+**Expected Success Output:**
+- `🔧 ENABLED DEBUG - Final platform_values[enabled]: "1"`
+- `🔧 URL CLEANUP - Original: "https://www.mastodon.social", Cleaned: "https://mastodon.social"`
+- `🔍 DB CHECK - mastodon.enabled: "TRUE"`
+- `=== Mastodon connection test completed ===` (without 401 errors)
 1. In the admin interface, scroll to "Testing" section
 2. Select content type (Analytics Summary recommended)
 3. Click "Test Mastodon Only"
