@@ -80,7 +80,8 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       '#markup' => '<div class="messages messages--info"><strong>Multi-Platform Social Media Automation</strong><br/>Configure credentials for each platform you want to use. The system will automatically post to all enabled platforms twice daily (morning and evening).</div>',
     ];
 
-    // Global automation settings
+    // DISABLED FOR TESTING - Global automation settings
+    /*
     $form['automation'] = [
       '#type' => 'details',
       '#title' => $this->t('Global Automation Settings'),
@@ -109,11 +110,17 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       '#description' => $this->t('Time range for evening posts (display only - actual range is 6 PM - 10 PM).'),
       '#disabled' => TRUE,
     ];
+    */
 
-    // Platform configurations
+    // Platform configurations - ONLY MASTODON FOR NOW
     $platforms = $this->platformManager->getAllPlatforms();
     
     foreach ($platforms as $platform_name => $platform) {
+      // Skip all platforms except Mastodon for initial testing
+      if ($platform_name !== 'mastodon') {
+        continue;
+      }
+      
       $form['platforms'] = $form['platforms'] ?? [
         '#type' => 'details',
         '#title' => $this->t('Platform Configurations'),
@@ -155,7 +162,8 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       ];
     }
 
-    // Statistics section
+    // DISABLED FOR TESTING - Statistics section
+    /*
     $stats = $this->socialMediaScheduler->getStats();
     
     $form['statistics'] = [
@@ -201,12 +209,13 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
         }
       }
     }
+    */
 
-    // Testing section
+    // Testing section - MASTODON ONLY
     $form['testing'] = [
       '#type' => 'details',
-      '#title' => $this->t('Testing'),
-      '#open' => FALSE,
+      '#title' => $this->t('Testing - Mastodon Only'),
+      '#open' => TRUE,
     ];
 
     // Add debug test form section
@@ -587,10 +596,15 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     $this->logger->info('Global settings saved:');
     $this->logger->info('- enabled: @enabled', ['@enabled' => $values['enabled'] ?? 'FALSE']);
     
-    // Save platform-specific settings
+    // Save platform-specific settings - MASTODON ONLY FOR TESTING
     $platforms = $this->platformManager->getAllPlatforms();
     
     foreach ($platforms as $platform_name => $platform) {
+      // Skip all platforms except Mastodon for initial testing
+      if ($platform_name !== 'mastodon') {
+        continue;
+      }
+      
       $this->logger->info('Processing platform: @platform', ['@platform' => $platform_name]);
       
       // Check for new nested structure (platforms[platform_name])
