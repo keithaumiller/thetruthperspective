@@ -153,7 +153,11 @@ class TwitterApiClient {
       }
 
     } catch (RequestException $e) {
-      $this->logger->error('Failed to post tweet: @message', ['@message' => $e->getMessage()]);
+      $error_response = $e->getResponse() ? $e->getResponse()->getBody()->getContents() : 'No response body';
+      $this->logger->error('Failed to post tweet: @message. Full response: @response', [
+        '@message' => $e->getMessage(),
+        '@response' => $error_response
+      ]);
       return FALSE;
     }
   }
