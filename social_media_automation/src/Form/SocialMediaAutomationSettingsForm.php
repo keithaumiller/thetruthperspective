@@ -582,27 +582,134 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
    * AJAX callback for generating content preview.
    */
   public function generateContentPreviewCallback(array &$form, FormStateInterface $form_state) {
-    // Make a request to our content preview controller
-    $request = \Drupal::request();
-    $content_preview_controller = \Drupal::service('class_resolver')->getInstanceFromDefinition('\Drupal\social_media_automation\Controller\ContentPreviewController');
-    
     try {
+      // Get content preview controller
+      $content_preview_controller = \Drupal::service('class_resolver')->getInstanceFromDefinition('\Drupal\social_media_automation\Controller\ContentPreviewController');
+      
+      // Create a new request object for the controller
+      $request = \Drupal::request();
+      
+      // Call the controller method
       $response = $content_preview_controller->generatePreview($request);
       
-      // Extract the HTML from the AJAX response
+      // The response is an AjaxResponse, extract the content for our form return
       $commands = $response->getCommands();
+      
+      // Look for a ReplaceCommand to get the generated content
       foreach ($commands as $command) {
-        if ($command['command'] === 'insert' && isset($command['data'])) {
+        if ($command['command'] === 'insert' || $command['command'] === 'replace') {
           $form['content_preview']['preview_container']['#markup'] = $command['data'];
-          break;
+          return $form['content_preview']['preview_container'];
         }
       }
+      
+      // If no content found in commands, try to generate directly
+      $container = \Drupal::getContainer();
+      $ai_service = $container->get('news_extractor.ai_processing');
+      
+      // Get most recent article
+      $query = \Drupal::entityQuery('node')
+        ->condition('type', 'article')
+        ->condition('status', 1)
+        ->sort('created', 'DESC')
+        ->range(0, 1)
+        ->accessCheck(FALSE);
+      
+      $nids = $query->execute();
+      
+      if (empty($nids)) {
+        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--warning">No published articles found to generate content from.</div>';
+        return $form['content_preview']['preview_container'];
+      }
+      
+      $nid = reset($nids);
+      $article = \Drupal\node\Entity\Node::load($nid);
+      
+      // Get AI summary
+      $ai_summary = '';
+      if ($article->hasField('field_ai_response') && !$article->get('field_ai_response')->isEmpty()) {
+        $ai_response = $article->get('field_ai_response')->value;
+        $ai_data = json_decode($ai_response, TRUE);
+        $ai_summary = isset($ai_data['summary']) ? $ai_data['summary'] : $ai_response;
+      } else {
+        // Fallback to body
+        if ($article->hasField('body') && !$article->get('body')->isEmpty()) {
+          $body = $article->get('body')->value;
+          $ai_summary = substr(strip_tags($body), 0, 500) . '...';
+        }
+      }
+      
+      if (empty($ai_summary)) {
+        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--warning">No AI analysis found for the most recent article.</div>';
+        return $form['content_preview']['preview_container'];
+      }
+      
+      // Generate social media content
+      $article_title = $article->getTitle();
+      $article_url = $article->toUrl('canonical', ['absolute' => TRUE])->toString();
+      
+      $prompt = "Generate a compelling social media post for Mastodon based on this news article analysis. 
+
+ARTICLE TITLE: {$article_title}
+
+ARTICLE ANALYSIS: {$ai_summary}
+
+ARTICLE URL: {$article_url}
+
+REQUIREMENTS:
+- Keep under 500 characters (Mastodon limit)
+- Include relevant hashtags (2-4 maximum)
+- Be engaging and informative
+- Include the article URL
+- Maintain journalistic credibility
+- Focus on key insights from the analysis
+
+Please respond with ONLY the social media post text, ready to publish. Do not include any additional commentary or explanation.";
+
+      $social_media_post = $ai_service->generateAnalysis($prompt);
+      
+      if ($social_media_post) {
+        // Build preview HTML
+        $created_date = \Drupal::service('date.formatter')->format($article->getCreatedTime(), 'medium');
+        
+        $html = '<div id="social-media-preview-container" class="social-media-preview">';
+        $html .= '<h3>' . $this->t('Generated Social Media Post Preview') . '</h3>';
+        
+        $html .= '<div class="preview-content">';
+        $html .= '<div class="post-preview">';
+        $html .= '<h4>' . $this->t('Post Content:') . '</h4>';
+        $html .= '<div class="post-text">' . nl2br(htmlspecialchars($social_media_post)) . '</div>';
+        $html .= '<div class="character-count">' . $this->t('Character count: @count', ['@count' => strlen($social_media_post)]) . '</div>';
+        $html .= '</div>';
+        
+        $html .= '<div class="source-article">';
+        $html .= '<h4>' . $this->t('Source Article:') . '</h4>';
+        $html .= '<div class="article-info">';
+        $html .= '<strong>' . htmlspecialchars($article_title) . '</strong><br>';
+        $html .= '<small>' . $this->t('Published: @date', ['@date' => $created_date]) . '</small><br>';
+        $html .= '<a href="' . $article_url . '" target="_blank">' . $article_url . '</a>';
+        $html .= '</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        $html .= '<div class="preview-actions">';
+        $html .= '<button type="button" class="button button--primary" onclick="generateNewPreview()">' . $this->t('Generate New Version') . '</button>';
+        $html .= '<button type="button" class="button" onclick="clearPreview()">' . $this->t('Clear Preview') . '</button>';
+        $html .= '</div>';
+        
+        $html .= '</div>';
+        
+        $form['content_preview']['preview_container']['#markup'] = $html;
+      } else {
+        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Failed to generate content. Please check the logs for details.</div>';
+      }
+      
     } catch (\Exception $e) {
       \Drupal::logger('social_media_automation')->error('Preview generation failed in form: @error', [
         '@error' => $e->getMessage(),
       ]);
       
-      $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Failed to generate preview. Please check the logs for details.</div>';
+      $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Failed to generate preview: ' . $e->getMessage() . '</div>';
     }
 
     return $form['content_preview']['preview_container'];

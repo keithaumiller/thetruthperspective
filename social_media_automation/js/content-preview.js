@@ -3,7 +3,7 @@
  * JavaScript for Social Media Content Preview functionality.
  */
 
-(function ($, Drupal) {
+(function ($, Drupal, once) {
   'use strict';
 
   /**
@@ -11,8 +11,8 @@
    */
   Drupal.behaviors.socialMediaContentPreview = {
     attach: function (context, settings) {
-      // Ensure we only attach once
-      $('body', context).once('social-media-content-preview').each(function () {
+      // Use the once() function properly for Drupal 11
+      once('social-media-content-preview', 'body', context).forEach(function (element) {
         // Add global functions for preview interactions
         window.generateNewPreview = function() {
           // Find the generate preview button and trigger click
@@ -28,9 +28,11 @@
             '<p><em>Click "Generate Social Media Post Preview" to create AI-powered content based on your most recent article.</em></p>'
           );
         };
+      });
 
-        // Add loading state to preview button
-        $(document).on('click', '#edit-generate-preview', function() {
+      // Add loading state to preview button
+      once('preview-button-handler', '#edit-generate-preview', context).forEach(function (element) {
+        $(element).on('click', function() {
           var $button = $(this);
           var originalText = $button.val();
           
@@ -45,9 +47,11 @@
             }
           });
         });
+      });
 
-        // Add copy to clipboard functionality for generated content
-        $(document).on('click', '.post-text', function() {
+      // Add copy to clipboard functionality for generated content
+      once('clipboard-handler', '.post-text', context).forEach(function (element) {
+        $(element).on('click', function() {
           var text = $(this).text();
           if (navigator.clipboard) {
             navigator.clipboard.writeText(text).then(function() {
@@ -60,9 +64,11 @@
             }.bind(this));
           }
         });
+      });
 
-        // Add character count monitoring for post content
-        $(document).on('keyup input paste', '.post-text', function() {
+      // Add character count monitoring for post content
+      once('character-count-handler', '.post-text', context).forEach(function (element) {
+        $(element).on('keyup input paste', function() {
           var length = $(this).text().length;
           var $counter = $(this).siblings('.character-count');
           if ($counter.length) {
@@ -82,4 +88,4 @@
     }
   };
 
-})(jQuery, Drupal);
+})(jQuery, Drupal, once);
