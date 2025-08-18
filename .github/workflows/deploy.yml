@@ -55,16 +55,16 @@ jobs:
           sudo rm -rf "$CUSTOM_MODULES_DIR/job_application_automation"
           sudo cp -r job_application_automation "$CUSTOM_MODULES_DIR/"
           
-          echo "=== Copying twitter_automation module ==="
-          sudo rm -rf "$CUSTOM_MODULES_DIR/twitter_automation"
-          sudo cp -r twitter_automation "$CUSTOM_MODULES_DIR/"
+          echo "=== Copying social_media_automation module ==="
+          sudo rm -rf "$CUSTOM_MODULES_DIR/social_media_automation"
+          sudo cp -r social_media_automation "$CUSTOM_MODULES_DIR/"
           
           # Set proper permissions for all modules
           sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/news_extractor"
           sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/newsmotivationmetrics"
           sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/ai_conversation"
           sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/job_application_automation"
-          sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/twitter_automation"
+          sudo chown -R www-data:www-data "$CUSTOM_MODULES_DIR/social_media_automation"
           
           sudo find "$CUSTOM_MODULES_DIR/news_extractor" -type f -exec chmod 644 {} \;
           sudo find "$CUSTOM_MODULES_DIR/news_extractor" -type d -exec chmod 755 {} \;
@@ -74,8 +74,8 @@ jobs:
           sudo find "$CUSTOM_MODULES_DIR/ai_conversation" -type d -exec chmod 755 {} \;
           sudo find "$CUSTOM_MODULES_DIR/job_application_automation" -type f -exec chmod 644 {} \;
           sudo find "$CUSTOM_MODULES_DIR/job_application_automation" -type d -exec chmod 755 {} \;
-          sudo find "$CUSTOM_MODULES_DIR/twitter_automation" -type f -exec chmod 644 {} \;
-          sudo find "$CUSTOM_MODULES_DIR/twitter_automation" -type d -exec chmod 755 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/social_media_automation" -type f -exec chmod 644 {} \;
+          sudo find "$CUSTOM_MODULES_DIR/social_media_automation" -type d -exec chmod 755 {} \;
           
           echo "=== All modules deployed successfully ==="
           
