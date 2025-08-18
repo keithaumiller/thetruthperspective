@@ -139,7 +139,6 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
         '#default_value' => $config->get($platform_name . '.enabled'),
         '#description' => $this->t('Enable posting to @platform.', ['@platform' => $platform->getName()]),
         '#id' => 'edit-' . $platform_name . '-enabled',
-        '#name' => 'platforms[' . $platform_name . '][enabled]',
       ];
 
       // Add platform-specific credential fields
@@ -324,7 +323,6 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('The URL of your Mastodon server (e.g., https://mastodon.social)'),
           '#placeholder' => 'https://mastodon.social',
           '#id' => 'edit-mastodon-server-url',
-          '#name' => 'platforms[mastodon][server_url]',
         ];
 
         $form_section['access_token'] = [
@@ -334,7 +332,6 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
           '#description' => $this->t('Generate this in your Mastodon account under Preferences → Development → New Application'),
           '#attributes' => ['autocomplete' => 'off'],
           '#id' => 'edit-mastodon-access-token',
-          '#name' => 'platforms[mastodon][access_token]',
         ];
         break;
 
@@ -541,9 +538,45 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     $values = $form_state->getValues();
     $config = $this->config('social_media_automation.settings');
     
-    // Debug: Log all form values to help troubleshoot
-    $this->logger->info('=== Form submission debug ===');
-    $this->logger->info('All form values: @values', ['@values' => print_r($values, TRUE)]);
+    // COMPREHENSIVE DEBUG LOGGING
+    $this->logger->info('=== COMPLETE FORM SUBMISSION DEBUG ===');
+    $this->logger->info('🔍 RAW FORM VALUES (JSON): @values', ['@values' => json_encode($values, JSON_PRETTY_PRINT)]);
+    $this->logger->info('🔍 RAW FORM VALUES (PRINT_R): @values', ['@values' => print_r($values, TRUE)]);
+    
+    // Check each possible structure location for Mastodon data
+    $this->logger->info('🔍 STRUCTURE CHECK: Checking all possible locations for Mastodon data...');
+    
+    // 1. Check top-level fields
+    $this->logger->info('� TOP LEVEL server_url: "@value"', ['@value' => $values['server_url'] ?? 'NOT_FOUND']);
+    $this->logger->info('� TOP LEVEL access_token: "@value"', ['@value' => $values['access_token'] ?? 'NOT_FOUND']);
+    $this->logger->info('� TOP LEVEL enabled: "@value"', ['@value' => $values['enabled'] ?? 'NOT_FOUND']);
+    
+    // 2. Check platforms[mastodon] structure
+    if (isset($values['platforms']['mastodon'])) {
+      $this->logger->info('✅ FOUND platforms[mastodon]: @data', ['@data' => json_encode($values['platforms']['mastodon'], JSON_PRETTY_PRINT)]);
+    } else {
+      $this->logger->warning('❌ NOT FOUND: platforms[mastodon]');
+    }
+    
+    // 3. Check mastodon direct structure
+    if (isset($values['mastodon'])) {
+      $this->logger->info('✅ FOUND direct mastodon: @data', ['@data' => json_encode($values['mastodon'], JSON_PRETTY_PRINT)]);
+    } else {
+      $this->logger->warning('❌ NOT FOUND: direct mastodon');
+    }
+    
+    // 4. List ALL top-level keys for debugging
+    $this->logger->info('🗂️ ALL TOP-LEVEL FORM KEYS: @keys', ['@keys' => implode(', ', array_keys($values))]);
+    
+    // 5. Check for any key containing "mastodon"
+    foreach ($values as $key => $value) {
+      if (strpos($key, 'mastodon') !== false) {
+        $this->logger->info('� FOUND KEY WITH "mastodon": @key = @value', [
+          '@key' => $key,
+          '@value' => is_array($value) ? json_encode($value) : $value
+        ]);
+      }
+    }
     
     // Special debug test logging
     if (isset($values['test_server_url'])) {
@@ -551,44 +584,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     }
     if (isset($values['test_access_token'])) {
       $this->logger->info('🔧 DEBUG TEST - test_access_token: @token', ['@token' => $values['test_access_token']]);
-    }
-    if (isset($values['test_checkbox'])) {
-      $this->logger->info('🔧 DEBUG TEST - test_checkbox: @checkbox', ['@checkbox' => $values['test_checkbox']]);
-    }
-    if (isset($values['test_nested'])) {
-      $this->logger->info('🔧 DEBUG TEST - test_nested: @nested', ['@nested' => print_r($values['test_nested'], TRUE)]);
-    }
-    
-      // Check for server_url and access_token at top level
-      $this->logger->info('🔧 TOP LEVEL - server_url: "@url"', ['@url' => $values['server_url'] ?? 'NOT_SET']);
-      $this->logger->info('🔧 TOP LEVEL - access_token: "@token"', ['@token' => $values['access_token'] ?? 'NOT_SET']);
-      
-      // Check for nested mastodon fields
-      if (isset($values['mastodon'])) {
-        $this->logger->info('🔧 NESTED MASTODON FOUND: @mastodon', ['@mastodon' => print_r($values['mastodon'], TRUE)]);
-      } else {
-        $this->logger->warning('🔧 NO NESTED MASTODON STRUCTURE FOUND');
-      }
-      
-      // Check each platform structure (new platforms[platform] structure)
-      foreach (['mastodon', 'linkedin', 'facebook', 'twitter'] as $platform) {
-        if (isset($values['platforms'][$platform])) {
-          $this->logger->info('🔧 PLATFORM STRUCTURE - platforms[@platform]: @data', [
-            '@platform' => $platform,
-            '@data' => print_r($values['platforms'][$platform], TRUE)
-          ]);
-        } else {
-          $this->logger->warning('🔧 MISSING PLATFORM STRUCTURE: platforms[@platform]', ['@platform' => $platform]);
-        }
-        
-        // Also check old structure for comparison
-        if (isset($values[$platform])) {
-          $this->logger->info('🔧 OLD PLATFORM STRUCTURE - @platform: @data', [
-            '@platform' => $platform,
-            '@data' => print_r($values[$platform], TRUE)
-          ]);
-        }
-      }    // Save global settings
+    }    // Save global settings
     $config->set('enabled', $values['enabled'] ?? FALSE);
     $config->set('morning_time', $values['morning_time'] ?? '8 AM - 12 PM');
     $config->set('evening_time', $values['evening_time'] ?? '6 PM - 10 PM');
@@ -610,10 +606,25 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       // Check for new nested structure (platforms[platform_name])
       if (isset($values['platforms'][$platform_name]) && is_array($values['platforms'][$platform_name])) {
         $platform_values = $values['platforms'][$platform_name];
-        $this->logger->info('Found NEW nested platform @platform values: @values', [
+        $this->logger->info('✅ SUCCESS! Found nested platform @platform values: @values', [
           '@platform' => $platform_name,
           '@values' => print_r($platform_values, TRUE),
         ]);
+        
+        // Save the platform settings
+        $config->set($platform_name . '.enabled', $platform_values['enabled'] ?? FALSE);
+        
+        // Save credential fields
+        $required_credentials = $platform->getRequiredCredentials();
+        foreach ($required_credentials as $credential => $info) {
+          if (isset($platform_values[$credential])) {
+            $config->set($platform_name . '.' . $credential, $platform_values[$credential]);
+            $this->logger->info('Saved @platform.@credential', [
+              '@platform' => $platform_name,
+              '@credential' => $credential,
+            ]);
+          }
+        }
       }
       // Check if platform data exists in old nested form values (platform_name directly)
       elseif (isset($values[$platform_name]) && is_array($values[$platform_name])) {
@@ -691,16 +702,44 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
     
     // Save the configuration
     $config->save();
-    $this->logger->info('Configuration saved successfully');
+    $this->logger->info('✅ Configuration saved successfully');
     
-    // Verify the saved configuration
+    // COMPREHENSIVE DATABASE VERIFICATION
+    $this->logger->info('=== DATABASE VERIFICATION ===');
     $saved_config = $this->configFactory->get('social_media_automation.settings');
-    $this->logger->info('Verification - Mastodon server_url after save: @url', [
+    
+    // Verify all Mastodon settings
+    $this->logger->info('🔍 DB CHECK - mastodon.enabled: "@value"', [
+      '@value' => $saved_config->get('mastodon.enabled') ? 'TRUE' : 'FALSE',
+    ]);
+    $this->logger->info('🔍 DB CHECK - mastodon.server_url: "@url"', [
       '@url' => $saved_config->get('mastodon.server_url') ?? 'NULL',
     ]);
-    $this->logger->info('Verification - Mastodon access_token length after save: @length', [
+    $this->logger->info('🔍 DB CHECK - mastodon.access_token: @length chars', [
       '@length' => strlen($saved_config->get('mastodon.access_token') ?? ''),
     ]);
+    
+    // Get raw config data to see complete structure
+    $all_data = $saved_config->getRawData();
+    $this->logger->info('🔍 DB CHECK - ALL CONFIG DATA: @data', [
+      '@data' => json_encode($all_data, JSON_PRETTY_PRINT)
+    ]);
+    
+    // Check if the config file exists and has the expected structure
+    $config_name = 'social_media_automation.settings';
+    $this->logger->info('🔍 DB CHECK - Config name: @name', ['@name' => $config_name]);
+    
+    // Verify what we just tried to save vs what's actually in DB
+    if (isset($platform_values)) {
+      $this->logger->info('📊 COMPARISON - Attempted to save: @attempted', [
+        '@attempted' => json_encode($platform_values, JSON_PRETTY_PRINT)
+      ]);
+      $this->logger->info('📊 COMPARISON - Actually in DB: enabled=@enabled, server_url=@url, token_length=@length', [
+        '@enabled' => $saved_config->get('mastodon.enabled') ? 'TRUE' : 'FALSE',
+        '@url' => $saved_config->get('mastodon.server_url') ?? 'NULL',
+        '@length' => strlen($saved_config->get('mastodon.access_token') ?? '')
+      ]);
+    }
 
     parent::submitForm($form, $form_state);
   }
