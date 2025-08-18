@@ -583,30 +583,6 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
    */
   public function generateContentPreviewCallback(array &$form, FormStateInterface $form_state) {
     try {
-      // Get content preview controller
-      $content_preview_controller = \Drupal::service('class_resolver')->getInstanceFromDefinition('\Drupal\social_media_automation\Controller\ContentPreviewController');
-      
-      // Create a new request object for the controller
-      $request = \Drupal::request();
-      
-      // Call the controller method
-      $response = $content_preview_controller->generatePreview($request);
-      
-      // The response is an AjaxResponse, extract the content for our form return
-      $commands = $response->getCommands();
-      
-      // Look for a ReplaceCommand to get the generated content
-      foreach ($commands as $command) {
-        if ($command['command'] === 'insert' || $command['command'] === 'replace') {
-          $form['content_preview']['preview_container']['#markup'] = $command['data'];
-          return $form['content_preview']['preview_container'];
-        }
-      }
-      
-      // If no content found in commands, try to generate directly
-      $container = \Drupal::getContainer();
-      $ai_service = $container->get('news_extractor.ai_processing');
-      
       // Get most recent article
       $query = \Drupal::entityQuery('node')
         ->condition('type', 'article')
@@ -625,14 +601,25 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       $nid = reset($nids);
       $article = \Drupal\node\Entity\Node::load($nid);
       
+      if (!$article) {
+        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Could not load the most recent article.</div>';
+        return $form['content_preview']['preview_container'];
+      }
+      
       // Get AI summary
       $ai_summary = '';
       if ($article->hasField('field_ai_response') && !$article->get('field_ai_response')->isEmpty()) {
         $ai_response = $article->get('field_ai_response')->value;
         $ai_data = json_decode($ai_response, TRUE);
-        $ai_summary = isset($ai_data['summary']) ? $ai_data['summary'] : $ai_response;
-      } else {
-        // Fallback to body
+        if (is_array($ai_data) && isset($ai_data['summary'])) {
+          $ai_summary = $ai_data['summary'];
+        } elseif (is_string($ai_response) && !empty($ai_response)) {
+          $ai_summary = $ai_response;
+        }
+      }
+      
+      // Fallback to body if no AI summary
+      if (empty($ai_summary)) {
         if ($article->hasField('body') && !$article->get('body')->isEmpty()) {
           $body = $article->get('body')->value;
           $ai_summary = substr(strip_tags($body), 0, 500) . '...';
@@ -640,9 +627,18 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       }
       
       if (empty($ai_summary)) {
-        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--warning">No AI analysis found for the most recent article.</div>';
+        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--warning">No content available to generate social media post from.</div>';
         return $form['content_preview']['preview_container'];
       }
+      
+      // Check if AI service is available
+      $container = \Drupal::getContainer();
+      if (!$container->has('news_extractor.ai_processing')) {
+        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">AI processing service not available. Please check your configuration.</div>';
+        return $form['content_preview']['preview_container'];
+      }
+      
+      $ai_service = $container->get('news_extractor.ai_processing');
       
       // Generate social media content
       $article_title = $article->getTitle();
@@ -668,48 +664,60 @@ Please respond with ONLY the social media post text, ready to publish. Do not in
 
       $social_media_post = $ai_service->generateAnalysis($prompt);
       
-      if ($social_media_post) {
-        // Build preview HTML
-        $created_date = \Drupal::service('date.formatter')->format($article->getCreatedTime(), 'medium');
-        
-        $html = '<div id="social-media-preview-container" class="social-media-preview">';
-        $html .= '<h3>' . $this->t('Generated Social Media Post Preview') . '</h3>';
-        
-        $html .= '<div class="preview-content">';
-        $html .= '<div class="post-preview">';
-        $html .= '<h4>' . $this->t('Post Content:') . '</h4>';
-        $html .= '<div class="post-text">' . nl2br(htmlspecialchars($social_media_post)) . '</div>';
-        $html .= '<div class="character-count">' . $this->t('Character count: @count', ['@count' => strlen($social_media_post)]) . '</div>';
-        $html .= '</div>';
-        
-        $html .= '<div class="source-article">';
-        $html .= '<h4>' . $this->t('Source Article:') . '</h4>';
-        $html .= '<div class="article-info">';
-        $html .= '<strong>' . htmlspecialchars($article_title) . '</strong><br>';
-        $html .= '<small>' . $this->t('Published: @date', ['@date' => $created_date]) . '</small><br>';
-        $html .= '<a href="' . $article_url . '" target="_blank">' . $article_url . '</a>';
-        $html .= '</div>';
-        $html .= '</div>';
-        $html .= '</div>';
-        
-        $html .= '<div class="preview-actions">';
-        $html .= '<button type="button" class="button button--primary" onclick="generateNewPreview()">' . $this->t('Generate New Version') . '</button>';
-        $html .= '<button type="button" class="button" onclick="clearPreview()">' . $this->t('Clear Preview') . '</button>';
-        $html .= '</div>';
-        
-        $html .= '</div>';
-        
-        $form['content_preview']['preview_container']['#markup'] = $html;
-      } else {
-        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Failed to generate content. Please check the logs for details.</div>';
+      if (empty($social_media_post)) {
+        $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Failed to generate social media content. AI service may be unavailable.</div>';
+        return $form['content_preview']['preview_container'];
       }
       
+      // If AI service returns an array, extract the content
+      if (is_array($social_media_post)) {
+        if (isset($social_media_post['content'])) {
+          $social_media_post = $social_media_post['content'];
+        } elseif (isset($social_media_post['text'])) {
+          $social_media_post = $social_media_post['text'];
+        } else {
+          $social_media_post = json_encode($social_media_post);
+        }
+      }
+      
+      // Build preview HTML
+      $created_date = \Drupal::service('date.formatter')->format($article->getCreatedTime(), 'medium');
+      
+      $html = '<div id="social-media-preview-container" class="social-media-preview">';
+      $html .= '<h3>' . $this->t('Generated Social Media Post Preview') . '</h3>';
+      
+      $html .= '<div class="preview-content">';
+      $html .= '<div class="post-preview">';
+      $html .= '<h4>' . $this->t('Post Content:') . '</h4>';
+      $html .= '<div class="post-text">' . nl2br(htmlspecialchars($social_media_post)) . '</div>';
+      $html .= '<div class="character-count">' . $this->t('Character count: @count', ['@count' => strlen($social_media_post)]) . '</div>';
+      $html .= '</div>';
+      
+      $html .= '<div class="source-article">';
+      $html .= '<h4>' . $this->t('Source Article:') . '</h4>';
+      $html .= '<div class="article-info">';
+      $html .= '<strong>' . htmlspecialchars($article_title) . '</strong><br>';
+      $html .= '<small>' . $this->t('Published: @date', ['@date' => $created_date]) . '</small><br>';
+      $html .= '<a href="' . $article_url . '" target="_blank">' . $article_url . '</a>';
+      $html .= '</div>';
+      $html .= '</div>';
+      $html .= '</div>';
+      
+      $html .= '<div class="preview-actions">';
+      $html .= '<button type="button" class="button button--primary" onclick="generateNewPreview()">' . $this->t('Generate New Version') . '</button>';
+      $html .= '<button type="button" class="button" onclick="clearPreview()">' . $this->t('Clear Preview') . '</button>';
+      $html .= '</div>';
+      
+      $html .= '</div>';
+      
+      $form['content_preview']['preview_container']['#markup'] = $html;
+      
     } catch (\Exception $e) {
-      \Drupal::logger('social_media_automation')->error('Preview generation failed in form: @error', [
+      \Drupal::logger('social_media_automation')->error('Preview generation failed: @error', [
         '@error' => $e->getMessage(),
       ]);
       
-      $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Failed to generate preview: ' . $e->getMessage() . '</div>';
+      $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">An unexpected error occurred: ' . htmlspecialchars($e->getMessage()) . '</div>';
     }
 
     return $form['content_preview']['preview_container'];
