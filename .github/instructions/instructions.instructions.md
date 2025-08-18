@@ -55,7 +55,7 @@ https://thetruthperspective.org
 Do not SSH out or create debug php files to be deployed to the server.
 I will copy and paste any command lines required.
 Remember to sudo into www-data when appropriate
-
+The autodeploy clears the cache on the server during deployment. Do not recomend a drush cr.
 
 # The Truth Perspective Platform - AI Coding Instructions
 
