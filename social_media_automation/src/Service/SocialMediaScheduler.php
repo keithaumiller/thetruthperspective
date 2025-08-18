@@ -326,13 +326,13 @@ class SocialMediaScheduler {
       
       $result = $platform->postContent($test_content);
       
-      if ($result) {
+      if ($result !== FALSE) {
         $this->logger->info('Successfully posted test to @platform', ['@platform' => $platform->getName()]);
+        return TRUE;
       } else {
         $this->logger->error('Failed to post test to @platform', ['@platform' => $platform->getName()]);
+        return FALSE;
       }
-      
-      return $result;
 
     } catch (\Exception $e) {
       $this->logger->error('Exception sending test to @platform: @message', [
