@@ -146,7 +146,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
 
       // Add test connection button (test post for Mastodon)
       $button_text = ($platform_name === 'mastodon') 
-        ? $this->t('Test @platform (Send Hello World Post)', ['@platform' => $platform->getName()])
+        ? $this->t('Test @platform (Send AI-Generated Post)', ['@platform' => $platform->getName()])
         : $this->t('Test @platform Connection', ['@platform' => $platform->getName()]);
         
       $form['platforms'][$platform_name]['test_connection'] = [
@@ -485,11 +485,11 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       try {
         // For Mastodon, do a test post; for others, just test connection
         if ($platform_name === 'mastodon' && method_exists($platform, 'testPost')) {
-          $this->logger->info('Testing Mastodon with test post...');
+          $this->logger->info('Testing Mastodon with AI-generated post...');
           $result = $platform->testPost();
           
           if ($result) {
-            $message = '<div class="messages messages--status">✅ <strong>SUCCESS!</strong> Test post sent to ' . $platform->getName() . '! Check your Mastodon account.</div>';
+            $message = '<div class="messages messages--status">✅ <strong>SUCCESS!</strong> AI-generated test post sent to ' . $platform->getName() . '! Check your Mastodon account.</div>';
           } else {
             $message = '<div class="messages messages--error">❌ <strong>Failed</strong> to post to ' . $platform->getName() . '. Check your credentials and logs.</div>';
           }

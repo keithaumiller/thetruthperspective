@@ -223,13 +223,13 @@ class MastodonClient implements PlatformInterface {
   }
 
   /**
-   * Test Mastodon by posting a "Hello World" message.
+   * Test Mastodon by posting an AI-generated social media message.
    * 
    * @return bool
    *   TRUE if the test post was successful, FALSE otherwise.
    */
   public function testPost(): bool {
-    $this->logger->info('=== Starting Mastodon test post ===');
+    $this->logger->info('=== Starting Mastodon test post with AI-generated content ===');
     
     // Step 1: Test connection first
     if (!$this->testConnection()) {
@@ -237,11 +237,24 @@ class MastodonClient implements PlatformInterface {
       return FALSE;
     }
     
-    // Step 2: Create test message
-    $timestamp = date('Y-m-d H:i:s T');
-    $test_message = "🤖 Hello World from The Truth Perspective!\n\nThis is a test post to verify Mastodon integration is working.\n\nTimestamp: {$timestamp}\n\n#TestPost #TheTruthPerspective";
+    // Step 2: Generate AI social media content
+    $this->logger->info('Step 2: Attempting to generate AI content...');
+    $test_message = $this->generateTestContent();
     
-    $this->logger->info('Step 2: Posting test message (length: @length chars)', [
+    $this->logger->info('AI content generation result: @result', [
+      '@result' => empty($test_message) ? 'EMPTY/FAILED' : 'SUCCESS (' . strlen($test_message) . ' chars)'
+    ]);
+    
+    if (empty($test_message)) {
+      // Fallback to basic test message if AI generation fails
+      $timestamp = date('Y-m-d H:i:s T');
+      $test_message = "🤖 Hello World from The Truth Perspective!\n\nThis is a test post to verify Mastodon integration is working.\n\nTimestamp: {$timestamp}\n\n#TestPost #TheTruthPerspective";
+      $this->logger->warning('AI content generation failed, using fallback test message');
+    } else {
+      $this->logger->info('Using AI-generated content for test post');
+    }
+    
+    $this->logger->info('Step 2: Posting message (length: @length chars)', [
       '@length' => strlen($test_message)
     ]);
     
@@ -431,6 +444,175 @@ class MastodonClient implements PlatformInterface {
       'threads' => TRUE,
       'polls' => TRUE,
     ];
+  }
+
+  /**
+   * Generate AI-powered social media content for test posting.
+   *
+   * @return string
+   *   The generated social media content, or empty string if generation fails.
+   */
+  protected function generateTestContent(): string {
+    $this->logger->info('Starting AI test content generation...');
+    
+    try {
+      // Get most recent article
+      $this->logger->info('Querying for most recent article...');
+      $query = \Drupal::entityQuery('node')
+        ->condition('type', 'article')
+        ->condition('status', 1)
+        ->sort('created', 'DESC')
+        ->range(0, 1)
+        ->accessCheck(FALSE);
+      
+      $nids = $query->execute();
+      
+      if (empty($nids)) {
+        $this->logger->warning('No published articles found for AI test content generation');
+        return '';
+      }
+      
+      $nid = reset($nids);
+      $this->logger->info('Found article @nid for content generation', ['@nid' => $nid]);
+      
+      $article = \Drupal\node\Entity\Node::load($nid);
+      
+      if (!$article) {
+        $this->logger->warning('Could not load article @nid for test content', ['@nid' => $nid]);
+        return '';
+      }
+      
+      $this->logger->info('Article loaded successfully: @title', ['@title' => $article->getTitle()]);
+      
+      // Extract motivation analysis
+      $motivation_analysis = '';
+      if ($article->hasField('field_motivation_analysis') && !$article->get('field_motivation_analysis')->isEmpty()) {
+        $motivation_analysis = $article->get('field_motivation_analysis')->value;
+        $this->logger->info('Found motivation analysis field: @length characters', [
+          '@length' => strlen($motivation_analysis)
+        ]);
+      } else {
+        $this->logger->warning('No motivation analysis field or field is empty for article @nid', ['@nid' => $nid]);
+        
+        // Debug: Check what fields are actually available
+        $field_definitions = $article->getFieldDefinitions();
+        $available_fields = array_keys($field_definitions);
+        $this->logger->info('Available fields on article: @fields', [
+          '@fields' => implode(', ', $available_fields)
+        ]);
+        
+        return '';
+      }
+      
+      if (empty($motivation_analysis)) {
+        $this->logger->warning('Motivation analysis field exists but is empty for article @nid', ['@nid' => $nid]);
+        return '';
+      }
+      
+      // Get article details
+      $article_title = $article->getTitle();
+      $article_url = $article->toUrl('canonical', ['absolute' => TRUE])->toString();
+      
+      $this->logger->info('Article details extracted: title=@title, url=@url', [
+        '@title' => $article_title,
+        '@url' => $article_url
+      ]);
+      
+      // Check if AI service is available
+      $container = \Drupal::getContainer();
+      if (!$container->has('news_extractor.ai_processing')) {
+        $this->logger->warning('AI processing service not available for test content');
+        return '';
+      }
+      
+      $ai_service = $container->get('news_extractor.ai_processing');
+      $this->logger->info('AI processing service loaded successfully');
+      
+      // Build prompt for social media generation
+      $prompt = $this->buildTestPrompt($article_title, $article_url, $motivation_analysis);
+      $this->logger->info('Built prompt for AI: @length characters', ['@length' => strlen($prompt)]);
+      
+      // Call AI service
+      $this->logger->info('Calling AI service for content generation...');
+      $social_media_post = $ai_service->generateAnalysis($prompt, $article_title);
+      
+      if (empty($social_media_post)) {
+        $this->logger->warning('AI service returned empty response for test content');
+        return '';
+      }
+      
+      $this->logger->info('AI service returned response: @length characters', [
+        '@length' => strlen($social_media_post)
+      ]);
+      
+      // Parse AI response if it's JSON
+      if (is_string($social_media_post) && (strpos($social_media_post, '{') === 0)) {
+        $this->logger->info('Parsing JSON response from AI...');
+        $parsed = json_decode($social_media_post, TRUE);
+        if (json_last_error() === JSON_ERROR_NONE && isset($parsed['content'])) {
+          $social_media_post = $parsed['content'];
+          $this->logger->info('Extracted content from JSON response');
+        } else {
+          $this->logger->warning('Failed to parse AI JSON response or missing content field');
+        }
+      }
+      
+      $this->logger->info('Successfully generated AI test content: @length characters', [
+        '@length' => strlen($social_media_post)
+      ]);
+      
+      // Log first 100 chars for debugging
+      $this->logger->info('Generated content preview: @preview...', [
+        '@preview' => substr($social_media_post, 0, 100)
+      ]);
+      
+      return $social_media_post;
+      
+    } catch (\Exception $e) {
+      $this->logger->error('AI test content generation failed with exception: @error', [
+        '@error' => $e->getMessage()
+      ]);
+      $this->logger->error('Exception trace: @trace', [
+        '@trace' => $e->getTraceAsString()
+      ]);
+      return '';
+    }
+  }
+
+  /**
+   * Build prompt for AI test content generation.
+   *
+   * @param string $article_title
+   *   The article title.
+   * @param string $article_url
+   *   The article URL.
+   * @param string $motivation_analysis
+   *   The motivation analysis data.
+   *
+   * @return string
+   *   The prompt for AI.
+   */
+  protected function buildTestPrompt($article_title, $article_url, $motivation_analysis): string {
+    $prompt = "As a social scientist, create a compelling social media post for Mastodon based on the motivation analysis below. This is a TEST POST for The Truth Perspective platform.\n\n";
+    
+    $prompt .= "ARTICLE TITLE: {$article_title}\n\n";
+    $prompt .= "ARTICLE URL: {$article_url}\n\n";
+    $prompt .= "MOTIVATION ANALYSIS DATA:\n{$motivation_analysis}\n\n";
+    
+    $prompt .= "REQUIREMENTS:\n";
+    $prompt .= "- Write from a social scientist's analytical perspective\n";
+    $prompt .= "- Keep under 500 characters total (Mastodon limit)\n";
+    $prompt .= "- Highlight the most compelling motivational insights from the analysis\n";
+    $prompt .= "- Include 2-4 relevant hashtags (e.g., #MotivationAnalysis #SocialScience #TestPost)\n";
+    $prompt .= "- Include the article URL\n";
+    $prompt .= "- Focus on what drives the key players and what this reveals about societal patterns\n";
+    $prompt .= "- Add a note that this is a test post for platform verification\n\n";
+    
+    $prompt .= "TONE: Professional yet accessible, insightful, thought-provoking\n\n";
+    
+    $prompt .= "Please respond with ONLY the social media post text, ready to publish. Do not include any additional commentary, explanation, or JSON formatting.";
+    
+    return $prompt;
   }
 
   /**
