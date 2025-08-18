@@ -674,31 +674,32 @@ REQUIREMENTS:
 Please respond with ONLY the social media post text, ready to publish. Do not include any additional commentary or explanation.";
 
       \Drupal::logger('social_media_automation')->info('Calling AI service with prompt');
-      $social_media_post = $ai_service->generateAnalysis($prompt);
-      \Drupal::logger('social_media_automation')->info('AI service response type: @type', ['@type' => gettype($social_media_post)]);
+      
+      // The generateAnalysis method expects ($article_text, $article_title) but we're calling it with a custom prompt
+      // So let's use a different approach or create a custom method for social media generation
+      try {
+        // Create a simulated AI call for social media content generation
+        $social_media_post = $this->generateSocialMediaContent($prompt, $ai_service);
+        
+        if (empty($social_media_post)) {
+          throw new \Exception('AI service returned empty response for social media generation');
+        }
+        
+        \Drupal::logger('social_media_automation')->info('AI service response type: @type, length: @length', [
+          '@type' => gettype($social_media_post),
+          '@length' => is_string($social_media_post) ? strlen($social_media_post) : 'N/A'
+        ]);
+      } catch (\Exception $e) {
+        \Drupal::logger('social_media_automation')->error('AI service call failed: @error', [
+          '@error' => $e->getMessage()
+        ]);
+        throw $e;
+      }
       
       if (empty($social_media_post)) {
         \Drupal::logger('social_media_automation')->error('AI service returned empty response');
         $form['content_preview']['preview_container']['#markup'] = '<div id="social-media-preview-container" class="messages messages--error">Failed to generate social media content. AI service may be unavailable.</div>';
         return $form['content_preview']['preview_container'];
-      }
-      
-      // If AI service returns an array, extract the content
-      if (is_array($social_media_post)) {
-        \Drupal::logger('social_media_automation')->info('AI response is array, extracting content');
-        if (isset($social_media_post['content'])) {
-          $social_media_post = $social_media_post['content'];
-        } elseif (isset($social_media_post['text'])) {
-          $social_media_post = $social_media_post['text'];
-        } elseif (isset($social_media_post['social_media_post'])) {
-          $social_media_post = $social_media_post['social_media_post'];
-        } else {
-          // Use the first string value found
-          $social_media_post = reset($social_media_post);
-          if (!is_string($social_media_post)) {
-            $social_media_post = json_encode($social_media_post);
-          }
-        }
       }
       
       \Drupal::logger('social_media_automation')->info('Final post content: @length characters', ['@length' => strlen($social_media_post)]);
@@ -980,6 +981,65 @@ Please respond with ONLY the social media post text, ready to publish. Do not in
     }
 
     parent::submitForm($form, $form_state);
+  }
+
+  /**
+   * Generate social media content using AI service.
+   *
+   * @param string $prompt
+   *   The prompt for social media generation.
+   * @param \Drupal\news_extractor\Service\AIProcessingService $ai_service
+   *   The AI processing service.
+   *
+   * @return string
+   *   The generated social media content.
+   *
+   * @throws \Exception
+   *   If the AI service fails to generate content.
+   */
+  protected function generateSocialMediaContent($prompt, $ai_service) {
+    try {
+      // Since the original generateAnalysis method expects article_text and article_title,
+      // we'll call it with our prompt as the article_text and a dummy title
+      $social_media_post = $ai_service->generateAnalysis($prompt, 'Social Media Generation');
+      
+      if (empty($social_media_post)) {
+        throw new \Exception('AI service returned empty response');
+      }
+      
+      // If the response is JSON (as the original method returns), try to parse it
+      if (is_string($social_media_post) && (strpos($social_media_post, '{') === 0 || strpos($social_media_post, '[') === 0)) {
+        $parsed = json_decode($social_media_post, TRUE);
+        if (json_last_error() === JSON_ERROR_NONE) {
+          // Look for common fields that might contain our social media content
+          if (isset($parsed['social_media_post'])) {
+            return $parsed['social_media_post'];
+          } elseif (isset($parsed['content'])) {
+            return $parsed['content'];
+          } elseif (isset($parsed['text'])) {
+            return $parsed['text'];
+          } elseif (isset($parsed['summary'])) {
+            return $parsed['summary'];
+          } else {
+            // If it's a structured response but no clear content field, use the first string value
+            foreach ($parsed as $value) {
+              if (is_string($value) && strlen(trim($value)) > 10) {
+                return $value;
+              }
+            }
+          }
+        }
+      }
+      
+      // If not JSON or parsing failed, return the raw response
+      return is_string($social_media_post) ? $social_media_post : json_encode($social_media_post);
+      
+    } catch (\Exception $e) {
+      \Drupal::logger('social_media_automation')->error('Social media content generation failed: @error', [
+        '@error' => $e->getMessage(),
+      ]);
+      throw new \Exception('Failed to generate social media content: ' . $e->getMessage());
+    }
   }
 
 }
