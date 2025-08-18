@@ -36,9 +36,9 @@ class TwitterApiClient {
   protected $httpClient;
 
   /**
-   * Twitter API base URL.
+   * Twitter API v1.1 base URL.
    */
-  const API_BASE_URL = 'https://api.twitter.com/2/';
+  const API_BASE_URL = 'https://api.twitter.com/1.1/';
 
   /**
    * Constructor.
@@ -54,7 +54,7 @@ class TwitterApiClient {
   }
 
   /**
-   * Post a tweet to Twitter.
+   * Post a tweet to Twitter using OAuth 1.0a.
    *
    * @param string $text
    *   The tweet text content.
@@ -66,10 +66,13 @@ class TwitterApiClient {
    */
   public function postTweet(string $text, array $options = []) {
     $config = $this->configFactory->get('twitter_automation.settings');
-    $bearer_token = $config->get('bearer_token');
+    $api_key = $config->get('api_key');
+    $api_secret = $config->get('api_secret');
+    $access_token = $config->get('access_token');
+    $access_secret = $config->get('access_secret');
     
-    if (empty($bearer_token)) {
-      $this->logger->error('Twitter Bearer Token not configured');
+    if (empty($api_key) || empty($api_secret) || empty($access_token) || empty($access_secret)) {
+      $this->logger->error('Twitter OAuth credentials not configured');
       return FALSE;
     }
 
@@ -78,32 +81,56 @@ class TwitterApiClient {
       $text = substr($text, 0, 277) . '...';
     }
 
-    $payload = [
-      'text' => $text,
-    ];
+    // Use Twitter API v1.1 statuses/update endpoint
+    $url = self::API_BASE_URL . 'statuses/update.json';
+    $params = ['status' => $text];
 
     // Add optional parameters
     if (!empty($options['reply_to'])) {
-      $payload['reply'] = ['in_reply_to_tweet_id' => $options['reply_to']];
-    }
-
-    if (!empty($options['media_ids'])) {
-      $payload['media'] = ['media_ids' => $options['media_ids']];
+      $params['in_reply_to_status_id'] = $options['reply_to'];
     }
 
     try {
-      $response = $this->httpClient->post(self::API_BASE_URL . 'tweets', [
+      // Generate OAuth signature
+      $oauth_params = [
+        'oauth_consumer_key' => $api_key,
+        'oauth_nonce' => $this->generateNonce(),
+        'oauth_signature_method' => 'HMAC-SHA1',
+        'oauth_timestamp' => time(),
+        'oauth_token' => $access_token,
+        'oauth_version' => '1.0',
+      ];
+
+      // Create base string for signature
+      $base_params = array_merge($oauth_params, $params);
+      ksort($base_params);
+      $base_string = 'POST&' . rawurlencode($url) . '&' . rawurlencode(http_build_query($base_params));
+
+      // Create signing key and signature
+      $signing_key = rawurlencode($api_secret) . '&' . rawurlencode($access_secret);
+      $signature = base64_encode(hash_hmac('sha1', $base_string, $signing_key, true));
+      $oauth_params['oauth_signature'] = $signature;
+
+      // Build authorization header
+      $auth_parts = [];
+      foreach ($oauth_params as $key => $value) {
+        $auth_parts[] = $key . '="' . rawurlencode($value) . '"';
+      }
+      $auth_header = 'OAuth ' . implode(', ', $auth_parts);
+
+      // Make the request
+      $response = $this->httpClient->post($url, [
         'headers' => [
-          'Authorization' => 'Bearer ' . $bearer_token,
-          'Content-Type' => 'application/json',
+          'Authorization' => $auth_header,
+          'Content-Type' => 'application/x-www-form-urlencoded',
         ],
-        'json' => $payload,
+        'form_params' => $params,
       ]);
 
       $data = json_decode($response->getBody()->getContents(), TRUE);
       
-      if (isset($data['data']['id'])) {
-        $this->logger->info('Successfully posted tweet: @tweet_id', ['@tweet_id' => $data['data']['id']]);
+      if (isset($data['id_str'])) {
+        $this->logger->info('Successfully posted tweet: @tweet_id', ['@tweet_id' => $data['id_str']]);
         return $data;
       } else {
         $this->logger->error('Twitter API returned unexpected response: @response', ['@response' => print_r($data, TRUE)]);
@@ -173,6 +200,16 @@ class TwitterApiClient {
       $this->logger->error('Failed to get user info: @message', ['@message' => $e->getMessage()]);
       return FALSE;
     }
+  }
+
+  /**
+   * Generate a random nonce for OAuth requests.
+   *
+   * @return string
+   *   A random 32-character string.
+   */
+  private function generateNonce() {
+    return bin2hex(random_bytes(16));
   }
 
 }
