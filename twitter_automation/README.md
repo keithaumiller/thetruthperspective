@@ -1,5 +1,7 @@
 # Twitter Automation Module
 
+Userid:@TheTruthPers
+
 ## Overview
 
 The Twitter Automation module provides automated posting capabilities for The Truth Perspective platform. It generates and posts content twice daily based on analytics data from the newsmotivationmetrics module.
