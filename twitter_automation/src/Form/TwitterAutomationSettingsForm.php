@@ -231,11 +231,11 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
    * AJAX callback for testing Twitter connection.
    */
   public function testConnectionCallback(array &$form, FormStateInterface $form_state) {
-    // Get values from form (either newly entered or saved)
-    $api_key = $form_state->getValue('api_key') ?: $this->config('twitter_automation.settings')->get('api_key');
-    $api_secret = $form_state->getValue('api_secret') ?: $this->config('twitter_automation.settings')->get('api_secret');
-    $access_token = $form_state->getValue('access_token') ?: $this->config('twitter_automation.settings')->get('access_token');
-    $access_secret = $form_state->getValue('access_secret') ?: $this->config('twitter_automation.settings')->get('access_secret');
+    // Get values from form (either newly entered or saved) - handle nested structure
+    $api_key = $form_state->getValue(['consumer_keys', 'api_key']) ?: $this->config('twitter_automation.settings')->get('api_key');
+    $api_secret = $form_state->getValue(['consumer_keys', 'api_secret']) ?: $this->config('twitter_automation.settings')->get('api_secret');
+    $access_token = $form_state->getValue(['auth_tokens', 'access_token']) ?: $this->config('twitter_automation.settings')->get('access_token');
+    $access_secret = $form_state->getValue(['auth_tokens', 'access_secret']) ?: $this->config('twitter_automation.settings')->get('access_secret');
     
     if (empty($api_key) || empty($api_secret) || empty($access_token) || empty($access_secret)) {
       $message = '<div class="messages messages--error">Please enter all OAuth credentials first.</div>';
@@ -386,11 +386,11 @@ class TwitterAutomationSettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $this->config('twitter_automation.settings')
-      ->set('bearer_token', $form_state->getValue('bearer_token'))
-      ->set('api_key', $form_state->getValue('api_key'))
-      ->set('api_secret', $form_state->getValue('api_secret'))
-      ->set('access_token', $form_state->getValue('access_token'))
-      ->set('access_secret', $form_state->getValue('access_secret'))
+      ->set('bearer_token', $form_state->getValue(['auth_tokens', 'bearer_token']))
+      ->set('api_key', $form_state->getValue(['consumer_keys', 'api_key']))
+      ->set('api_secret', $form_state->getValue(['consumer_keys', 'api_secret']))
+      ->set('access_token', $form_state->getValue(['auth_tokens', 'access_token']))
+      ->set('access_secret', $form_state->getValue(['auth_tokens', 'access_secret']))
       ->set('enabled', $form_state->getValue('enabled'))
       ->set('morning_time', $form_state->getValue('morning_time'))
       ->set('evening_time', $form_state->getValue('evening_time'))
