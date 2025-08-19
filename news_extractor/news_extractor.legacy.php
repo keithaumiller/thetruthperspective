@@ -704,6 +704,10 @@ function _news_extractor_extract_structured_data($ai_response) {
           $data['sentiment_score'] = (int) $parsed['sentiment_score'];
         }
         
+        if (isset($parsed['authoritarianism_score']) && is_numeric($parsed['authoritarianism_score'])) {
+          $data['authoritarianism_score'] = (int) $parsed['authoritarianism_score'];
+        }
+        
       } else {
         \Drupal::logger('news_extractor')->error('JSON parsing failed: @error', ['@error' => json_last_error_msg()]);
       }

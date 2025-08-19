@@ -78,6 +78,11 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
           $entity->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
         }
 
+        // Authoritarianism score (text field format)
+        if (isset($structured_data['authoritarianism_score']) && $entity->hasField('field_authoritarianism_score')) {
+          $entity->set('field_authoritarianism_score', (string) $structured_data['authoritarianism_score']);
+        }
+
         // Create simple tags for browsing (entities + motivations + metrics) BEFORE formatting
         if (!empty($structured_data)) {
           $simple_tags = [];
@@ -830,6 +835,18 @@ function news_extractor_format_json_analysis($structured_data) {
     $html .= "Sentiment Score: {$structured_data['sentiment_score']}/100<br>";
   }
   
+  if (isset($structured_data['authoritarianism_score'])) {
+    $authoritarianism_label = '';
+    $authoritarianism_score = $structured_data['authoritarianism_score'];
+    if ($authoritarianism_score <= 20) $authoritarianism_label = 'Strongly Democratic';
+    elseif ($authoritarianism_score <= 40) $authoritarianism_label = 'Generally Democratic';
+    elseif ($authoritarianism_score <= 60) $authoritarianism_label = 'Mixed/Neutral';
+    elseif ($authoritarianism_score <= 80) $authoritarianism_label = 'Authoritarian Tendencies';
+    else $authoritarianism_label = 'Totalitarian Risk';
+    
+    $html .= "Authoritarianism Risk: {$authoritarianism_score}/100 ({$authoritarianism_label})<br>";
+  }
+  
   $html .= '</p>';
 
   // Bias analysis
@@ -928,6 +945,11 @@ function news_extractor_reprocess_node_from_raw_response($nid) {
   // Sentiment score (text field format)
   if (isset($structured_data['sentiment_score']) && $node->hasField('field_article_sentiment_score')) {
     $node->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
+  }
+  
+  // Authoritarianism score (text field format)
+  if (isset($structured_data['authoritarianism_score']) && $node->hasField('field_authoritarianism_score')) {
+    $node->set('field_authoritarianism_score', (string) $structured_data['authoritarianism_score']);
   }
   
   // Update motivation data field

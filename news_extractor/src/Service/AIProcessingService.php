@@ -127,7 +127,7 @@ class AIProcessingService {
            "2. For each entity, select their top 2-3 motivations from the allowed list\n" .
            "3. Choose the most relevant US performance metric this article impacts\n" .
            "4. Provide analysis of how this affects that metric\n" .
-           "5. Assess the article's credibility, bias, and sentiment\n\n" .
+           "5. Assess the article's credibility, bias, sentiment, and authoritarianism risk\n\n" .
            "Use ONLY motivations from this list: $allowed_motivations\n\n" .
            "CREDIBILITY SCORING (0-100):\n" .
            "- 0-20: Intentional deceit, false information, propaganda\n" .
@@ -147,6 +147,12 @@ class AIProcessingService {
            "- 41-60: Neutral, balanced reporting\n" .
            "- 61-80: Positive, optimistic, hopeful\n" .
            "- 81-100: Very positive, celebratory, triumphant\n\n" .
+           "AUTHORITARIANISM RISK SCORING (0-100):\n" .
+           "- 0-20: Strongly promotes democratic values, transparency, accountability\n" .
+           "- 21-40: Generally democratic with minor authoritarian elements\n" .
+           "- 41-60: Mixed democratic/authoritarian signals or neutral\n" .
+           "- 61-80: Shows authoritarian tendencies, power consolidation themes\n" .
+           "- 81-100: Promotes totalitarian ideas, suppression of dissent, elimination of checks/balances\n\n" .
            "Return your response as valid JSON in this exact format:\n\n" .
            "{\n" .
            "  \"entities\": [\n" .
@@ -160,7 +166,8 @@ class AIProcessingService {
            "  \"credibility_score\": 75,\n" .
            "  \"bias_rating\": 45,\n" .
            "  \"bias_analysis\": \"Two-line explanation of why this bias rating was selected based on language, framing, and source presentation.\",\n" .
-           "  \"sentiment_score\": 35\n" .
+           "  \"sentiment_score\": 35,\n" .
+           "  \"authoritarianism_score\": 25\n" .
            "}\n\n" .
            "IMPORTANT: Return ONLY the JSON object, no other text or formatting.\n\n" .
            "Article Title: " . $article_title . "\n\n" .
@@ -195,6 +202,7 @@ class AIProcessingService {
       'bias_rating' => NULL,
       'bias_analysis' => '',
       'sentiment_score' => NULL,
+      'authoritarianism_score' => NULL,
       'analysis' => '',
     ];
 
@@ -260,6 +268,10 @@ class AIProcessingService {
 
           if (isset($parsed['sentiment_score']) && is_numeric($parsed['sentiment_score'])) {
             $data['sentiment_score'] = (int) $parsed['sentiment_score'];
+          }
+
+          if (isset($parsed['authoritarianism_score']) && is_numeric($parsed['authoritarianism_score'])) {
+            $data['authoritarianism_score'] = (int) $parsed['authoritarianism_score'];
           }
 
           $this->logger()->info('Successfully parsed AI response with @entities entities and @motivations motivations', [
