@@ -247,11 +247,20 @@ class MastodonClient implements PlatformInterface {
     
     if (empty($test_message)) {
       // Fallback to basic test message if AI generation fails
-      $timestamp = date('Y-m-d H:i:s T');
-      $test_message = "🤖 Hello World from The Truth Perspective!\n\nThis is a test post to verify Mastodon integration is working.\n\nTimestamp: {$timestamp}\n\n#TestPost #TheTruthPerspective";
+      // Keep it very short to handle low character limits
+      $test_message = "🤖 Test from Truth Perspective #Test";
       $this->logger->warning('AI content generation failed, using fallback test message');
     } else {
       $this->logger->info('Using AI-generated content for test post');
+    }
+
+    // Ensure message fits within character limit
+    $char_limit = $this->getInstanceCharacterLimit();
+    if (strlen($test_message) > $char_limit) {
+      $test_message = substr($test_message, 0, $char_limit - 10) . '... #Test';
+      $this->logger->warning('Truncated test message to fit character limit of @limit chars', [
+        '@limit' => $char_limit
+      ]);
     }
     
     $this->logger->info('Step 2: Posting message (length: @length chars)', [
@@ -285,7 +294,54 @@ class MastodonClient implements PlatformInterface {
    * {@inheritdoc}
    */
   public function getCharacterLimit(): int {
-    return 500; // Standard Mastodon limit, some instances allow more
+    // Standard Mastodon limit, but some instances have much lower limits
+    // This returns the theoretical maximum, actual validation happens in postContent()
+    return 500;
+  }
+
+  /**
+   * Get the actual character limit for this Mastodon instance.
+   * 
+   * @return int The actual character limit, or fallback to conservative value.
+   */
+  protected function getInstanceCharacterLimit(): int {
+    static $cached_limit = null;
+    
+    if ($cached_limit !== null) {
+      return $cached_limit;
+    }
+
+    try {
+      $config = $this->configFactory->get('social_media_automation.settings');
+      $server_url = $config->get('mastodon.server_url');
+      
+      if (empty($server_url)) {
+        $cached_limit = 50; // Conservative fallback
+        return $cached_limit;
+      }
+
+      // Query instance info
+      $response = $this->httpClient->get($server_url . '/api/v1/instance', [
+        'timeout' => 10,
+        'http_errors' => false,
+      ]);
+
+      if ($response->getStatusCode() === 200) {
+        $data = json_decode($response->getBody()->getContents(), true);
+        if (isset($data['configuration']['statuses']['max_characters'])) {
+          $cached_limit = (int) $data['configuration']['statuses']['max_characters'];
+          $this->logger->info('Detected Mastodon instance character limit: @limit', ['@limit' => $cached_limit]);
+          return $cached_limit;
+        }
+      }
+    } catch (\Exception $e) {
+      $this->logger->warning('Could not detect instance character limit: @message', ['@message' => $e->getMessage()]);
+    }
+
+    // Fallback to very conservative limit if we can't detect
+    $cached_limit = 50;
+    $this->logger->info('Using conservative character limit fallback: @limit', ['@limit' => $cached_limit]);
+    return $cached_limit;
   }
 
   /**
@@ -346,10 +402,20 @@ class MastodonClient implements PlatformInterface {
 
     } catch (RequestException $e) {
       $error_response = $e->getResponse() ? $e->getResponse()->getBody()->getContents() : 'No response body';
-      $this->logger->error('Failed to post to Mastodon: @message. Response: @response', [
-        '@message' => $e->getMessage(),
-        '@response' => $error_response
-      ]);
+      
+      // Check for character limit error
+      if (strpos($error_response, 'character limit') !== false || 
+          strpos($error_response, 'Validation failed') !== false) {
+        $this->logger->error('Mastodon post failed due to character limit. Content length: @length chars. Error: @message', [
+          '@length' => strlen($content),
+          '@message' => $e->getMessage()
+        ]);
+      } else {
+        $this->logger->error('Failed to post to Mastodon: @message. Response: @response', [
+          '@message' => $e->getMessage(),
+          '@response' => $error_response
+        ]);
+      }
       return FALSE;
     }
   }
@@ -361,8 +427,8 @@ class MastodonClient implements PlatformInterface {
     // Mastodon supports markdown-like formatting and hashtags
     $formatted = $content;
     
-    // Ensure content fits within character limit
-    $limit = $this->getCharacterLimit();
+    // Ensure content fits within character limit using instance-specific limit
+    $limit = $this->getInstanceCharacterLimit();
     if (strlen($formatted) > $limit) {
       $formatted = substr($formatted, 0, $limit - 3) . '...';
     }
@@ -599,9 +665,10 @@ class MastodonClient implements PlatformInterface {
     $prompt .= "ARTICLE URL: {$article_url}\n\n";
     $prompt .= "MOTIVATION ANALYSIS DATA:\n{$motivation_analysis}\n\n";
     
+    $instance_limit = $this->getInstanceCharacterLimit();
     $prompt .= "REQUIREMENTS:\n";
     $prompt .= "- Write from a social scientist's analytical perspective\n";
-    $prompt .= "- Keep under 500 characters total (Mastodon limit)\n";
+    $prompt .= "- Keep under {$instance_limit} characters total (Mastodon instance limit)\n";
     $prompt .= "- Highlight the most compelling motivational insights from the analysis\n";
     $prompt .= "- Include 2-4 relevant hashtags (e.g., #MotivationAnalysis #SocialScience #TestPost)\n";
     $prompt .= "- Include the article URL\n";
