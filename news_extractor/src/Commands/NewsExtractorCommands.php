@@ -748,14 +748,15 @@ class NewsExtractorCommands extends DrushCommands {
     $extraction_service = \Drupal::service('news_extractor.extraction');
     
     // Find articles that need processing (have URL but no JSON data)
+    $processing_or_group = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
+      ->condition('field_json_scraped_article_data', '', '=')
+      ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=');
+    
     $query = \Drupal::entityQuery('node')
       ->condition('type', 'article')
       ->condition('field_original_url.uri', '', '<>')
-      ->group()
-        ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
-        ->condition('field_json_scraped_article_data', '', '=')
-        ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
-      ->groupOperator('OR')
+      ->condition($processing_or_group)
       ->range(0, 10)
       ->sort('created', 'DESC')
       ->accessCheck(FALSE);
@@ -869,22 +870,22 @@ class NewsExtractorCommands extends DrushCommands {
     switch ($type) {
       case 'scrape_only':
         // Articles with URLs but no/failed JSON data
+        $scrape_or_group = \Drupal::entityQuery('node')->orConditionGroup()
+          ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
+          ->condition('field_json_scraped_article_data', '', '=')
+          ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=');
         $query->condition('field_original_url.uri', '', '<>')
-          ->group()
-            ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
-            ->condition('field_json_scraped_article_data', '', '=')
-            ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
-          ->groupOperator('OR');
+          ->condition($scrape_or_group);
         break;
         
       case 'analyze_only':
         // Articles with good JSON data but no AI analysis
+        $ai_or_group = \Drupal::entityQuery('node')->orConditionGroup()
+          ->condition('field_ai_raw_response', NULL, 'IS NULL')
+          ->condition('field_ai_raw_response', '', '=');
         $query->condition('field_json_scraped_article_data', '', '<>')
           ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '<>')
-          ->group()
-            ->condition('field_ai_raw_response', NULL, 'IS NULL')
-            ->condition('field_ai_raw_response', '', '=')
-          ->groupOperator('OR');
+          ->condition($ai_or_group);
         break;
         
       case 'reprocess':
@@ -895,14 +896,14 @@ class NewsExtractorCommands extends DrushCommands {
       case 'full':
       default:
         // Articles that need any kind of processing
+        $full_or_group = \Drupal::entityQuery('node')->orConditionGroup()
+          ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
+          ->condition('field_json_scraped_article_data', '', '=')
+          ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
+          ->condition('field_ai_raw_response', NULL, 'IS NULL')
+          ->condition('field_ai_raw_response', '', '=');
         $query->condition('field_original_url.uri', '', '<>')
-          ->group()
-            ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
-            ->condition('field_json_scraped_article_data', '', '=')
-            ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
-            ->condition('field_ai_raw_response', NULL, 'IS NULL')
-            ->condition('field_ai_raw_response', '', '=')
-          ->groupOperator('OR');
+          ->condition($full_or_group);
         break;
     }
     

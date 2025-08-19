@@ -33,17 +33,16 @@ class UpdateMissingFieldsCommands extends DrushCommands {
     $this->output()->writeln("🔄 Finding articles missing authoritarianism scores...");
     
     // Query for articles that have raw AI responses but missing authoritarianism scores
+    $auth_or_group = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_authoritarianism_score', NULL, 'IS NULL')
+      ->condition('field_authoritarianism_score', '', '=');
+    
     $query = \Drupal::entityQuery('node')
       ->condition('type', 'article')
       ->condition('field_ai_raw_response', '', '<>')
+      ->condition($auth_or_group)
       ->accessCheck(FALSE)
       ->sort('created', 'DESC');
-    
-    // Add condition for missing authoritarianism score
-    $query->group()
-      ->condition('field_authoritarianism_score', NULL, 'IS NULL')
-      ->condition('field_authoritarianism_score', '', '=')
-      ->groupOperator('OR');
     
     if ($limit) {
       $query->range(0, $limit);
