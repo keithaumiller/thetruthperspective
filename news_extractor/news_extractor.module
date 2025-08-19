@@ -789,20 +789,18 @@ function _news_extractor_check_stuck_feeds() {
       return $stuck_feeds;
     }
     
-    // Get table structure to understand available columns
-    $table_info = $schema->getFieldNames('feeds_feed');
-    \Drupal::logger('news_extractor')->info('feeds_feed table columns: @columns', [
-      '@columns' => implode(', ', $table_info),
-    ]);
-    
-    // Check if we have a lock-related column
+    // Check if we have a lock-related column by trying each possibility
     $lock_column = null;
-    if (in_array('locked', $table_info)) {
-      $lock_column = 'locked';
-    } elseif (in_array('lock', $table_info)) {
-      $lock_column = 'lock';
-    } elseif (in_array('importing', $table_info)) {
-      $lock_column = 'importing';
+    $possible_lock_columns = ['locked', 'lock', 'importing'];
+    
+    foreach ($possible_lock_columns as $column) {
+      if ($schema->fieldExists('feeds_feed', $column)) {
+        $lock_column = $column;
+        \Drupal::logger('news_extractor')->info('Found lock column: @column in feeds_feed table', [
+          '@column' => $column,
+        ]);
+        break;
+      }
     }
     
     if (!$lock_column) {
