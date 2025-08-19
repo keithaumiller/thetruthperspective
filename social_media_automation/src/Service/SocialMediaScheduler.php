@@ -495,10 +495,15 @@ class SocialMediaScheduler {
     $post_count = $this->state->get($post_count_key, 0);
     $last_error = $this->state->get($last_error_key, '');
     
+    // Check if platform is enabled via configuration
+    $config = $this->configFactory->get('social_media_automation.settings');
+    $enabled_platforms = $config->get('enabled_platforms') ?: [];
+    $is_enabled = in_array($platform_name, $enabled_platforms);
+    
     return [
       'platform_name' => $platform->getName(),
       'platform_machine_name' => $platform_name,
-      'enabled' => $platform->isEnabled(),
+      'enabled' => $is_enabled,
       'last_post' => $last_post,
       'last_post_date' => $last_post ? date('Y-m-d H:i:s', $last_post) : 'Never',
       'total_posts' => $post_count,
