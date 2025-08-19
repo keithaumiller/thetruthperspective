@@ -243,5 +243,4 @@ authoritarianism-timeline:
   dependencies:
     - core/drupal
     - core/jquery
-    - core/once
     - core/drupalSettings

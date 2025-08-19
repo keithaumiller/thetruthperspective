@@ -6,7 +6,7 @@
  * using Chart.js with consistent design patterns matching other assessment metrics.
  */
 
-(function (Drupal, drupalSettings, $) {
+(function ($, Drupal, drupalSettings) {
   'use strict';
 
   /**
@@ -14,19 +14,40 @@
    */
   Drupal.behaviors.authoritarianismTimelineChart = {
     attach: function (context, settings) {
-      var chartSettings = settings.newsmotivationmetrics_authoritarianism;
-      
-      if (!chartSettings || !window.Chart) {
-        console.warn('Authoritarianism timeline chart: Missing chart settings or Chart.js library');
-        return;
-      }
+      console.log('🔄 Authoritarianism Timeline Chart behavior initializing...');
+      console.log('Context element:', context === document ? '#document' : context.tagName || 'Unknown', context === document ? '(' + window.location.href + ')' : '');
+      console.log('Settings keys:', Object.keys(settings));
 
-      // Initialize chart if canvas element exists and hasn't been processed
-      var $canvas = $('#authoritarianism-timeline-chart', context).once('authoritarianism-timeline-chart');
-      if ($canvas.length) {
+      // Find all authoritarianism timeline chart canvases
+      const canvases = $(context).find('canvas.authoritarianism-timeline-chart').addBack('canvas.authoritarianism-timeline-chart');
+      console.log('Found', canvases.length, 'authoritarianism chart canvases to process');
+
+      canvases.each(function() {
+        const canvas = this;
+        const canvasId = canvas.id;
+
+        // Skip if already processed
+        if (canvas.hasAttribute('data-authoritarianism-chart-processed')) {
+          console.log('Skipping already processed canvas:', canvasId);
+          return;
+        }
+
+        console.log('Processing authoritarianism chart canvas:', canvasId);
+
+        // Get settings for this specific canvas
+        const chartSettings = settings.newsmotivationmetrics_authoritarianism && settings.newsmotivationmetrics_authoritarianism[canvasId];
+        
+        if (!chartSettings || !window.Chart) {
+          console.warn('Authoritarianism timeline chart: Missing chart settings or Chart.js library for canvas:', canvasId);
+          return;
+        }
+
         console.log('Initializing authoritarianism timeline chart with settings:', chartSettings);
-        initializeAuthoritarianismChart($canvas[0], chartSettings);
-      }
+        initializeAuthoritarianismChart(canvas, chartSettings);
+        
+        // Mark as processed
+        canvas.setAttribute('data-authoritarianism-chart-processed', 'true');
+      });
     }
   };
 
@@ -358,4 +379,4 @@
     ctx.fillText('for the selected time period', width / 2, height / 2 + 25);
   }
 
-})(Drupal, drupalSettings, jQuery);
+})(jQuery, Drupal, drupalSettings);
