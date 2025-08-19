@@ -74,14 +74,19 @@ The module follows a service-oriented architecture with clear separation of conc
   - Updates analysis fields to indicate unpublished status
   - Logs publishing decisions with reasons
 
-### Stage 7: Automated Cleanup (Cron)
+### Stage 7: Enhanced Automated Cleanup (Cron)
 - **File**: `news_extractor.module`
 - **Function**: `news_extractor_cron()` - runs automatically
 - **Actions**:
   1. Checks published articles for post-processor conditions (may unpublish)
   2. Finds unpublished articles (< 3 days old) and reprocesses them through complete pipeline
-  3. **NEW**: Detects and unlocks stuck feed imports (locked > 30 minutes)
-  - Logs comprehensive statistics: found, reprocessed, stuck feeds counts
+  3. **Enhanced Assessment Field Maintenance**: Comprehensive statistics and reprocessing for missing assessment fields
+     - **Before/After Statistics**: Detailed counts of missing authoritarianism, credibility, bias, and sentiment scores
+     - **Smart Field Detection**: Identifies articles missing any assessment field in last 14 days
+     - **Targeted Reprocessing**: Processes up to 15 articles per cron run with specific field gap logging
+     - **Improvement Tracking**: Logs exactly how many fields were fixed per assessment type
+  4. **NEW**: Detects and unlocks stuck feed imports (locked > 30 minutes)
+- **Enhanced Logging**: Comprehensive statistics including field-specific improvements and total fixes counter
 
 **Note**: Post-processors in Stage 6 run after all processing is complete to make final publishing decisions based on data quality and completeness.
 
@@ -98,6 +103,7 @@ The module follows a service-oriented architecture with clear separation of conc
 - **Sentiment Analysis**: Measures article emotional tone (-1 to +1 scale)
 - **Bias Detection**: Identifies political/ideological bias (0-10 scale)
 - **Credibility Scoring**: Assesses article reliability (0-10 scale)
+- **Authoritarianism Assessment**: Evaluates authoritarian tendencies (0-10 scale)
 - **Entity Recognition**: Extracts people, organizations, locations, concepts
 - **Motivation Analysis**: Identifies underlying motivations (political, economic, social)
 
@@ -136,6 +142,7 @@ The module expects the following fields on the `article` content type:
 - `field_article_sentiment_score` (Number): Sentiment analysis (-1 to +1)
 - `field_bias_rating` (Number): Bias score (0-10)
 - `field_credibility_score` (Number): Credibility score (0-10)
+- `field_authoritarianism_score` (Number): Authoritarianism assessment (0-10)
 
 **Entity Fields:**
 - `field_ai_people` (Text, multiple): Extracted person entities
@@ -233,6 +240,12 @@ drush news-extractor:cleanup      # Same functionality
 
 #### Standard Processing
 ```bash
+# Enhanced cron maintenance with detailed assessment field statistics
+sudo -u www-data drush cron          # Run as www-data user to avoid permission issues
+
+# Watch comprehensive cron logging in real-time
+drush watchdog:tail --filter=news_extractor
+
 # Process recent articles
 drush news-extractor:process
 

@@ -12,11 +12,18 @@ This module has been restructured to comply with Drupal 11 custom module develop
 - **TimelineService**: Manages time-based data retrieval for charts
 - **ChartDataService**: Prepares data structures optimized for Chart.js
 - **DashboardBuilderService**: Constructs dashboard render arrays
+- **NewsMotivationTimelineChartService**: News motivation specific timeline charts
+- **BiasTimelineChartService**: Individual bias trend analysis charts
+- **CredibilityTimelineChartService**: Individual credibility trend analysis charts
+- **SentimentTimelineChartService**: Individual sentiment trend analysis charts
 
 ### Controllers
 
 - **MetricsController**: Main dashboard endpoints using dependency injection
 - **ChartDebugController**: Debug tools using services for chart development
+- **BiasTimelineChartController**: Individual bias chart routes
+- **CredibilityTimelineChartController**: Individual credibility chart routes
+- **SentimentTimelineChartController**: Individual sentiment chart routes
 
 ### Key Improvements
 
@@ -43,6 +50,16 @@ $articleMetrics = $metricsService->getArticleMetrics();
 $chartService = \Drupal::service('newsmotivationmetrics.chart_data_service');
 $chartData = $chartService->getTimelineChartData(['limit' => 10]);
 
+// Get individual assessment chart data
+$biasService = \Drupal::service('newsmotivationmetrics.bias_timeline_chart_service');
+$biasChart = $biasService->buildTimelineChart();
+
+$credibilityService = \Drupal::service('newsmotivationmetrics.credibility_timeline_chart_service');
+$credibilityChart = $credibilityService->buildTimelineChart();
+
+$sentimentService = \Drupal::service('newsmotivationmetrics.sentiment_timeline_chart_service');
+$sentimentChart = $sentimentService->buildTimelineChart();
+
 // Build dashboard
 $dashboardBuilder = \Drupal::service('newsmotivationmetrics.dashboard_builder');
 $build = $dashboardBuilder->buildPublicDashboard();
@@ -56,7 +73,7 @@ $build = $dashboardBuilder->buildPublicDashboard();
 
 ## Last Updated
 
-Architecture verified and tested: August 8, 2025
+Architecture verified and tested: August 19, 2025
 
 ## Future Development
 
@@ -65,3 +82,4 @@ The service-based architecture provides a clean foundation for:
 - API endpoint development
 - Advanced analytics features
 - Third-party integrations
+- Additional individual assessment metric charts

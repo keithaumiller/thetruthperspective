@@ -39,6 +39,29 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 - Print-friendly chart export capabilities
 - Professional gradient styling suitable for media/academic use
 
+## Recent Updates (August 19, 2025)
+
+### Individual Assessment Timeline Charts
+Successfully separated the combined News Source Quality Trends chart into three individual timeline charts following exact design patterns:
+
+#### New Individual Chart Services
+- **BiasTimelineChartService**: Dedicated bias trend analysis at `/metrics/bias`
+- **CredibilityTimelineChartService**: Dedicated credibility trend analysis at `/metrics/credibility`  
+- **SentimentTimelineChartService**: Dedicated sentiment trend analysis at `/metrics/sentiment`
+
+#### Technical Implementation
+- **Design Pattern Consistency**: All three charts follow identical architecture to original combined chart
+- **Isolated Data Namespaces**: Each chart uses unique drupalSettings keys to prevent data contamination
+- **Route Structure**: Individual routes for each assessment metric type
+- **Chart.js Integration**: Same Chart.js configuration and styling across all three charts
+- **Shared Infrastructure**: Leverages existing ChartDataService for data aggregation
+
+#### Benefits
+- **Enhanced Clarity**: Users can focus on specific assessment metrics independently
+- **Better Performance**: Reduced data payload per chart page
+- **Improved UX**: Cleaner, more focused data visualization
+- **Scalable Architecture**: Foundation for additional assessment metric charts
+
 ## Recent Updates (August 13, 2025)
 
 ### Data Isolation Fix for Multiple Chart Types
@@ -94,10 +117,13 @@ This renaming provides clear semantic separation for when additional timeline ch
 
 ### Service Layer (Updated)
 - **NewsMotivationTimelineChartService**: Centralized service for building news motivation timeline chart components
-- **ChartDataService**: Aggregates and processes timeline data for news motivation visualization
+- **BiasTimelineChartService**: Individual bias trend analysis with isolated data namespace
+- **CredibilityTimelineChartService**: Individual credibility trend analysis with isolated data namespace
+- **SentimentTimelineChartService**: Individual sentiment trend analysis with isolated data namespace
+- **ChartDataService**: Aggregates and processes timeline data for all chart types
 - **DashboardBuilderService**: Coordinates multiple chart components and dashboard sections
 - **MetricsDataService**: Core data processing and aggregation for analytics
-- **TimelineService**: Backend data processing specifically for news motivation timeline analysis
+- **TimelineService**: Backend data processing for all timeline chart types
 
 ### Component Structure
 - **Block Plugins**: `NewsMotivationTimelineBlock`, `NewsMotivationTimelineChartBlock` 
@@ -107,6 +133,7 @@ This renaming provides clear semantic separation for when additional timeline ch
 
 ### Route Structure
 - **Legacy Route**: `/metrics` - DISABLED (redirects to front page)
+- **Individual Assessment Charts**: `/metrics/bias`, `/metrics/credibility`, `/metrics/sentiment` - Dedicated timeline chart pages
 - **Block-Based Dashboard**: Displayed on front page (`<front>`) via hero region blocks
 - **Admin Dashboard**: `/admin/reports/news-motivation-metrics` - Administrative interface
 - **API Endpoints**: Internal data fetching for chart updates

@@ -1,7 +1,7 @@
 # The Truth Perspective - AI-Powered News Analysis Platform
 
-**Version**: 1.2.0  
-**Last Updated**: August 18, 2025  
+**Version**: 1.3.0  
+**Last Updated**: August 19, 2025  
 **Drupal Version**: 11.x  
 **PHP Version**: 8.3.6+  
 **Status**: Production Ready
@@ -21,6 +21,8 @@ The Truth Perspective is an AI-powered platform for analyzing news articles usin
 Public analytics dashboard providing transparent insights into news analysis data.
 
 **Features**:
+- **Individual Assessment Timeline Charts**: Separate charts for bias, credibility, and sentiment trends following consistent design patterns
+- **Enhanced Chart Visualization**: Dedicated timeline charts with isolated data namespaces to prevent data contamination
 - Real-time analytics dashboard with Chart.js visualizations
 - Mobile-responsive design for public accessibility
 - Professional data presentation suitable for media and academic use
@@ -33,8 +35,10 @@ Comprehensive news content extraction, AI analysis, and automated processing sys
 
 **Features**:
 - **Content Extraction**: Diffbot API integration for clean article parsing
-- **AI Analysis**: AWS Bedrock Claude 3.5 Sonnet for motivation detection, bias analysis, sentiment scoring
-- **Automated Processing**: Multi-stage pipeline with cron-based background processing
+- **AI Analysis**: AWS Bedrock Claude 3.5 Sonnet for motivation detection, bias analysis, sentiment scoring, and authoritarianism assessment
+- **Automated Processing**: Multi-stage pipeline with enhanced cron-based background processing
+- **Enhanced Cron Maintenance**: Comprehensive statistics tracking for assessment field coverage (authoritarianism, credibility, bias, sentiment)
+- **Smart Assessment Field Management**: Automatic detection and reprocessing of articles missing assessment scores with detailed before/after logging
 - **Source Detection**: Multi-stage extraction from JSON data, URLs, and feed metadata
 - **Stuck Feed Recovery**: Automatic detection and resolution of blocked feed imports
 
@@ -67,6 +71,7 @@ Interactive conversational AI interface for engaging with content insights.
 - **AI-Powered Processing**: Claude 3.5 Sonnet for advanced natural language understanding
 - **Bias Detection**: Systematic identification of political and ideological bias
 - **Sentiment Analysis**: Emotional tone measurement and tracking
+- **Authoritarianism Assessment**: Political authoritarianism tendency scoring (0-10 scale)
 - **Entity Recognition**: Extraction of people, organizations, locations, and concepts
 - **Motivation Analysis**: Detection of underlying political, economic, and social motivations
 
@@ -134,6 +139,12 @@ drush ne:pop-url
 
 # Test extraction for specific URL
 drush ne:test https://example.com/article
+
+# Run enhanced cron maintenance with assessment field statistics
+sudo -u www-data drush cron
+
+# Watch Drupal logs for detailed processing statistics
+drush watchdog:tail --filter=news_extractor
 ```
 
 ### Social Media Automation
@@ -202,4 +213,4 @@ GPL-2.0+ (Drupal compatible)
 
 ---
 
-**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 18, 2025
+**Maintained by**: Keith Aumiller | **Organization**: The Truth Perspective | **Last Updated**: August 19, 2025
