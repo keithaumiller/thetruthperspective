@@ -479,6 +479,19 @@ function news_extractor_cron() {
   
   $fourteen_days_ago = \Drupal::time()->getRequestTime() - (14 * 24 * 60 * 60);
   
+  // Get baseline statistics BEFORE processing
+  $baseline_stats = _news_extractor_get_assessment_field_statistics($fourteen_days_ago);
+  $logger->info('Assessment field statistics BEFORE processing (last 14 days): @stats', [
+    '@stats' => json_encode($baseline_stats),
+  ]);
+  $logger->info('BEFORE: Missing authoritarianism: @auth, Missing credibility: @cred, Missing bias: @bias, Missing sentiment: @sentiment, Total articles: @total', [
+    '@auth' => $baseline_stats['missing_authoritarianism'],
+    '@cred' => $baseline_stats['missing_credibility'],
+    '@bias' => $baseline_stats['missing_bias'],
+    '@sentiment' => $baseline_stats['missing_sentiment'],
+    '@total' => $baseline_stats['total_articles'],
+  ]);
+  
   // Create OR condition for missing any assessment field
   $missing_assessment_group = \Drupal::entityQuery('node')->orConditionGroup();
   
@@ -518,7 +531,7 @@ function news_extractor_cron() {
   $assessment_nids = $assessment_query->execute();
   $stats['assessment_missing'] = count($assessment_nids);
   
-  $logger->info('Found @count published articles missing assessment fields', ['@count' => $stats['assessment_missing']]);
+  $logger->info('Found @count published articles missing assessment fields for reprocessing', ['@count' => $stats['assessment_missing']]);
   
   // Reprocess articles missing assessment fields
   $assessment_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($assessment_nids);
@@ -567,6 +580,40 @@ function news_extractor_cron() {
       ]);
     }
   }
+  
+  // Get updated statistics AFTER processing
+  $updated_stats = _news_extractor_get_assessment_field_statistics($fourteen_days_ago);
+  $logger->info('Assessment field statistics AFTER processing (last 14 days): @stats', [
+    '@stats' => json_encode($updated_stats),
+  ]);
+  $logger->info('AFTER: Missing authoritarianism: @auth, Missing credibility: @cred, Missing bias: @bias, Missing sentiment: @sentiment, Total articles: @total', [
+    '@auth' => $updated_stats['missing_authoritarianism'],
+    '@cred' => $updated_stats['missing_credibility'],
+    '@bias' => $updated_stats['missing_bias'],
+    '@sentiment' => $updated_stats['missing_sentiment'],
+    '@total' => $updated_stats['total_articles'],
+  ]);
+  
+  // Calculate improvements
+  $improvements = [
+    'authoritarianism_fixed' => $baseline_stats['missing_authoritarianism'] - $updated_stats['missing_authoritarianism'],
+    'credibility_fixed' => $baseline_stats['missing_credibility'] - $updated_stats['missing_credibility'],
+    'bias_fixed' => $baseline_stats['missing_bias'] - $updated_stats['missing_bias'],
+    'sentiment_fixed' => $baseline_stats['missing_sentiment'] - $updated_stats['missing_sentiment'],
+  ];
+  
+  $total_fields_fixed = array_sum($improvements);
+  $logger->info('Assessment field improvements: Fixed @auth authoritarianism, @cred credibility, @bias bias, @sentiment sentiment scores (Total: @total field fixes)', [
+    '@auth' => $improvements['authoritarianism_fixed'],
+    '@cred' => $improvements['credibility_fixed'],
+    '@bias' => $improvements['bias_fixed'],
+    '@sentiment' => $improvements['sentiment_fixed'],
+    '@total' => $total_fields_fixed,
+  ]);
+  
+  // Store improvement stats for final summary
+  $stats['assessment_improvements'] = $improvements;
+  $stats['total_fields_fixed'] = $total_fields_fixed;
 
   // STEP 4: Check for stuck feed imports and unlock them
   $logger->info('Step 4: Checking for stuck feed imports');
@@ -598,7 +645,7 @@ function news_extractor_cron() {
   ]);
 
   // Also log human-readable summary
-  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @assessment_missing articles missing assessment fields, reprocessed @assessment_reprocessed assessment fields, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds', [
+  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @assessment_missing articles missing assessment fields, reprocessed @assessment_reprocessed assessment fields, fixed @total_fields assessment field gaps, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds', [
     '@checked' => $stats['published_checked'],
     '@unpublished' => $stats['articles_unpublished'],
     '@found' => $stats['unpublished_found'],
@@ -606,9 +653,110 @@ function news_extractor_cron() {
     '@failed' => $stats['reprocessing_failed'],
     '@assessment_missing' => $stats['assessment_missing'],
     '@assessment_reprocessed' => $stats['assessment_reprocessed'],
+    '@total_fields' => $stats['total_fields_fixed'] ?? 0,
     '@stuck_found' => $stats['stuck_feeds_found'],
     '@stuck_unlocked' => $stats['stuck_feeds_unlocked'],
   ]);
+}
+
+/**
+ * Get comprehensive statistics for assessment field coverage.
+ *
+ * @param int $since_timestamp
+ *   Only count articles created since this timestamp.
+ *
+ * @return array
+ *   Array containing counts of missing assessment fields and totals.
+ */
+function _news_extractor_get_assessment_field_statistics($since_timestamp) {
+  $stats = [
+    'missing_authoritarianism' => 0,
+    'missing_credibility' => 0,
+    'missing_bias' => 0,
+    'missing_sentiment' => 0,
+    'total_articles' => 0,
+  ];
+  
+  // Base query for published articles since timestamp
+  $base_query_conditions = [
+    'type' => 'article',
+    'status' => 1,
+    'created' => [$since_timestamp, '>'],
+  ];
+  
+  // Count total articles
+  $total_query = \Drupal::entityQuery('node');
+  foreach ($base_query_conditions as $field => $condition) {
+    if (is_array($condition)) {
+      $total_query->condition($field, $condition[0], $condition[1]);
+    } else {
+      $total_query->condition($field, $condition);
+    }
+  }
+  $total_query->accessCheck(FALSE);
+  $stats['total_articles'] = $total_query->count()->execute();
+  
+  // Count missing authoritarianism scores
+  $auth_query = \Drupal::entityQuery('node');
+  foreach ($base_query_conditions as $field => $condition) {
+    if (is_array($condition)) {
+      $auth_query->condition($field, $condition[0], $condition[1]);
+    } else {
+      $auth_query->condition($field, $condition);
+    }
+  }
+  $auth_missing_group = $auth_query->orConditionGroup()
+    ->condition('field_authoritarianism_score', NULL, 'IS NULL')
+    ->condition('field_authoritarianism_score', '', '=');
+  $auth_query->condition($auth_missing_group)->accessCheck(FALSE);
+  $stats['missing_authoritarianism'] = $auth_query->count()->execute();
+  
+  // Count missing credibility scores
+  $cred_query = \Drupal::entityQuery('node');
+  foreach ($base_query_conditions as $field => $condition) {
+    if (is_array($condition)) {
+      $cred_query->condition($field, $condition[0], $condition[1]);
+    } else {
+      $cred_query->condition($field, $condition);
+    }
+  }
+  $cred_missing_group = $cred_query->orConditionGroup()
+    ->condition('field_credibility_score', NULL, 'IS NULL')
+    ->condition('field_credibility_score', '', '=');
+  $cred_query->condition($cred_missing_group)->accessCheck(FALSE);
+  $stats['missing_credibility'] = $cred_query->count()->execute();
+  
+  // Count missing bias ratings
+  $bias_query = \Drupal::entityQuery('node');
+  foreach ($base_query_conditions as $field => $condition) {
+    if (is_array($condition)) {
+      $bias_query->condition($field, $condition[0], $condition[1]);
+    } else {
+      $bias_query->condition($field, $condition);
+    }
+  }
+  $bias_missing_group = $bias_query->orConditionGroup()
+    ->condition('field_bias_rating', NULL, 'IS NULL')
+    ->condition('field_bias_rating', '', '=');
+  $bias_query->condition($bias_missing_group)->accessCheck(FALSE);
+  $stats['missing_bias'] = $bias_query->count()->execute();
+  
+  // Count missing sentiment scores
+  $sentiment_query = \Drupal::entityQuery('node');
+  foreach ($base_query_conditions as $field => $condition) {
+    if (is_array($condition)) {
+      $sentiment_query->condition($field, $condition[0], $condition[1]);
+    } else {
+      $sentiment_query->condition($field, $condition);
+    }
+  }
+  $sentiment_missing_group = $sentiment_query->orConditionGroup()
+    ->condition('field_article_sentiment_score', NULL, 'IS NULL')
+    ->condition('field_article_sentiment_score', '', '=');
+  $sentiment_query->condition($sentiment_missing_group)->accessCheck(FALSE);
+  $stats['missing_sentiment'] = $sentiment_query->count()->execute();
+  
+  return $stats;
 }
 
 /**
