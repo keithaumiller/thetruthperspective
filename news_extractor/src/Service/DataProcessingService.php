@@ -178,6 +178,11 @@ class DataProcessingService {
     if (isset($structured_data['sentiment_score']) && $entity->hasField('field_article_sentiment_score')) {
       $entity->set('field_article_sentiment_score', (string) $structured_data['sentiment_score']);
     }
+
+    // Authoritarianism score (text field format)
+    if (isset($structured_data['authoritarianism_score']) && $entity->hasField('field_authoritarianism_score')) {
+      $entity->set('field_authoritarianism_score', (string) $structured_data['authoritarianism_score']);
+    }
   }
 
   /**
@@ -461,6 +466,11 @@ class DataProcessingService {
       $html .= "Sentiment Score: {$structured_data['sentiment_score']}/100<br>";
     }
 
+    if (isset($structured_data['authoritarianism_score'])) {
+      $authoritarianism_label = $this->getAuthoritarianismLabel($structured_data['authoritarianism_score']);
+      $html .= "Authoritarianism Risk: {$structured_data['authoritarianism_score']}/100 ({$authoritarianism_label})<br>";
+    }
+
     $html .= '</p>';
 
     // Bias analysis
@@ -550,6 +560,33 @@ class DataProcessingService {
     }
     else {
       return 'Extreme Right';
+    }
+  }
+
+  /**
+   * Get authoritarianism label from numeric score.
+   *
+   * @param int $authoritarianism_score
+   *   The authoritarianism score.
+   *
+   * @return string
+   *   The authoritarianism label.
+   */
+  protected function getAuthoritarianismLabel($authoritarianism_score) {
+    if ($authoritarianism_score <= 20) {
+      return 'Strongly Democratic';
+    }
+    elseif ($authoritarianism_score <= 40) {
+      return 'Generally Democratic';
+    }
+    elseif ($authoritarianism_score <= 60) {
+      return 'Mixed/Neutral';
+    }
+    elseif ($authoritarianism_score <= 80) {
+      return 'Authoritarian Tendencies';
+    }
+    else {
+      return 'Totalitarian Risk';
     }
   }
 
