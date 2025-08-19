@@ -3,3 +3,8 @@ services:
     class: \Drupal\news_extractor\Commands\NewsExtractorCommands
     tags:
       - { name: drush.command }
+
+  news_extractor.commands.update_missing_fields:
+    class: \Drupal\news_extractor\Commands\UpdateMissingFieldsCommands
+    tags:
+      - { name: drush.command }
