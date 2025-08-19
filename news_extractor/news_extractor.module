@@ -780,25 +780,56 @@ function _news_extractor_check_stuck_feeds() {
     $current_time = \Drupal::time()->getRequestTime();
     $stuck_threshold = 30 * 60; // 30 minutes in seconds
     
-    // Query the feeds_feed table for locked feeds
+    // First, let's check what columns exist in the feeds_feed table
     $database = \Drupal::database();
+    $schema = $database->schema();
+    
+    if (!$schema->tableExists('feeds_feed')) {
+      \Drupal::logger('news_extractor')->info('feeds_feed table does not exist, skipping stuck feed check');
+      return $stuck_feeds;
+    }
+    
+    // Get table structure to understand available columns
+    $table_info = $schema->getFieldNames('feeds_feed');
+    \Drupal::logger('news_extractor')->info('feeds_feed table columns: @columns', [
+      '@columns' => implode(', ', $table_info),
+    ]);
+    
+    // Check if we have a lock-related column
+    $lock_column = null;
+    if (in_array('locked', $table_info)) {
+      $lock_column = 'locked';
+    } elseif (in_array('lock', $table_info)) {
+      $lock_column = 'lock';
+    } elseif (in_array('importing', $table_info)) {
+      $lock_column = 'importing';
+    }
+    
+    if (!$lock_column) {
+      \Drupal::logger('news_extractor')->info('No lock column found in feeds_feed table, skipping stuck feed check');
+      return $stuck_feeds;
+    }
+    
+    // Query the feeds_feed table for locked feeds using the correct column
     $query = $database->select('feeds_feed', 'f')
-      ->fields('f', ['fid', 'title', 'locked'])
-      ->condition('f.locked', 0, '>'); // locked > 0 means feed is locked
+      ->fields('f', ['fid', 'title', $lock_column])
+      ->condition('f.' . $lock_column, 0, '>'); // locked > 0 means feed is locked
     
     $result = $query->execute();
     
     foreach ($result as $feed_data) {
-      $lock_duration = $current_time - $feed_data->locked;
+      $lock_timestamp = $feed_data->{$lock_column};
+      $lock_duration = $current_time - $lock_timestamp;
       
       // Consider feed stuck if locked for more than threshold
       if ($lock_duration > $stuck_threshold) {
         $stuck_feeds[] = [
           'fid' => $feed_data->fid,
           'title' => $feed_data->title,
-          'locked_timestamp' => $feed_data->locked,
+          'locked_timestamp' => $lock_timestamp,
           'lock_duration_seconds' => $lock_duration,
           'lock_duration_minutes' => round($lock_duration / 60, 1),
+          'lock_column' => $lock_column,
         ];
       }
     }
@@ -836,17 +867,21 @@ function _news_extractor_unlock_stuck_feed($feed_info) {
   try {
     $database = \Drupal::database();
     
-    // Reset the locked timestamp to 0 (unlocked)
+    // Use the lock column determined during stuck feed detection
+    $lock_column = isset($feed_info['lock_column']) ? $feed_info['lock_column'] : 'locked';
+    
+    // Reset the lock timestamp to 0 (unlocked)
     $result = $database->update('feeds_feed')
-      ->fields(['locked' => 0])
+      ->fields([$lock_column => 0])
       ->condition('fid', $feed_info['fid'])
       ->execute();
     
     if ($result) {
-      \Drupal::logger('news_extractor')->info('Successfully unlocked stuck feed: @title (FID: @fid, was locked for @duration minutes)', [
+      \Drupal::logger('news_extractor')->info('Successfully unlocked stuck feed: @title (FID: @fid, was locked for @duration minutes, column: @column)', [
         '@title' => $feed_info['title'],
         '@fid' => $feed_info['fid'],
         '@duration' => $feed_info['lock_duration_minutes'],
+        '@column' => $lock_column,
       ]);
       
       // Optional: Trigger feed import after unlocking
