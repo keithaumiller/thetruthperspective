@@ -29,3 +29,9 @@ services:
       - '@news_extractor.ai_processing' 
       - '@news_extractor.data_processing'
       - '@logger.factory'
+
+  # Drush commands for updating missing fields
+  news_extractor.commands.update_missing_fields:
+    class: Drupal\news_extractor\Commands\UpdateMissingFieldsCommands
+    tags:
+      - { name: drush.command }
