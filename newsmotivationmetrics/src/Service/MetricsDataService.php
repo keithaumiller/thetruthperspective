@@ -548,6 +548,10 @@ class MetricsDataService implements MetricsDataServiceInterface {
       $query->leftJoin('node__field_article_sentiment_score', 'sent', 'sent.entity_id = n.nid');
       $query->addField('sent', 'field_article_sentiment_score_value', 'sentiment_score');
       
+      // Join with authoritarianism field
+      $query->leftJoin('node__field_authoritarianism_score', 'auth', 'auth.entity_id = n.nid');
+      $query->addField('auth', 'field_authoritarianism_score_value', 'authoritarianism_score');
+      
       $query->condition('n.type', 'article')
         ->condition('n.status', 1)
         ->condition('n.created', $start_date->getTimestamp(), '>=')
@@ -587,6 +591,7 @@ class MetricsDataService implements MetricsDataServiceInterface {
             'bias_total' => 0,
             'credibility_total' => 0,
             'sentiment_total' => 0,
+            'authoritarianism_total' => 0,
             'count' => 0,
           ];
         }
@@ -594,6 +599,7 @@ class MetricsDataService implements MetricsDataServiceInterface {
         $source_data[$source_name][$date]['bias_total'] += (float) ($row->bias_rating ?? 0);
         $source_data[$source_name][$date]['credibility_total'] += (float) ($row->credibility_score ?? 0);
         $source_data[$source_name][$date]['sentiment_total'] += (float) ($row->sentiment_score ?? 0);
+        $source_data[$source_name][$date]['authoritarianism_total'] += (float) ($row->authoritarianism_score ?? 0);
         $source_data[$source_name][$date]['count']++;
       }
       
@@ -655,7 +661,23 @@ class MetricsDataService implements MetricsDataServiceInterface {
           }
         }
         
-        // Add source datasets (3 lines per source: bias, credibility, sentiment)
+        // Create authoritarianism score timeline
+        $authoritarianism_data = [];
+        foreach ($date_range as $date) {
+          if (isset($dates[$date]) && $dates[$date]['count'] > 0) {
+            $authoritarianism_data[] = [
+              'date' => $date,
+              'value' => round($dates[$date]['authoritarianism_total'] / $dates[$date]['count'], 2),
+            ];
+          } else {
+            $authoritarianism_data[] = [
+              'date' => $date,
+              'value' => 0,
+            ];
+          }
+        }
+        
+        // Add source datasets (4 lines per source: bias, credibility, sentiment, authoritarianism)
         $timeline_data[] = [
           'source_name' => $source_name . ' - Bias Rating',
           'source_id' => $source_name,
@@ -676,10 +698,17 @@ class MetricsDataService implements MetricsDataServiceInterface {
           'metric_type' => 'sentiment',
           'data' => $sentiment_data,
         ];
+        
+        $timeline_data[] = [
+          'source_name' => $source_name . ' - Authoritarianism Score',
+          'source_id' => $source_name,
+          'metric_type' => 'authoritarianism',
+          'data' => $authoritarianism_data,
+        ];
       }
       
-      // Limit to requested number of sources (multiply by 3 for 3 metrics per source)
-      $max_datasets = $options['limit'] * 3;
+      // Limit to requested number of sources (multiply by 4 for 4 metrics per source)
+      $max_datasets = $options['limit'] * 4;
       if (count($timeline_data) > $max_datasets) {
         $timeline_data = array_slice($timeline_data, 0, $max_datasets);
       }

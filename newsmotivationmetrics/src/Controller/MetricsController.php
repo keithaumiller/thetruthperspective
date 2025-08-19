@@ -12,6 +12,7 @@ use Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface;
 use Drupal\newsmotivationmetrics\Service\BiasTimelineChartService;
 use Drupal\newsmotivationmetrics\Service\CredibilityTimelineChartService;
 use Drupal\newsmotivationmetrics\Service\SentimentTimelineChartService;
+use Drupal\newsmotivationmetrics\Service\AuthoritarianismTimelineChartService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -66,6 +67,13 @@ class MetricsController extends ControllerBase {
   protected $sentimentTimelineChartService;
 
   /**
+   * The authoritarianism timeline chart service.
+   *
+   * @var \Drupal\newsmotivationmetrics\Service\AuthoritarianismTimelineChartService
+   */
+  protected $authoritarianismTimelineChartService;
+
+  /**
    * Constructor.
    *
    * @param \Drupal\newsmotivationmetrics\Service\Interface\DashboardBuilderServiceInterface $dashboard_builder
@@ -80,6 +88,8 @@ class MetricsController extends ControllerBase {
    *   The credibility timeline chart service.
    * @param \Drupal\newsmotivationmetrics\Service\SentimentTimelineChartService $sentiment_timeline_chart_service
    *   The sentiment timeline chart service.
+   * @param \Drupal\newsmotivationmetrics\Service\AuthoritarianismTimelineChartService $authoritarianism_timeline_chart_service
+   *   The authoritarianism timeline chart service.
    */
   public function __construct(
     DashboardBuilderServiceInterface $dashboard_builder,
@@ -87,7 +97,8 @@ class MetricsController extends ControllerBase {
     MetricsDataServiceInterface $metrics_data_service,
     BiasTimelineChartService $bias_timeline_chart_service,
     CredibilityTimelineChartService $credibility_timeline_chart_service,
-    SentimentTimelineChartService $sentiment_timeline_chart_service
+    SentimentTimelineChartService $sentiment_timeline_chart_service,
+    AuthoritarianismTimelineChartService $authoritarianism_timeline_chart_service
   ) {
     $this->dashboardBuilder = $dashboard_builder;
     $this->chartDataService = $chart_data_service;
@@ -95,6 +106,7 @@ class MetricsController extends ControllerBase {
     $this->biasTimelineChartService = $bias_timeline_chart_service;
     $this->credibilityTimelineChartService = $credibility_timeline_chart_service;
     $this->sentimentTimelineChartService = $sentiment_timeline_chart_service;
+    $this->authoritarianismTimelineChartService = $authoritarianism_timeline_chart_service;
   }
 
   /**
@@ -107,7 +119,8 @@ class MetricsController extends ControllerBase {
       $container->get('newsmotivationmetrics.metrics_data_service'),
       $container->get('newsmotivationmetrics.bias_timeline_chart_service'),
       $container->get('newsmotivationmetrics.credibility_timeline_chart_service'),
-      $container->get('newsmotivationmetrics.sentiment_timeline_chart_service')
+      $container->get('newsmotivationmetrics.sentiment_timeline_chart_service'),
+      $container->get('newsmotivationmetrics.authoritarianism_timeline_chart_service')
     );
   }
 
@@ -286,6 +299,28 @@ class MetricsController extends ControllerBase {
       'container_classes' => ['timeline-chart-container'],
       'library' => 'newsmotivationmetrics/sentiment-timeline',
       'js_behavior' => 'sentimentTimelineChart',
+    ]);
+  }
+
+  /**
+   * Display the authoritarianism timeline chart page.
+   * 
+   * @return array
+   *   Drupal render array for authoritarianism timeline chart page.
+   */
+  public function authoritarianismChart() {
+    return $this->authoritarianismTimelineChartService->buildAuthoritarianismTimelineChart([
+      'canvas_id' => 'authoritarianism-timeline-chart',
+      'title' => 'News Source Authoritarianism Trends Over Time',
+      'show_controls' => TRUE,
+      'show_legend' => TRUE,
+      'show_title' => TRUE,
+      'chart_height' => 400,
+      'days_back' => 90,
+      'source_limit' => 5,
+      'container_classes' => ['timeline-chart-container'],
+      'library' => 'newsmotivationmetrics/authoritarianism-timeline',
+      'js_behavior' => 'authoritarianismTimelineChart',
     ]);
   }
 

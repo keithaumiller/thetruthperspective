@@ -40,6 +40,14 @@ newsmotivationmetrics.sentiment_chart:
   requirements:
     _access: 'TRUE'
 
+newsmotivationmetrics.authoritarianism_chart:
+  path: '/metrics/authoritarianism'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::authoritarianismChart'
+    _title: 'News Source Authoritarianism Trends'
+  requirements:
+    _access: 'TRUE'
+
 newsmotivationmetrics.admin_dashboard:
   path: '/admin/reports/news-motivation-metrics'
   defaults:

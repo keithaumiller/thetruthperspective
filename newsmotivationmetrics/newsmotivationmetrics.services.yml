@@ -39,6 +39,10 @@ services:
     class: Drupal\newsmotivationmetrics\Service\SentimentTimelineChartService
     arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
 
+  newsmotivationmetrics.authoritarianism_timeline_chart_service:
+    class: Drupal\newsmotivationmetrics\Service\AuthoritarianismTimelineChartService
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
+
   newsmotivationmetrics.news_sources_commands:
     class: Drupal\newsmotivationmetrics\Commands\NewsSourcesCommands
     arguments: ['@database']
