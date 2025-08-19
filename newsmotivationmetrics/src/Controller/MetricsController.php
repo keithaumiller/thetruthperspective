@@ -9,6 +9,9 @@ use Drupal\taxonomy\Entity\Term;
 use Drupal\newsmotivationmetrics\Service\Interface\DashboardBuilderServiceInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\ChartDataServiceInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface;
+use Drupal\newsmotivationmetrics\Service\BiasTimelineChartService;
+use Drupal\newsmotivationmetrics\Service\CredibilityTimelineChartService;
+use Drupal\newsmotivationmetrics\Service\SentimentTimelineChartService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -42,6 +45,27 @@ class MetricsController extends ControllerBase {
   protected $metricsDataService;
 
   /**
+   * The bias timeline chart service.
+   *
+   * @var \Drupal\newsmotivationmetrics\Service\BiasTimelineChartService
+   */
+  protected $biasTimelineChartService;
+
+  /**
+   * The credibility timeline chart service.
+   *
+   * @var \Drupal\newsmotivationmetrics\Service\CredibilityTimelineChartService
+   */
+  protected $credibilityTimelineChartService;
+
+  /**
+   * The sentiment timeline chart service.
+   *
+   * @var \Drupal\newsmotivationmetrics\Service\SentimentTimelineChartService
+   */
+  protected $sentimentTimelineChartService;
+
+  /**
    * Constructor.
    *
    * @param \Drupal\newsmotivationmetrics\Service\Interface\DashboardBuilderServiceInterface $dashboard_builder
@@ -50,15 +74,27 @@ class MetricsController extends ControllerBase {
    *   The chart data service.
    * @param \Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface $metrics_data_service
    *   The metrics data service.
+   * @param \Drupal\newsmotivationmetrics\Service\BiasTimelineChartService $bias_timeline_chart_service
+   *   The bias timeline chart service.
+   * @param \Drupal\newsmotivationmetrics\Service\CredibilityTimelineChartService $credibility_timeline_chart_service
+   *   The credibility timeline chart service.
+   * @param \Drupal\newsmotivationmetrics\Service\SentimentTimelineChartService $sentiment_timeline_chart_service
+   *   The sentiment timeline chart service.
    */
   public function __construct(
     DashboardBuilderServiceInterface $dashboard_builder,
     ChartDataServiceInterface $chart_data_service,
-    MetricsDataServiceInterface $metrics_data_service
+    MetricsDataServiceInterface $metrics_data_service,
+    BiasTimelineChartService $bias_timeline_chart_service,
+    CredibilityTimelineChartService $credibility_timeline_chart_service,
+    SentimentTimelineChartService $sentiment_timeline_chart_service
   ) {
     $this->dashboardBuilder = $dashboard_builder;
     $this->chartDataService = $chart_data_service;
     $this->metricsDataService = $metrics_data_service;
+    $this->biasTimelineChartService = $bias_timeline_chart_service;
+    $this->credibilityTimelineChartService = $credibility_timeline_chart_service;
+    $this->sentimentTimelineChartService = $sentiment_timeline_chart_service;
   }
 
   /**
@@ -68,7 +104,10 @@ class MetricsController extends ControllerBase {
     return new static(
       $container->get('newsmotivationmetrics.dashboard_builder'),
       $container->get('newsmotivationmetrics.chart_data_service'),
-      $container->get('newsmotivationmetrics.metrics_data_service')
+      $container->get('newsmotivationmetrics.metrics_data_service'),
+      $container->get('newsmotivationmetrics.bias_timeline_chart_service'),
+      $container->get('newsmotivationmetrics.credibility_timeline_chart_service'),
+      $container->get('newsmotivationmetrics.sentiment_timeline_chart_service')
     );
   }
 
@@ -182,6 +221,72 @@ class MetricsController extends ControllerBase {
     ];
     
     return $build;
+  }
+
+  /**
+   * Display the bias timeline chart page.
+   * 
+   * @return array
+   *   Drupal render array for bias timeline chart page.
+   */
+  public function biasChart() {
+    return $this->biasTimelineChartService->buildBiasTimelineChart([
+      'canvas_id' => 'bias-timeline-chart',
+      'title' => 'News Source Bias Trends Over Time',
+      'show_controls' => TRUE,
+      'show_legend' => TRUE,
+      'show_title' => TRUE,
+      'chart_height' => 400,
+      'days_back' => 90,
+      'source_limit' => 5,
+      'container_classes' => ['timeline-chart-container'],
+      'library' => 'newsmotivationmetrics/bias-timeline',
+      'js_behavior' => 'biasTimelineChart',
+    ]);
+  }
+
+  /**
+   * Display the credibility timeline chart page.
+   * 
+   * @return array
+   *   Drupal render array for credibility timeline chart page.
+   */
+  public function credibilityChart() {
+    return $this->credibilityTimelineChartService->buildCredibilityTimelineChart([
+      'canvas_id' => 'credibility-timeline-chart',
+      'title' => 'News Source Credibility Trends Over Time',
+      'show_controls' => TRUE,
+      'show_legend' => TRUE,
+      'show_title' => TRUE,
+      'chart_height' => 400,
+      'days_back' => 90,
+      'source_limit' => 5,
+      'container_classes' => ['timeline-chart-container'],
+      'library' => 'newsmotivationmetrics/credibility-timeline',
+      'js_behavior' => 'credibilityTimelineChart',
+    ]);
+  }
+
+  /**
+   * Display the sentiment timeline chart page.
+   * 
+   * @return array
+   *   Drupal render array for sentiment timeline chart page.
+   */
+  public function sentimentChart() {
+    return $this->sentimentTimelineChartService->buildSentimentTimelineChart([
+      'canvas_id' => 'sentiment-timeline-chart',
+      'title' => 'News Source Sentiment Trends Over Time',
+      'show_controls' => TRUE,
+      'show_legend' => TRUE,
+      'show_title' => TRUE,
+      'chart_height' => 400,
+      'days_back' => 90,
+      'source_limit' => 5,
+      'container_classes' => ['timeline-chart-container'],
+      'library' => 'newsmotivationmetrics/sentiment-timeline',
+      'js_behavior' => 'sentimentTimelineChart',
+    ]);
   }
 
 }

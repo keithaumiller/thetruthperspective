@@ -16,6 +16,30 @@ newsmotivationmetrics.tag_details:
     _access: 'TRUE'
     tid: \d+
 
+newsmotivationmetrics.bias_chart:
+  path: '/metrics/bias'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::biasChart'
+    _title: 'News Source Bias Trends'
+  requirements:
+    _access: 'TRUE'
+
+newsmotivationmetrics.credibility_chart:
+  path: '/metrics/credibility'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::credibilityChart'
+    _title: 'News Source Credibility Trends'
+  requirements:
+    _access: 'TRUE'
+
+newsmotivationmetrics.sentiment_chart:
+  path: '/metrics/sentiment'
+  defaults:
+    _controller: '\Drupal\newsmotivationmetrics\Controller\MetricsController::sentimentChart'
+    _title: 'News Source Sentiment Trends'
+  requirements:
+    _access: 'TRUE'
+
 newsmotivationmetrics.admin_dashboard:
   path: '/admin/reports/news-motivation-metrics'
   defaults:

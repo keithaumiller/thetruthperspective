@@ -27,6 +27,18 @@ services:
     class: Drupal\newsmotivationmetrics\Service\ActivityTimelineChartService
     arguments: ['@newsmotivationmetrics.metrics_data_service', '@logger.factory']
 
+  newsmotivationmetrics.bias_timeline_chart_service:
+    class: Drupal\newsmotivationmetrics\Service\BiasTimelineChartService
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
+
+  newsmotivationmetrics.credibility_timeline_chart_service:
+    class: Drupal\newsmotivationmetrics\Service\CredibilityTimelineChartService
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
+
+  newsmotivationmetrics.sentiment_timeline_chart_service:
+    class: Drupal\newsmotivationmetrics\Service\SentimentTimelineChartService
+    arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
+
   newsmotivationmetrics.news_sources_commands:
     class: Drupal\newsmotivationmetrics\Commands\NewsSourcesCommands
     arguments: ['@database']

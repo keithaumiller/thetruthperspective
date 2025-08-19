@@ -185,3 +185,48 @@ activity-timeline-chart:
     - core/jquery
     - core/once
     - core/drupalSettings
+
+bias-timeline:
+  version: 1.x
+  css:
+    theme:
+      css/chart-styles.css: {}
+  js:
+    js/chart.umd.js: { weight: -10 }
+    js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
+    js/bias-timeline-chart.js: { weight: -8 }
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/once
+    - core/drupalSettings
+
+credibility-timeline:
+  version: 1.x
+  css:
+    theme:
+      css/chart-styles.css: {}
+  js:
+    js/chart.umd.js: { weight: -10 }
+    js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
+    js/credibility-timeline-chart.js: { weight: -8 }
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/once
+    - core/drupalSettings
+
+sentiment-timeline:
+  version: 1.x
+  css:
+    theme:
+      css/chart-styles.css: {}
+  js:
+    js/chart.umd.js: { weight: -10 }
+    js/chartjs-adapter-date-fns.bundle.min.js: { weight: -9 }
+    js/sentiment-timeline-chart.js: { weight: -8 }
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/once
+    - core/drupalSettings
