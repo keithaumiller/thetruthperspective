@@ -258,4 +258,251 @@ class UpdateMissingFieldsCommands extends DrushCommands {
     $this->output()->writeln("   Failed: {$failed}");
   }
 
+  /**
+   * Automated cron cleanup for missing assessment fields.
+   *
+   * @param array $options
+   *   Command options.
+   *
+   * @command news-extractor:cron-cleanup-assessments
+   * @aliases ne:cron-assess
+   * @option limit Number of articles to process per cron run (default: 20)
+   * @option max-age Maximum age in days for articles to reprocess (default: 30)
+   * @usage news-extractor:cron-cleanup-assessments
+   *   Process 20 articles missing assessment fields
+   * @usage news-extractor:cron-cleanup-assessments --limit=50
+   *   Process 50 articles missing assessment fields
+   * @usage news-extractor:cron-cleanup-assessments --max-age=7
+   *   Only process articles from last 7 days
+   */
+  public function cronCleanupAssessments(array $options = ['limit' => 20, 'max-age' => 30]) {
+    $limit = $options['limit'];
+    $max_age = $options['max-age'];
+    
+    $this->output()->writeln("🔄 [CRON] Automated cleanup: Finding articles missing assessment fields...");
+    
+    // Calculate cutoff date for max-age
+    $cutoff_timestamp = time() - ($max_age * 24 * 60 * 60);
+    
+    // Query for articles missing any assessment field
+    $query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('status', 1) // Only published articles
+      ->condition('created', $cutoff_timestamp, '>')
+      ->accessCheck(FALSE)
+      ->range(0, $limit)
+      ->sort('created', 'DESC');
+    
+    // Create OR condition group for missing any assessment field
+    $missing_fields_group = \Drupal::entityQuery('node')->orConditionGroup();
+    
+    // Add conditions for each assessment field being missing
+    $auth_missing = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_authoritarianism_score', NULL, 'IS NULL')
+      ->condition('field_authoritarianism_score', '', '=');
+    
+    $cred_missing = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_credibility_score', NULL, 'IS NULL')
+      ->condition('field_credibility_score', '', '=');
+    
+    $bias_missing = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_bias_rating', NULL, 'IS NULL')
+      ->condition('field_bias_rating', '', '=');
+    
+    $sentiment_missing = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_article_sentiment_score', NULL, 'IS NULL')
+      ->condition('field_article_sentiment_score', '', '=');
+    
+    $missing_fields_group
+      ->condition($auth_missing)
+      ->condition($cred_missing)
+      ->condition($bias_missing)
+      ->condition($sentiment_missing);
+    
+    $query->condition($missing_fields_group);
+    
+    $nids = $query->execute();
+    
+    if (empty($nids)) {
+      $this->output()->writeln("✅ [CRON] No articles found missing assessment fields (last {$max_age} days).");
+      return;
+    }
+    
+    $total_count = count($nids);
+    $this->output()->writeln("📊 [CRON] Found {$total_count} articles missing assessment fields...");
+    
+    /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
+    $extraction_service = \Drupal::service('news_extractor.extraction');
+    
+    $processed = 0;
+    $updated = 0;
+    $failed = 0;
+    $skipped = 0;
+    
+    foreach ($nids as $nid) {
+      $node = Node::load($nid);
+      if (!$node) {
+        continue;
+      }
+      
+      $processed++;
+      $this->output()->writeln("[{$processed}/{$total_count}] [CRON] Processing: " . $node->getTitle() . " (ID: {$nid})");
+      
+      // Check which fields are missing
+      $missing_fields = [];
+      if ($node->hasField('field_authoritarianism_score') && $node->get('field_authoritarianism_score')->isEmpty()) {
+        $missing_fields[] = 'authoritarianism';
+      }
+      if ($node->hasField('field_credibility_score') && $node->get('field_credibility_score')->isEmpty()) {
+        $missing_fields[] = 'credibility';
+      }
+      if ($node->hasField('field_bias_rating') && $node->get('field_bias_rating')->isEmpty()) {
+        $missing_fields[] = 'bias';
+      }
+      if ($node->hasField('field_article_sentiment_score') && $node->get('field_article_sentiment_score')->isEmpty()) {
+        $missing_fields[] = 'sentiment';
+      }
+      
+      if (empty($missing_fields)) {
+        $skipped++;
+        $this->output()->writeln("  ⏭️  [CRON] All fields present, skipping");
+        continue;
+      }
+      
+      $this->output()->writeln("  🔧 [CRON] Missing: " . implode(', ', $missing_fields));
+      
+      try {
+        // Full reprocessing with AI call to get all assessment fields
+        if (!$node->hasField('field_original_url') || $node->get('field_original_url')->isEmpty()) {
+          throw new \Exception("No URL available for reprocessing");
+        }
+        
+        $url = $node->get('field_original_url')->uri;
+        $result = $extraction_service->processArticle($node, $url);
+        
+        if ($result) {
+          $updated++;
+          $this->output()->writeln("  ✅ [CRON] Successfully reprocessed with new AI analysis");
+        } else {
+          $failed++;
+          $this->output()->writeln("  ❌ [CRON] Failed to reprocess");
+        }
+      } catch (\Exception $e) {
+        $failed++;
+        $this->output()->writeln("  ❌ [CRON] Error: " . $e->getMessage());
+        \Drupal::logger('news_extractor')->error('[CRON] Failed to reprocess node @nid: @error', [
+          '@nid' => $nid,
+          '@error' => $e->getMessage(),
+        ]);
+      }
+      
+      // Rate limiting for cron jobs
+      sleep(3);
+    }
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("🎉 [CRON] Cleanup complete!");
+    $this->output()->writeln("📊 [CRON] Summary:");
+    $this->output()->writeln("   Total processed: {$processed}");
+    $this->output()->writeln("   Successfully updated: {$updated}");
+    $this->output()->writeln("   Skipped (complete): {$skipped}");
+    $this->output()->writeln("   Failed: {$failed}");
+    
+    // Log summary for monitoring
+    \Drupal::logger('news_extractor')->info('[CRON] Assessment cleanup completed: @updated updated, @failed failed, @skipped skipped from @total articles', [
+      '@updated' => $updated,
+      '@failed' => $failed,
+      '@skipped' => $skipped,
+      '@total' => $processed,
+    ]);
+  }
+
+  /**
+   * Quick assessment field status check for monitoring.
+   *
+   * @command news-extractor:assessment-status
+   * @aliases ne:assess-status
+   * @usage news-extractor:assessment-status
+   *   Check status of assessment fields across all articles
+   */
+  public function assessmentStatus() {
+    $this->output()->writeln("📊 Assessment Field Status Report");
+    $this->output()->writeln("================================");
+    
+    // Total articles
+    $total_articles = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('status', 1)
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    
+    $this->output()->writeln("📄 Total published articles: {$total_articles}");
+    $this->output()->writeln("");
+    
+    // Check each assessment field
+    $fields = [
+      'field_authoritarianism_score' => 'Authoritarianism Score',
+      'field_credibility_score' => 'Credibility Score', 
+      'field_bias_rating' => 'Bias Rating',
+      'field_article_sentiment_score' => 'Sentiment Score',
+    ];
+    
+    foreach ($fields as $field_name => $field_label) {
+      // Articles with this field populated
+      $with_field = \Drupal::entityQuery('node')
+        ->condition('type', 'article')
+        ->condition('status', 1)
+        ->condition($field_name, '', '<>')
+        ->exists($field_name)
+        ->accessCheck(FALSE)
+        ->count()
+        ->execute();
+      
+      // Articles missing this field
+      $missing_field_group = \Drupal::entityQuery('node')->orConditionGroup()
+        ->condition($field_name, NULL, 'IS NULL')
+        ->condition($field_name, '', '=');
+      
+      $missing_field = \Drupal::entityQuery('node')
+        ->condition('type', 'article')
+        ->condition('status', 1)
+        ->condition($missing_field_group)
+        ->accessCheck(FALSE)
+        ->count()
+        ->execute();
+      
+      $percentage = $total_articles > 0 ? round(($with_field / $total_articles) * 100, 1) : 0;
+      
+      $this->output()->writeln("🔍 {$field_label}:");
+      $this->output()->writeln("   ✅ Present: {$with_field} ({$percentage}%)");
+      $this->output()->writeln("   ❌ Missing: {$missing_field}");
+      $this->output()->writeln("");
+    }
+    
+    // Articles missing ANY assessment field
+    $missing_any_group = \Drupal::entityQuery('node')->orConditionGroup();
+    foreach (array_keys($fields) as $field_name) {
+      $field_missing = \Drupal::entityQuery('node')->orConditionGroup()
+        ->condition($field_name, NULL, 'IS NULL')
+        ->condition($field_name, '', '=');
+      $missing_any_group->condition($field_missing);
+    }
+    
+    $missing_any = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('status', 1)
+      ->condition($missing_any_group)
+      ->accessCheck(FALSE)
+      ->count()
+      ->execute();
+    
+    $complete = $total_articles - $missing_any;
+    $complete_percentage = $total_articles > 0 ? round(($complete / $total_articles) * 100, 1) : 0;
+    
+    $this->output()->writeln("📈 Overall Assessment Completion:");
+    $this->output()->writeln("   ✅ Complete: {$complete} ({$complete_percentage}%)");
+    $this->output()->writeln("   🔧 Need Processing: {$missing_any}");
+  }
+
 }

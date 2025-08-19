@@ -1378,4 +1378,197 @@ class NewsExtractorCommands extends DrushCommands {
     }
   }
 
+  /**
+   * Comprehensive cron maintenance including assessment field checks.
+   *
+   * @param array $options
+   *   Command options.
+   *
+   * @command news-extractor:cron-maintenance
+   * @aliases ne:cron
+   * @option limit Number of articles to process per run (default: 30)
+   * @option check-assessments Include assessment field validation (default: true)
+   * @option max-age Maximum age in days for articles to check (default: 14)
+   * @usage news-extractor:cron-maintenance
+   *   Run comprehensive maintenance including assessment checks
+   * @usage news-extractor:cron-maintenance --limit=50 --max-age=7
+   *   Check 50 articles from last 7 days
+   * @usage news-extractor:cron-maintenance --check-assessments=false
+   *   Skip assessment field validation
+   */
+  public function cronMaintenance(array $options = ['limit' => 30, 'check-assessments' => TRUE, 'max-age' => 14]) {
+    $limit = $options['limit'];
+    $check_assessments = $options['check-assessments'];
+    $max_age = $options['max-age'];
+    
+    $this->output()->writeln("🔧 [CRON] Starting comprehensive news extractor maintenance...");
+    $this->output()->writeln("📅 Processing articles from last {$max_age} days");
+    $this->output()->writeln("📊 Limit: {$limit} articles per run");
+    $this->output()->writeln("🎯 Assessment checks: " . ($check_assessments ? 'ENABLED' : 'DISABLED'));
+    $this->output()->writeln("");
+    
+    $cutoff_timestamp = time() - ($max_age * 24 * 60 * 60);
+    $total_processed = 0;
+    $total_updated = 0;
+    $total_failed = 0;
+    
+    // 1. Check for articles needing basic processing (scraping + AI)
+    $this->output()->writeln("1️⃣ [CRON] Checking for articles needing basic processing...");
+    
+    $basic_or_group = \Drupal::entityQuery('node')->orConditionGroup()
+      ->condition('field_json_scraped_article_data', NULL, 'IS NULL')
+      ->condition('field_json_scraped_article_data', '', '=')
+      ->condition('field_json_scraped_article_data', 'Scraped data unavailable.', '=')
+      ->condition('field_ai_raw_response', NULL, 'IS NULL')
+      ->condition('field_ai_raw_response', '', '=');
+    
+    $basic_query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('status', 1)
+      ->condition('field_original_url.uri', '', '<>')
+      ->condition('created', $cutoff_timestamp, '>')
+      ->condition($basic_or_group)
+      ->accessCheck(FALSE)
+      ->range(0, min($limit, 10)) // Limit basic processing to 10 per run
+      ->sort('created', 'DESC');
+    
+    $basic_nids = $basic_query->execute();
+    
+    if (!empty($basic_nids)) {
+      $this->output()->writeln("   📋 Found " . count($basic_nids) . " articles needing basic processing");
+      $total_processed += $this->processBasicArticles($basic_nids, $total_updated, $total_failed);
+    } else {
+      $this->output()->writeln("   ✅ No articles need basic processing");
+    }
+    
+    // 2. Check for assessment fields (if enabled)
+    if ($check_assessments) {
+      $remaining_limit = $limit - count($basic_nids);
+      if ($remaining_limit > 0) {
+        $this->output()->writeln("");
+        $this->output()->writeln("2️⃣ [CRON] Checking for missing assessment fields...");
+        
+        $assess_processed = $this->processAssessmentFields($remaining_limit, $max_age);
+        $total_processed += $assess_processed;
+      }
+    }
+    
+    // 3. Summary
+    $this->output()->writeln("");
+    $this->output()->writeln("🎉 [CRON] Maintenance complete!");
+    $this->output()->writeln("📊 Total articles processed: {$total_processed}");
+    
+    \Drupal::logger('news_extractor')->info('[CRON] Maintenance completed: @processed articles processed', [
+      '@processed' => $total_processed,
+    ]);
+  }
+
+  /**
+   * Process articles needing basic scraping/AI analysis.
+   */
+  private function processBasicArticles($nids, &$updated, &$failed) {
+    /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
+    $extraction_service = \Drupal::service('news_extractor.extraction');
+    
+    $processed = 0;
+    foreach ($nids as $nid) {
+      $node = \Drupal\node\Entity\Node::load($nid);
+      if (!$node) continue;
+      
+      $processed++;
+      $this->output()->writeln("   [BASIC] Processing: " . $node->getTitle() . " (ID: {$nid})");
+      
+      try {
+        $url = $node->get('field_original_url')->uri;
+        $result = $extraction_service->processArticle($node, $url);
+        
+        if ($result) {
+          $updated++;
+          $this->output()->writeln("     ✅ Success");
+        } else {
+          $failed++;
+          $this->output()->writeln("     ❌ Failed");
+        }
+      } catch (\Exception $e) {
+        $failed++;
+        $this->output()->writeln("     ❌ Error: " . $e->getMessage());
+      }
+      
+      sleep(2); // Rate limiting
+    }
+    
+    return $processed;
+  }
+
+  /**
+   * Process articles missing assessment fields.
+   */
+  private function processAssessmentFields($limit, $max_age) {
+    $cutoff_timestamp = time() - ($max_age * 24 * 60 * 60);
+    
+    // Create OR condition for missing assessment fields
+    $missing_any = \Drupal::entityQuery('node')->orConditionGroup();
+    
+    $fields = [
+      'field_authoritarianism_score',
+      'field_credibility_score', 
+      'field_bias_rating',
+      'field_article_sentiment_score'
+    ];
+    
+    foreach ($fields as $field) {
+      $field_missing = \Drupal::entityQuery('node')->orConditionGroup()
+        ->condition($field, NULL, 'IS NULL')
+        ->condition($field, '', '=');
+      $missing_any->condition($field_missing);
+    }
+    
+    $assess_query = \Drupal::entityQuery('node')
+      ->condition('type', 'article')
+      ->condition('status', 1)
+      ->condition('created', $cutoff_timestamp, '>')
+      ->condition($missing_any)
+      ->accessCheck(FALSE)
+      ->range(0, $limit)
+      ->sort('created', 'DESC');
+    
+    $assess_nids = $assess_query->execute();
+    
+    if (empty($assess_nids)) {
+      $this->output()->writeln("   ✅ No articles missing assessment fields");
+      return 0;
+    }
+    
+    $this->output()->writeln("   📋 Found " . count($assess_nids) . " articles missing assessment fields");
+    
+    /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
+    $extraction_service = \Drupal::service('news_extractor.extraction');
+    
+    $processed = 0;
+    foreach ($assess_nids as $nid) {
+      $node = \Drupal\node\Entity\Node::load($nid);
+      if (!$node) continue;
+      
+      $processed++;
+      $this->output()->writeln("   [ASSESS] Reprocessing: " . $node->getTitle() . " (ID: {$nid})");
+      
+      try {
+        $url = $node->get('field_original_url')->uri;
+        $result = $extraction_service->processArticle($node, $url);
+        
+        if ($result) {
+          $this->output()->writeln("     ✅ Assessment fields updated");
+        } else {
+          $this->output()->writeln("     ❌ Failed to update");
+        }
+      } catch (\Exception $e) {
+        $this->output()->writeln("     ❌ Error: " . $e->getMessage());
+      }
+      
+      sleep(3); // Longer delay for assessment reprocessing
+    }
+    
+    return $processed;
+  }
+
 }
