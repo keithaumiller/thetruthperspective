@@ -331,7 +331,8 @@ function _news_extractor_has_invalid_title($title) {
  * Automated reprocessing of failed articles and feed maintenance:
  * 1. Check published articles for post-processor conditions
  * 2. Find unpublished articles with processing failures and reprocess them
- * 3. Detect and unlock stuck feed imports (locked > 30 minutes)
+ * 3. Check for articles missing assessment fields and reprocess them
+ * 4. Detect and unlock stuck feed imports (locked > 30 minutes)
  */
 function news_extractor_cron() {
   $logger = \Drupal::logger('news_extractor');
@@ -347,6 +348,8 @@ function news_extractor_cron() {
     'unpublished_found' => 0,
     'reprocessed_successfully' => 0,
     'reprocessing_failed' => 0,
+    'assessment_missing' => 0,
+    'assessment_reprocessed' => 0,
   ];
 
   // STEP 1: Check published articles for post-processor conditions
@@ -471,8 +474,102 @@ function news_extractor_cron() {
     }
   }
 
-  // STEP 3: Check for stuck feed imports and unlock them
-  $logger->info('Step 3: Checking for stuck feed imports');
+  // STEP 3: Check for articles missing assessment fields (published, recent articles only)
+  $logger->info('Step 3: Checking for articles missing assessment fields (last 14 days)');
+  
+  $fourteen_days_ago = \Drupal::time()->getRequestTime() - (14 * 24 * 60 * 60);
+  
+  // Create OR condition for missing any assessment field
+  $missing_assessment_group = \Drupal::entityQuery('node')->orConditionGroup();
+  
+  // Check for missing authoritarianism score
+  $auth_missing = \Drupal::entityQuery('node')->orConditionGroup()
+    ->condition('field_authoritarianism_score', NULL, 'IS NULL')
+    ->condition('field_authoritarianism_score', '', '=');
+  $missing_assessment_group->condition($auth_missing);
+  
+  // Check for missing credibility score
+  $cred_missing = \Drupal::entityQuery('node')->orConditionGroup()
+    ->condition('field_credibility_score', NULL, 'IS NULL')
+    ->condition('field_credibility_score', '', '=');
+  $missing_assessment_group->condition($cred_missing);
+  
+  // Check for missing bias rating
+  $bias_missing = \Drupal::entityQuery('node')->orConditionGroup()
+    ->condition('field_bias_rating', NULL, 'IS NULL')
+    ->condition('field_bias_rating', '', '=');
+  $missing_assessment_group->condition($bias_missing);
+  
+  // Check for missing sentiment score
+  $sentiment_missing = \Drupal::entityQuery('node')->orConditionGroup()
+    ->condition('field_article_sentiment_score', NULL, 'IS NULL')
+    ->condition('field_article_sentiment_score', '', '=');
+  $missing_assessment_group->condition($sentiment_missing);
+  
+  $assessment_query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->condition('status', 1) // Only published articles
+    ->condition('created', $fourteen_days_ago, '>') // Only recent articles
+    ->condition('field_original_url.uri', '', '<>') // Must have URL for reprocessing
+    ->condition($missing_assessment_group)
+    ->accessCheck(FALSE)
+    ->range(0, 15); // Limit to 15 per cron run
+  
+  $assessment_nids = $assessment_query->execute();
+  $stats['assessment_missing'] = count($assessment_nids);
+  
+  $logger->info('Found @count published articles missing assessment fields', ['@count' => $stats['assessment_missing']]);
+  
+  // Reprocess articles missing assessment fields
+  $assessment_nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($assessment_nids);
+  
+  foreach ($assessment_nodes as $node) {
+    try {
+      $missing_fields = [];
+      if ($node->hasField('field_authoritarianism_score') && $node->get('field_authoritarianism_score')->isEmpty()) {
+        $missing_fields[] = 'authoritarianism';
+      }
+      if ($node->hasField('field_credibility_score') && $node->get('field_credibility_score')->isEmpty()) {
+        $missing_fields[] = 'credibility';
+      }
+      if ($node->hasField('field_bias_rating') && $node->get('field_bias_rating')->isEmpty()) {
+        $missing_fields[] = 'bias';
+      }
+      if ($node->hasField('field_article_sentiment_score') && $node->get('field_article_sentiment_score')->isEmpty()) {
+        $missing_fields[] = 'sentiment';
+      }
+      
+      if (empty($missing_fields)) {
+        continue; // Skip if no missing fields
+      }
+      
+      $url = $node->get('field_original_url')->uri;
+      $logger->info('Reprocessing article @nid for missing assessment fields (@fields): @title', [
+        '@nid' => $node->id(),
+        '@fields' => implode(', ', $missing_fields),
+        '@title' => $node->getTitle(),
+      ]);
+      
+      // Run through complete processing pipeline to get all assessment fields
+      $success = $extraction_service->processArticle($node, $url);
+      
+      if ($success) {
+        $stats['assessment_reprocessed']++;
+        $logger->info('Successfully reprocessed assessment fields for article @nid', ['@nid' => $node->id()]);
+      } else {
+        $logger->warning('Failed to reprocess assessment fields for article @nid', ['@nid' => $node->id()]);
+      }
+      
+    } catch (\Exception $e) {
+      $logger->error('Error reprocessing assessment fields for article @nid: @error', [
+        '@nid' => $node->id(),
+        '@error' => $e->getMessage(),
+      ]);
+    }
+  }
+
+  // STEP 4: Check for stuck feed imports and unlock them
+  $logger->info('Step 4: Checking for stuck feed imports');
   
   $stuck_feeds = _news_extractor_check_stuck_feeds();
   $stats['stuck_feeds_found'] = count($stuck_feeds);
@@ -501,12 +598,14 @@ function news_extractor_cron() {
   ]);
 
   // Also log human-readable summary
-  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds', [
+  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @assessment_missing articles missing assessment fields, reprocessed @assessment_reprocessed assessment fields, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds', [
     '@checked' => $stats['published_checked'],
     '@unpublished' => $stats['articles_unpublished'],
     '@found' => $stats['unpublished_found'],
     '@success' => $stats['reprocessed_successfully'],
     '@failed' => $stats['reprocessing_failed'],
+    '@assessment_missing' => $stats['assessment_missing'],
+    '@assessment_reprocessed' => $stats['assessment_reprocessed'],
     '@stuck_found' => $stats['stuck_feeds_found'],
     '@stuck_unlocked' => $stats['stuck_feeds_unlocked'],
   ]);
