@@ -45,9 +45,16 @@ The News Motivation Metrics module provides a comprehensive public analytics das
 Successfully separated the combined News Source Quality Trends chart into three individual timeline charts following exact design patterns:
 
 #### New Individual Chart Services
-- **BiasTimelineChartService**: Dedicated bias trend analysis at `/metrics/bias`
-- **CredibilityTimelineChartService**: Dedicated credibility trend analysis at `/metrics/credibility`  
-- **SentimentTimelineChartService**: Dedicated sentiment trend analysis at `/metrics/sentiment`
+- **BiasTimelineChartService**: Dedicated bias trend analysis at `/metrics/bias` ⚠️ **NEEDS IMPLEMENTATION**
+- **CredibilityTimelineChartService**: Dedicated credibility trend analysis at `/metrics/credibility` ⚠️ **NEEDS IMPLEMENTATION**
+- **SentimentTimelineChartService**: Dedicated sentiment trend analysis at `/metrics/sentiment` ⚠️ **NEEDS IMPLEMENTATION**
+
+#### Current Implementation Status
+- **Routes Configured**: Individual routes exist for each assessment metric
+- **JavaScript Ready**: Chart behaviors implemented and properly isolated
+- **Service Classes Missing**: Backend service implementations needed to provide data
+- **Error State**: Charts currently show "No [assessment] timeline data available" errors
+- **Template Ready**: Twig templates configured for all three chart types
 
 #### Technical Implementation
 - **Design Pattern Consistency**: All three charts follow identical architecture to original combined chart
@@ -297,6 +304,25 @@ The module uses Drupal's `hook_preprocess_page()` to move content from the stand
 ## Troubleshooting
 
 ### Common Issues
+
+#### Individual Assessment Charts Showing "No Data Available" Errors
+**Symptoms**: JavaScript console shows "No [bias/credibility/sentiment] timeline data available"
+**Root Cause**: Missing service class implementations for individual assessment charts
+**Solution**: 
+1. Service classes need implementation:
+   - `BiasTimelineChartService` 
+   - `CredibilityTimelineChartService`
+   - `SentimentTimelineChartService`
+2. Follow `NewsMotivationTimelineChartService` pattern for implementation
+3. Register services in `newsmotivationmetrics.services.yml`
+
+**JavaScript Console Debugging**:
+```javascript
+// Check if data exists for individual charts
+console.log('Bias data:', drupalSettings.bias_timeline_chart);
+console.log('Credibility data:', drupalSettings.credibility_timeline_chart);
+console.log('Sentiment data:', drupalSettings.sentiment_timeline_chart);
+```
 
 #### Dashboard Not Loading
 - Verify `news_extractor` module is enabled and has processed articles
