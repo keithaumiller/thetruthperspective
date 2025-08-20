@@ -1,382 +1,290 @@
-/**
- * @file
- * Authoritarianism Timeline Chart functionality for News Motivation Metrics.
- *
- * Provides interactive timeline visualization for news source authoritarianism scores
- * using Chart.js with consistent design patterns matching other assessment metrics.
- */
-
-(function ($, Drupal, drupalSettings) {
+(function (Drupal, drupalSettings) {
   'use strict';
 
-  /**
-   * Initialize authoritarianism timeline chart behavior.
-   */
+  console.log('=== Authoritarianism Timeline Chart Script Loading ===');
+
+  let chart = null;
+  let sourceSelector = null;
+
   Drupal.behaviors.authoritarianismTimelineChart = {
     attach: function (context, settings) {
-      console.log('🔄 Authoritarianism Timeline Chart behavior initializing...');
-      console.log('Context element:', context === document ? '#document' : context.tagName || 'Unknown', context === document ? '(' + window.location.href + ')' : '');
-      console.log('Settings keys:', Object.keys(settings));
+      console.log('=== Authoritarianism Timeline Chart Behavior Attach Called ===');
 
-      // Find all authoritarianism timeline chart canvases
-      const canvases = $(context).find('canvas.authoritarianism-timeline-chart').addBack('canvas.authoritarianism-timeline-chart');
-      console.log('Found', canvases.length, 'authoritarianism chart canvases to process');
+      // Check for Chart.js availability
+      if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js library not loaded');
+        return;
+      }
 
-      canvases.each(function() {
-        const canvas = this;
+      // Find authoritarianism timeline chart canvases
+      const canvases = context.querySelectorAll ? 
+        context.querySelectorAll('canvas[id*="authoritarianism-timeline-chart"]') :
+        document.querySelectorAll('canvas[id*="authoritarianism-timeline-chart"]');
+      
+      console.log('Found', canvases.length, 'authoritarianism chart canvases');
+      
+      canvases.forEach((canvas) => {
+        if (canvas.hasAttribute('data-chart-processed')) {
+          return;
+        }
+        
+        canvas.setAttribute('data-chart-processed', 'true');
         const canvasId = canvas.id;
+        console.log('✅ Processing authoritarianism chart canvas:', canvasId);
 
-        // Skip if already processed
-        if (canvas.hasAttribute('data-authoritarianism-chart-processed')) {
-          console.log('Skipping already processed canvas:', canvasId);
+        // Check if we have authoritarianism data
+        if (!settings.newsmotivationmetrics_authoritarianism) {
+          console.log('❌ No authoritarianism data found in settings');
+          console.log('Available settings:', Object.keys(settings));
           return;
         }
 
-        console.log('Processing authoritarianism chart canvas:', canvasId);
+        const chartData = settings.newsmotivationmetrics_authoritarianism;
+        console.log('📊 Authoritarianism chart data structure:', {
+          timelineData: chartData.timelineData ? Object.keys(chartData.timelineData).length : 0,
+          topSources: chartData.topSources ? chartData.topSources.length : 0
+        });
 
-        // Get settings for this specific canvas
-        const chartSettings = settings.newsmotivationmetrics_authoritarianism && settings.newsmotivationmetrics_authoritarianism[canvasId];
+        // Find source selector
+        const selectorId = 'source-selector';
+        sourceSelector = document.getElementById(selectorId) || context.querySelector('#' + selectorId);
         
-        if (!chartSettings || !window.Chart) {
-          console.warn('Authoritarianism timeline chart: Missing chart settings or Chart.js library for canvas:', canvasId);
+        if (!sourceSelector) {
+          sourceSelector = document.querySelector('.source-selector');
+        }
+
+        // Validate data structure
+        if (!chartData.timelineData || typeof chartData.timelineData !== 'object') {
+          console.log('❌ Invalid authoritarianism timeline data structure');
           return;
         }
 
-        console.log('Initializing authoritarianism timeline chart with settings:', chartSettings);
-        initializeAuthoritarianismChart(canvas, chartSettings);
-        
-        // Mark as processed
-        canvas.setAttribute('data-authoritarianism-chart-processed', 'true');
+        // Initialize chart
+        initializeChart(canvas, chartData, canvasId);
+        setupEventListeners(canvasId);
       });
     }
   };
 
-  /**
-   * Initialize the authoritarianism timeline chart.
-   *
-   * @param {HTMLCanvasElement} canvas
-   *   The canvas element for the chart.
-   * @param {Object} chartSettings
-   *   Chart configuration and data settings.
-   */
-  function initializeAuthoritarianismChart(canvas, chartSettings) {
-    var ctx = canvas.getContext('2d');
+  function initializeChart(canvas, data, canvasId) {
+    console.log('🎯 Initializing Authoritarianism Chart...');
     
-    // Extract timeline data
-    var timelineData = chartSettings.timelineData || [];
-    var topSources = chartSettings.topSources || [];
-    var extendedSources = chartSettings.extendedSources || null;
-    
-    console.log('Authoritarianism timeline data received:', {
-      timelineCount: timelineData.length,
-      topSourcesCount: topSources.length,
-      hasExtended: !!extendedSources
-    });
+    try {
+      const ctx = canvas.getContext('2d');
+      
+      // Destroy existing chart
+      if (chart) {
+        chart.destroy();
+        chart = null;
+      }
+      
+      if (canvas.chart) {
+        canvas.chart.destroy();
+        canvas.chart = null;
+      }
 
-    // Process data for Chart.js format
-    var chartData = processAuthoritarianismTimelineData(timelineData, topSources);
-    
-    if (!chartData.labels || chartData.labels.length === 0) {
-      console.warn('No authoritarianism data available for chart');
-      showEmptyState(canvas);
-      return;
-    }
+      // Convert object-based timeline data to array format for processing
+      const timelineArray = Object.values(data.timelineData);
+      console.log('Timeline data points:', timelineArray.length);
 
-    // Chart configuration optimized for authoritarianism score visualization
-    var config = {
-      type: 'line',
-      data: chartData,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          title: {
-            display: true,
-            text: 'News Source Authoritarianism Trends Over Time',
-            font: { size: 16, weight: 'bold' }
-          },
-          legend: {
-            display: true,
-            position: 'top',
-            labels: {
-              filter: function(legendItem, chartData) {
-                // Show legend for visible datasets only
-                return chartData.datasets[legendItem.datasetIndex] && 
-                       !chartData.datasets[legendItem.datasetIndex].hidden;
-              },
-              usePointStyle: true,
-              padding: 15
-            }
-          },
-          tooltip: {
+      if (timelineArray.length === 0) {
+        throw new Error('No authoritarianism timeline data available');
+      }
+
+      // Prepare datasets - show top 3 sources initially
+      const datasets = timelineArray.slice(0, 3).map((sourceData, index) => {
+        console.log(`Processing dataset ${index}: ${sourceData.source_name}`);
+        
+        const colors = [
+          '#DC2626', // Red for authoritarianism
+          '#F87171', // Light red
+          '#FCA5A5'  // Lighter red
+        ];
+        
+        return {
+          label: sourceData.source_name,
+          data: sourceData.data ? sourceData.data.map(point => ({
+            x: point.date,
+            y: point.value
+          })) : [],
+          borderColor: colors[index % colors.length],
+          backgroundColor: colors[index % colors.length] + '20',
+          fill: false,
+          tension: 0.4,
+          pointRadius: 3,
+          pointHoverRadius: 6
+        };
+      });
+
+      console.log('Creating authoritarianism chart with', datasets.length, 'datasets');
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
             mode: 'index',
             intersect: false,
-            callbacks: {
-              title: function(tooltipItems) {
-                return 'Date: ' + tooltipItems[0].label;
-              },
-              label: function(context) {
-                var value = context.parsed.y;
-                var sourceName = context.dataset.label;
-                return sourceName + ': ' + value.toFixed(1) + '/10';
-              },
-              afterBody: function(tooltipItems) {
-                return ['', '📊 Authoritarianism Scale:', '0 = Democratic/liberal', '5 = Mixed approach', '10 = Authoritarian/autocratic'];
-              }
-            }
-          }
-        },
-        interaction: {
-          mode: 'nearest',
-          axis: 'x',
-          intersect: false
-        },
-        scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'day',
-              displayFormats: {
-                day: 'MMM dd'
-              }
-            },
+          },
+          plugins: {
             title: {
               display: true,
-              text: 'Date',
-              font: { weight: 'bold' }
+              text: 'News Source Authoritarianism Trends Over Time',
+              font: { size: 16 }
             },
-            grid: {
-              display: true,
-              color: 'rgba(0,0,0,0.1)'
+            legend: {
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleColor: 'white',
+              bodyColor: 'white',
+              borderColor: 'rgba(255,255,255,0.2)',
+              borderWidth: 1,
+              callbacks: {
+                afterLabel: function(context) {
+                  const value = context.parsed.y;
+                  if (value >= 80) return 'Very Authoritarian';
+                  if (value >= 70) return 'Highly Authoritarian';
+                  if (value >= 60) return 'Moderately Authoritarian';
+                  if (value >= 50) return 'Somewhat Authoritarian';
+                  return 'Low Authoritarian';
+                }
+              }
             }
           },
-          y: {
-            beginAtZero: true,
-            max: 10,
-            title: {
-              display: true,
-              text: 'Authoritarianism Score (0-10 scale)',
-              font: { weight: 'bold' }
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                parser: 'yyyy-MM-dd',
+                tooltipFormat: 'MMM dd, yyyy',
+                displayFormats: {
+                  day: 'MMM dd',
+                  week: 'MMM dd',
+                  month: 'MMM yyyy'
+                }
+              },
+              title: {
+                display: true,
+                text: 'Date'
+              }
             },
-            grid: {
-              display: true,
-              color: 'rgba(0,0,0,0.1)'
-            },
-            ticks: {
-              callback: function(value) {
-                return value.toFixed(1);
+            y: {
+              min: 0,
+              max: 100,
+              title: {
+                display: true,
+                text: 'Authoritarianism Rating (0=Low, 100=High)'
+              },
+              ticks: {
+                stepSize: 10
               }
             }
           }
-        },
-        elements: {
-          line: {
-            tension: 0.2,
-            borderWidth: 2.5
-          },
-          point: {
-            radius: 3,
-            hoverRadius: 6,
-            borderWidth: 2
-          }
-        }
-      }
-    };
-
-    // Create chart instance
-    var chart = new Chart(ctx, config);
-    
-    // Store chart instance for external access
-    canvas.chartInstance = chart;
-
-    // Set up source selector functionality
-    setupSourceSelector(chart, chartSettings);
-    
-    // Set up chart action buttons
-    setupChartActions(chart, chartSettings, topSources);
-
-    console.log('Authoritarianism timeline chart initialized successfully');
-  }
-
-  /**
-   * Process timeline data for Chart.js consumption.
-   *
-   * @param {Array} timelineData
-   *   Raw timeline data from backend.
-   * @param {Array} topSources
-   *   Top news sources data.
-   *
-   * @return {Object}
-   *   Formatted data for Chart.js.
-   */
-  function processAuthoritarianismTimelineData(timelineData, topSources) {
-    var datasets = [];
-    var allDates = new Set();
-    
-    // Color palette for authoritarianism visualization (red spectrum for intensity)
-    var colors = [
-      '#FF6B6B', '#FF8E8E', '#FFB3B3', '#FFD1D1', '#FF4757',
-      '#FF3838', '#FF6348', '#FF7675', '#FD79A8', '#E84393'
-    ];
-    
-    console.log('Processing authoritarianism timeline data:', timelineData);
-    
-    // Process each source's authoritarianism data
-    timelineData.forEach(function(sourceData, index) {
-      if (!sourceData.data || sourceData.data.length === 0) {
-        return;
-      }
-      
-      // Extract dates and values
-      var chartPoints = [];
-      sourceData.data.forEach(function(point) {
-        if (point.date && point.value !== undefined) {
-          chartPoints.push({
-            x: point.date,
-            y: parseFloat(point.value) || 0
-          });
-          allDates.add(point.date);
         }
       });
-      
-      if (chartPoints.length === 0) {
-        return;
-      }
-      
-      // Create dataset for this source
-      var colorIndex = index % colors.length;
-      var dataset = {
-        label: sourceData.source_name || ('Source ' + (index + 1)),
-        data: chartPoints,
-        borderColor: colors[colorIndex],
-        backgroundColor: colors[colorIndex] + '20', // 20% opacity
-        fill: false,
-        tension: 0.2,
-        pointBackgroundColor: colors[colorIndex],
-        pointBorderColor: '#FFFFFF',
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 7,
-        hidden: index >= 5 // Hide datasets beyond first 5 by default
-      };
-      
-      datasets.push(dataset);
-    });
-    
-    // Generate sorted date labels
-    var labels = Array.from(allDates).sort();
-    
-    console.log('Processed authoritarianism chart data:', {
-      labels: labels.length,
-      datasets: datasets.length,
-      dateRange: labels.length > 0 ? [labels[0], labels[labels.length - 1]] : []
-    });
-    
-    return {
-      labels: labels,
-      datasets: datasets
-    };
-  }
 
-  /**
-   * Set up source selector functionality.
-   *
-   * @param {Chart} chart
-   *   Chart.js instance.
-   * @param {Object} chartSettings
-   *   Chart configuration settings.
-   */
-  function setupSourceSelector(chart, chartSettings) {
-    var $selector = $('#source-selector, [id*="source-selector"]');
-    
-    if ($selector.length === 0) {
-      console.log('No source selector found for authoritarianism chart');
-      return;
+      canvas.chart = chart;
+      console.log('✅ Authoritarianism chart initialized successfully');
+      
+    } catch (error) {
+      console.error('❌ Authoritarianism chart initialization failed:', error);
     }
-    
-    $selector.on('change', function() {
-      var selectedSources = $(this).val() || [];
-      console.log('Authoritarianism chart sources selected:', selectedSources);
-      
-      // Update chart visibility based on selection
-      chart.data.datasets.forEach(function(dataset, index) {
-        var sourceName = dataset.label.replace(' - Authoritarianism Score', '');
-        var isSelected = selectedSources.length === 0 || 
-                        selectedSources.includes(sourceName) ||
-                        selectedSources.includes(dataset.source_id);
-        
-        dataset.hidden = !isSelected;
-      });
-      
-      chart.update('none'); // Fast update without animation
-    });
   }
 
-  /**
-   * Set up chart action buttons (reset, clear).
-   *
-   * @param {Chart} chart
-   *   Chart.js instance.
-   * @param {Object} chartSettings
-   *   Chart configuration settings.
-   * @param {Array} topSources
-   *   Default top sources.
-   */
-  function setupChartActions(chart, chartSettings, topSources) {
-    // Reset button - show top 5 sources
-    $('[id*="reset-chart"]').on('click', function() {
-      var canvasId = $(this).data('canvas-id');
-      if (canvasId !== 'authoritarianism-timeline-chart') return;
-      
-      console.log('Resetting authoritarianism chart to top sources');
-      
-      chart.data.datasets.forEach(function(dataset, index) {
-        dataset.hidden = index >= 5; // Show first 5, hide rest
-      });
-      
-      // Reset source selector
-      var $selector = $('#source-selector, [id*="source-selector"]');
-      $selector.val([]).trigger('change');
-      
+  function setupEventListeners(canvasId) {
+    if (sourceSelector) {
+      sourceSelector.addEventListener('change', updateChart);
+    }
+
+    // Reset and clear buttons
+    const resetButton = document.querySelector('[id*="reset-chart"]');
+    const clearButton = document.querySelector('[id*="clear-chart"]');
+
+    if (resetButton) {
+      resetButton.addEventListener('click', resetToTopSources);
+    }
+
+    if (clearButton) {
+      clearButton.addEventListener('click', clearAllSources);
+    }
+  }
+
+  function updateChart() {
+    if (!chart || !sourceSelector) return;
+
+    const selectedSourceIds = Array.from(sourceSelector.selectedOptions).map(option => option.value);
+    console.log('📊 Updating authoritarianism chart with selected sources:', selectedSourceIds);
+
+    // Get timeline data
+    const allTimelineData = Object.values(drupalSettings.newsmotivationmetrics_authoritarianism.timelineData || {});
+    
+    // Filter by selected sources
+    const filteredData = allTimelineData.filter(sourceData => 
+      selectedSourceIds.includes(sourceData.source_id)
+    );
+
+    console.log('Found authoritarianism data for', filteredData.length, 'sources');
+
+    // Update chart datasets
+    const colors = ['#DC2626', '#F87171', '#FCA5A5', '#FEE2E2', '#FEF2F2'];
+    
+    chart.data.datasets = filteredData.map((sourceData, index) => ({
+      label: sourceData.source_name,
+      data: sourceData.data ? sourceData.data.map(point => ({
+        x: point.date,
+        y: point.value
+      })) : [],
+      borderColor: colors[index % colors.length],
+      backgroundColor: colors[index % colors.length] + '20',
+      fill: false,
+      tension: 0.4,
+      pointRadius: 3,
+      pointHoverRadius: 6
+    }));
+
+    chart.update();
+  }
+
+  function resetToTopSources() {
+    if (!sourceSelector) return;
+
+    // Clear selections
+    Array.from(sourceSelector.options).forEach(option => {
+      option.selected = false;
+    });
+
+    // Select top 3
+    const options = Array.from(sourceSelector.options);
+    for (let i = 0; i < Math.min(3, options.length); i++) {
+      options[i].selected = true;
+    }
+
+    updateChart();
+  }
+
+  function clearAllSources() {
+    if (!sourceSelector) return;
+
+    Array.from(sourceSelector.options).forEach(option => {
+      option.selected = false;
+    });
+
+    if (chart) {
+      chart.data.datasets = [];
       chart.update();
-    });
-    
-    // Clear button - hide all sources
-    $('[id*="clear-chart"]').on('click', function() {
-      var canvasId = $(this).data('canvas-id');
-      if (canvasId !== 'authoritarianism-timeline-chart') return;
-      
-      console.log('Clearing all authoritarianism chart sources');
-      
-      chart.data.datasets.forEach(function(dataset) {
-        dataset.hidden = true;
-      });
-      
-      // Clear source selector
-      var $selector = $('#source-selector, [id*="source-selector"]');
-      $selector.val([]).trigger('change');
-      
-      chart.update();
-    });
+    }
   }
 
-  /**
-   * Show empty state when no data is available.
-   *
-   * @param {HTMLCanvasElement} canvas
-   *   The canvas element.
-   */
-  function showEmptyState(canvas) {
-    var ctx = canvas.getContext('2d');
-    var width = canvas.width;
-    var height = canvas.height;
-    
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#666666';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('No authoritarianism data available', width / 2, height / 2);
-    ctx.fillText('for the selected time period', width / 2, height / 2 + 25);
-  }
+  console.log('=== Authoritarianism Chart Script Loaded Successfully ===');
 
-})(jQuery, Drupal, drupalSettings);
+})(Drupal, drupalSettings);

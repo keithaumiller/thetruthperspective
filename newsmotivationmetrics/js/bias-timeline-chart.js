@@ -1,257 +1,178 @@
-/**
- * @file
- * Bias timeline chart behavior for The Truth Perspective news source analytics.
- * 
- * This file handles Chart.js initialization for bias rating trends over time.
- * Follows the same design pattern as the combined news source timeline chart
- * but filtered to show only bias metrics.
- */
-
-(function ($, Drupal, drupalSettings) {
+(function (Drupal, drupalSettings) {
   'use strict';
 
-  /**
-   * Chart behavior for bias timeline charts.
-   */
-  Drupal.behaviors.biasTimelineChart = {
-    attach: function (context, settings) {
-      console.log('🔄 Bias Timeline Chart behavior initializing...');
-      console.log('Context element:', context === document ? '#document' : context.tagName || 'Unknown', context === document ? '(' + window.location.href + ')' : '');
-      console.log('Settings keys:', Object.keys(settings));
-
-      // Find all bias timeline chart canvases
-      const canvases = $(context).find('canvas.bias-timeline-chart').addBack('canvas.bias-timeline-chart');
-      console.log('Found', canvases.length, 'bias chart canvases to process');
-
-      canvases.each(function() {
-        const canvas = this;
-        const canvasId = canvas.id;
-
-        // Skip if already processed
-        if (canvas.hasAttribute('data-chart-processed')) {
-          console.log('Skipping already processed canvas:', canvasId);
-          return;
-        }
-
-        console.log('✅ Processing bias canvas with ID:', canvasId);
-
-        // Mark as processed
-        canvas.setAttribute('data-chart-processed', 'true');
-
-        // Initialize chart for this canvas
-        initializeChart(canvas, canvasId, settings);
-      });
-    }
-  };
+  console.log('=== Bias Timeline Chart Script Loading ===');
 
   let chart = null;
   let sourceSelector = null;
 
-  // Function to assign colors to sources based on strict rules
-  function assignSourceColors(selectedSources) {
-    // Single color scheme for bias (red/orange tones)
-    const baseColors = [
-      { 
-        name: 'red', 
-        bias: '#DC2626'   // Red for bias rating
-      },
-      { 
-        name: 'orange', 
-        bias: '#EA580C'   // Orange for bias rating  
-      },
-      { 
-        name: 'amber', 
-        bias: '#D97706'   // Amber for bias rating
-      }
-    ];
-    
-    const sourceColorMap = {};
-    
-    // Get unique base sources and assign colors in rotation
-    const uniqueSources = [...new Set(selectedSources)];
-    
-    uniqueSources.forEach((source, index) => {
-      const colorIndex = index % 3; // Rotate through 0, 1, 2
-      sourceColorMap[source] = colorIndex;
-    });
-    
-    console.log('Color assignments (bias chart):', sourceColorMap);
-    
-    return {
-      sourceColorMap,
-      baseColors,
-    };
-  }
+  Drupal.behaviors.biasTimelineChart = {
+    attach: function (context, settings) {
+      console.log('=== Bias Timeline Chart Behavior Attach Called ===');
 
-  function initializeChart(canvas, canvasId, settings) {
-    try {
-      // Find associated source selector
-      const selectorId = canvasId === 'bias-timeline-chart' ? 'source-selector' : 'source-selector-' + canvasId.split('-').pop();
-      sourceSelector = document.getElementById(selectorId);
-      
-      if (!sourceSelector) {
-        console.log('❌ Source selector not found with ID:', selectorId);
-        // Try fallback approach - find by class
-        sourceSelector = document.querySelector('.source-selector');
-        if (sourceSelector) {
-          console.log('✅ Found source selector using class fallback');
-        }
-      } else {
-        console.log('✅ Found source selector with ID:', selectorId);
-      }
-
-      // Get chart data from settings - use individual bias namespace
-      const chartData = settings.newsmotivationmetrics_bias || {};
-      
-      if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
-        throw new Error('No bias timeline data available');
-      }
-
-      console.log('📊 Bias chart data loaded:', {
-        dataPoints: chartData.timelineData ? chartData.timelineData.length : 0,
-        sourceCount: chartData.topSources ? chartData.topSources.length : 0,
-        timestamp: Math.floor(Date.now() / 1000),
-        date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        php_version: chartData.debugInfo?.php_version || 'unknown'
-      });
-      console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
-
-      console.log('🎯 Initializing Chart.js...');
-      console.log('Canvas element:', canvas);
-      console.log('Canvas ID:', canvasId);
-
-      createChart(canvas, chartData);
-      setupEventListeners(canvasId);
-      
-      // Set default selection to top 3 sources (highest article count)
-      if (sourceSelector) {
-        resetToTopSources();
-      }
-
-    } catch (error) {
-      console.error('❌ Chart initialization error:', error);
-      
-      // Update status element with error message
-      const statusElement = document.querySelector('[id*="chart-status"]');
-      if (statusElement) {
-        statusElement.textContent = '⚠️ Chart initialization failed: ' + error.message;
-      }
-    }
-  }
-
-  function createChart(canvas, data) {
-    try {
-      // Ensure Chart.js is loaded
+      // Check for Chart.js availability
       if (typeof Chart === 'undefined') {
-        throw new Error('Chart.js library not loaded');
+        console.error('❌ Chart.js library not loaded');
+        return;
       }
 
-      if (!data.timelineData || !Array.isArray(data.timelineData)) {
-        throw new Error('Invalid timeline data structure');
-      }
+      // Find bias timeline chart canvases
+      const canvases = context.querySelectorAll ? 
+        context.querySelectorAll('canvas[id*="bias-timeline-chart"]') :
+        document.querySelectorAll('canvas[id*="bias-timeline-chart"]');
+      
+      console.log('Found', canvases.length, 'bias chart canvases');
+      
+      canvases.forEach((canvas) => {
+        if (canvas.hasAttribute('data-chart-processed')) {
+          return;
+        }
+        
+        canvas.setAttribute('data-chart-processed', 'true');
+        const canvasId = canvas.id;
+        console.log('✅ Processing bias chart canvas:', canvasId);
 
-      // Ensure canvas has proper dimensions
-      if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
-        console.warn('Canvas has zero dimensions, setting fallback size');
-        canvas.style.width = '100%';
-        canvas.style.height = '400px';
-      }
+        // Check if we have bias data
+        if (!settings.newsmotivationmetrics_bias) {
+          console.log('❌ No bias data found in settings');
+          console.log('Available settings:', Object.keys(settings));
+          return;
+        }
 
-      console.log('Canvas dimensions:', { 
-        width: canvas.clientWidth, 
-        height: canvas.clientHeight,
-        style: canvas.style.cssText 
+        const chartData = settings.newsmotivationmetrics_bias;
+        console.log('📊 Bias chart data structure:', {
+          timelineData: chartData.timelineData ? Object.keys(chartData.timelineData).length : 0,
+          topSources: chartData.topSources ? chartData.topSources.length : 0
+        });
+
+        // Find source selector
+        const selectorId = 'source-selector';
+        sourceSelector = document.getElementById(selectorId) || context.querySelector('#' + selectorId);
+        
+        if (!sourceSelector) {
+          sourceSelector = document.querySelector('.source-selector');
+        }
+        
+        if (sourceSelector) {
+          console.log('✅ Found source selector');
+        } else {
+          console.log('❌ No source selector found');
+        }
+
+        // Validate data structure
+        if (!chartData.timelineData || typeof chartData.timelineData !== 'object') {
+          console.log('❌ Invalid bias timeline data structure');
+          return;
+        }
+
+        // Initialize chart
+        initializeChart(canvas, chartData, canvasId);
+        setupEventListeners(canvasId);
       });
+    }
+  };
 
-      // Check if canvas already has a chart and destroy it
+  function initializeChart(canvas, data, canvasId) {
+    console.log('🎯 Initializing Bias Chart...');
+    
+    try {
+      const ctx = canvas.getContext('2d');
+      
+      // Destroy existing chart
+      if (chart) {
+        chart.destroy();
+        chart = null;
+      }
+      
       if (canvas.chart) {
-        console.log('Destroying existing chart on canvas...');
         canvas.chart.destroy();
         canvas.chart = null;
       }
-      
-      // Also check Chart.js registry for any charts using this canvas
-      if (window.Chart && window.Chart.getChart) {
-        const existingChart = window.Chart.getChart(canvas);
-        if (existingChart) {
-          console.log('Destroying existing chart from Chart.js registry...');
-          existingChart.destroy();
-        }
+
+      // Convert object-based timeline data to array format for processing
+      const timelineArray = Object.values(data.timelineData);
+      console.log('Timeline data points:', timelineArray.length);
+
+      if (timelineArray.length === 0) {
+        throw new Error('No bias timeline data available');
       }
 
-      console.log('Processing', data.timelineData.length, 'datasets...');
-    
-      // Get unique source names from the data for color assignment
-      const uniqueSources = [...new Set(data.timelineData.map(item => {
-        // Extract base source name from dataset names like "FOXNews.com - Bias Rating"
-        const sourceName = item.source_name;
-        const baseName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
-        return baseName;
-      }))];
-      
-      console.log('Unique sources in chart:', uniqueSources);
-      
-      // Get color assignments for all sources (simple rotation)
-      const { sourceColorMap, baseColors } = assignSourceColors(uniqueSources);
-    
-      // Prepare datasets from timeline data - each source has bias metric only
-      const datasets = data.timelineData.map((sourceData, index) => {
-        console.log(`Dataset ${index}: ${sourceData.source_name} with ${sourceData.data ? sourceData.data.length : 0} data points`);
+      // Prepare datasets - show top 3 sources initially
+      const datasets = timelineArray.slice(0, 3).map((sourceData, index) => {
+        console.log(`Processing dataset ${index}: ${sourceData.source_name}`);
         
-        // Get the source name and metric type
-        let sourceName = sourceData.source_name;
-        
-        // Extract base source name from dataset names like "FOXNews.com - Bias Rating"
-        const baseSourceName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
-        
-        // Get color scheme for this source using simple lookup
-        const colorIndex = sourceColorMap[baseSourceName] !== undefined ? sourceColorMap[baseSourceName] : 0; // Default to first color family if not found
-        const colorScheme = baseColors[colorIndex];
-        
-        // Get color for bias metric
-        const color = colorScheme.bias || '#DC2626';
-        
-        console.log(`Bias color assignment for ${sourceName} -> ${baseSourceName}: ${color} (${colorScheme.name})`);
+        const colors = [
+          '#DC2626', // Red for bias
+          '#EA580C', // Orange 
+          '#D97706'  // Amber
+        ];
         
         return {
-          label: `${baseSourceName} - Bias Rating`,
+          label: sourceData.source_name,
           data: sourceData.data ? sourceData.data.map(point => ({
             x: point.date,
             y: point.value
           })) : [],
-          borderColor: color,
-          backgroundColor: color + '20', // Add transparency for fill
+          borderColor: colors[index % colors.length],
+          backgroundColor: colors[index % colors.length] + '20',
           fill: false,
           tension: 0.4,
           pointRadius: 3,
-          pointHoverRadius: 5
+          pointHoverRadius: 6
         };
       });
 
-      console.log('📊 Creating bias chart with', datasets.length, 'datasets');
+      console.log('Creating bias chart with', datasets.length, 'datasets');
 
-      chart = new Chart(canvas, {
+      chart = new Chart(ctx, {
         type: 'line',
         data: { datasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          animation: {
-            duration: 300
+          interaction: {
+            mode: 'index',
+            intersect: false,
           },
-          layout: {
-            padding: {
-              top: 10,
-              right: 10,
-              bottom: 10,
-              left: 10
+          plugins: {
+            title: {
+              display: true,
+              text: 'News Source Bias Trends Over Time',
+              font: { size: 16 }
+            },
+            legend: {
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleColor: 'white',
+              bodyColor: 'white',
+              borderColor: 'rgba(255,255,255,0.2)',
+              borderWidth: 1,
+              callbacks: {
+                afterLabel: function(context) {
+                  const value = context.parsed.y;
+                  if (value <= 25) return 'Lean Left';
+                  if (value <= 45) return 'Center Left';
+                  if (value <= 55) return 'Center';
+                  if (value <= 75) return 'Center Right';
+                  return 'Lean Right';
+                }
+              }
             }
           },
           scales: {
             x: {
               type: 'time',
               time: {
-                unit: 'day',
+                parser: 'yyyy-MM-dd',
+                tooltipFormat: 'MMM dd, yyyy',
                 displayFormats: {
                   day: 'MMM dd',
                   week: 'MMM dd',
@@ -264,126 +185,43 @@
               }
             },
             y: {
-              beginAtZero: true,
+              min: 0,
               max: 100,
               title: {
                 display: true,
-                text: 'Bias Rating (0=Left, 100=Right)'
+                text: 'Bias Rating (0=Left, 50=Center, 100=Right)'
               },
               ticks: {
-                callback: function(value) {
-                  return value.toFixed(1);
-                }
+                stepSize: 10
               }
             }
-          },
-          plugins: {
-            title: {
-              display: true,
-              text: 'News Source Bias Trends (Last 90 Days)',
-              font: {
-                size: 16
-              }
-            },
-            legend: {
-              display: true,
-              position: 'top'
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-              callbacks: {
-                title: function(tooltipItems) {
-                  return tooltipItems[0].label;
-                },
-                label: function(context) {
-                  return context.dataset.label + ': ' + context.parsed.y.toFixed(2);
-                }
-              }
-            }
-          },
-          interaction: {
-            mode: 'index',
-            intersect: false
           }
         }
       });
 
-      // Store chart reference on canvas for future cleanup
       canvas.chart = chart;
-
-      console.log('✅ Chart initialized successfully');
-      
-      // Update status element with success message
-      const statusId = canvas.id === 'bias-timeline-chart' ? 'chart-status' : 'chart-status-' + canvas.id.split('-').pop();
-      const statusElement = document.getElementById(statusId) || document.querySelector('[id*="chart-status"]');
-      if (statusElement) {
-        statusElement.textContent = '✅ Chart loaded with ' + datasets.length + ' trend lines';
-      }
+      console.log('✅ Bias chart initialized successfully');
       
     } catch (error) {
-      console.error('❌ Chart initialization failed:', error);
-      
-      // Update status element with error message
-      const statusElement = document.querySelector('[id*="chart-status"]');
-      if (statusElement) {
-        statusElement.textContent = '⚠️ Chart initialization failed: ' + error.message;
-      }
+      console.error('❌ Bias chart initialization failed:', error);
     }
   }
 
   function setupEventListeners(canvasId) {
-    // Source selector change event with 3-selection limit
     if (sourceSelector) {
-      sourceSelector.addEventListener('change', function(event) {
-        const selectedOptions = Array.from(sourceSelector.selectedOptions);
-        
-        // Enforce maximum 3 selections
-        if (selectedOptions.length > 3) {
-          console.log('Maximum 3 sources allowed, deselecting excess selections');
-          
-          // Keep only the first 3 selections
-          Array.from(sourceSelector.options).forEach((option, index) => {
-            option.selected = false;
-          });
-          
-          // Re-select only the first 3
-          for (let i = 0; i < Math.min(3, selectedOptions.length); i++) {
-            selectedOptions[i].selected = true;
-          }
-          
-          // Show warning message
-          const statusElement = document.querySelector('[id*="chart-status"]');
-          if (statusElement) {
-            statusElement.textContent = '⚠️ Maximum 3 sources allowed - excess selections removed';
-            setTimeout(() => {
-              updateChart();
-            }, 1000);
-            return;
-          }
-        }
-        
-        updateChart();
-      });
+      sourceSelector.addEventListener('change', updateChart);
     }
 
-    // Reset and Clear button event listeners
-    const uniqueId = canvasId.split('-').pop();
-    const resetButton = document.getElementById('reset-chart-' + uniqueId) || document.querySelector('[data-canvas-id="' + canvasId + '"].chart-reset-btn');
-    const clearButton = document.getElementById('clear-chart-' + uniqueId) || document.querySelector('[data-canvas-id="' + canvasId + '"].chart-clear-btn');
+    // Reset and clear buttons
+    const resetButton = document.querySelector('[id*="reset-chart"]');
+    const clearButton = document.querySelector('[id*="clear-chart"]');
 
     if (resetButton) {
-      resetButton.addEventListener('click', function() {
-        console.log('Reset button clicked for canvas:', canvasId);
-        resetToTopSources();
-      });
+      resetButton.addEventListener('click', resetToTopSources);
     }
 
     if (clearButton) {
-      clearButton.addEventListener('click', function() {
-        console.log('Clear button clicked for canvas:', canvasId);
-        clearAllSources();
-      });
+      clearButton.addEventListener('click', clearAllSources);
     }
   }
 
@@ -391,132 +229,68 @@
     if (!chart || !sourceSelector) return;
 
     const selectedSourceIds = Array.from(sourceSelector.selectedOptions).map(option => option.value);
-    console.log('📊 Updating bias chart with selected sources:', selectedSourceIds);
+    console.log('📊 Updating chart with selected sources:', selectedSourceIds);
 
-    // Combine timeline data from bias sources
-    let allData = drupalSettings.newsmotivationmetrics_bias.timelineData || [];
+    // Get timeline data
+    const allTimelineData = Object.values(drupalSettings.newsmotivationmetrics_bias.timelineData || {});
     
-    // Add extended sources data if available
-    if (drupalSettings.newsmotivationmetrics_bias.extendedSources && 
-        drupalSettings.newsmotivationmetrics_bias.extendedSources.timelineData) {
-      const extendedData = drupalSettings.newsmotivationmetrics_bias.extendedSources.timelineData;
-      console.log('📈 Found extended source data with', extendedData.length, 'bias datasets');
-      
-      // Merge extended data, avoiding duplicates
-      const existingSourceKeys = new Set(allData.map(item => item.source_id + '_' + item.metric_type));
-      const newExtendedData = extendedData.filter(item => !existingSourceKeys.has(item.source_id + '_' + item.metric_type));
-      allData = [...allData, ...newExtendedData];
-      
-      console.log('📊 Total available timeline data:', allData.length, 'datasets');
-    }
+    // Filter by selected sources
+    const filteredData = allTimelineData.filter(sourceData => 
+      selectedSourceIds.includes(sourceData.source_id)
+    );
 
-    // Filter datasets based on selected sources
-    const filteredData = allData.filter(sourceData => selectedSourceIds.includes(sourceData.source_id));
+    console.log('Found data for', filteredData.length, 'sources');
+
+    // Update chart datasets
+    const colors = ['#DC2626', '#EA580C', '#D97706', '#B91C1C', '#C2410C'];
     
-    console.log('🎯 Found timeline data for', filteredData.length, 'datasets from', selectedSourceIds.length, 'selected sources');
-
-    // Warn about sources without timeline data
-    const foundSourceIds = new Set(filteredData.map(item => item.source_id));
-    const missingSourceIds = selectedSourceIds.filter(id => !foundSourceIds.has(id));
-    if (missingSourceIds.length > 0) {
-      console.warn('⚠️ No timeline data available for source IDs:', missingSourceIds);
-    }
-
-    // Update chart datasets with simple color rotation
-    // Get unique source names for color assignment
-    const uniqueSelectedSources = [...new Set(filteredData.map(item => {
-      // Extract base source name from dataset names like "FOXNews.com - Bias Rating"
-      const sourceName = item.source_name;
-      const baseName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
-      return baseName;
-    }))];
-    
-    console.log('Unique selected sources for coloring:', uniqueSelectedSources);
-    
-    // Get color assignments for selected sources (simple rotation)
-    const { sourceColorMap, baseColors } = assignSourceColors(uniqueSelectedSources);
-
-    chart.data.datasets = filteredData.map((sourceData, index) => {
-      // Get the source name
-      let sourceName = sourceData.source_name;
-      
-      // Extract base source name from dataset names like "FOXNews.com - Bias Rating"
-      const baseSourceName = sourceName.includes(' - ') ? sourceName.split(' - ')[0] : sourceName;
-      
-      // Get color scheme for this source using simple lookup
-      const colorIndex = sourceColorMap[baseSourceName] !== undefined ? sourceColorMap[baseSourceName] : 0; // Default to first color family if not found
-      const colorScheme = baseColors[colorIndex];
-      
-      // Get color for bias metric
-      const color = colorScheme.bias || '#DC2626';
-      
-      console.log(`Bias color assignment for ${sourceName} -> ${baseSourceName}: ${color} (${colorScheme.name})`);
-
-      return {
-        label: `${baseSourceName} - Bias Rating`,
-        data: sourceData.data ? sourceData.data.map(point => ({
-          x: point.date,
-          y: point.value
-        })) : [],
-        borderColor: color,
-        backgroundColor: color + '20', // Add transparency for fill
-        fill: false,
-        tension: 0.4
-      };
-    });
+    chart.data.datasets = filteredData.map((sourceData, index) => ({
+      label: sourceData.source_name,
+      data: sourceData.data ? sourceData.data.map(point => ({
+        x: point.date,
+        y: point.value
+      })) : [],
+      borderColor: colors[index % colors.length],
+      backgroundColor: colors[index % colors.length] + '20',
+      fill: false,
+      tension: 0.4,
+      pointRadius: 3,
+      pointHoverRadius: 6
+    }));
 
     chart.update();
-    
-    // Update status message
-    const statusElement = document.querySelector('[id*="chart-status"]');
-    if (statusElement) {
-      let message = `📊 Chart updated with ${filteredData.length} trend lines`;
-      if (missingSourceIds.length > 0) {
-        message += ` (${missingSourceIds.length} sources have no timeline data)`;
-      }
-      statusElement.textContent = message;
-    }
   }
 
   function resetToTopSources() {
     if (!sourceSelector) return;
 
-    // Clear all selections
+    // Clear selections
     Array.from(sourceSelector.options).forEach(option => {
       option.selected = false;
     });
 
-    // Select top 3 options (top 3 sources by article count)
+    // Select top 3
     const options = Array.from(sourceSelector.options);
     for (let i = 0; i < Math.min(3, options.length); i++) {
-      if (options[i]) {
-        options[i].selected = true;
-      }
+      options[i].selected = true;
     }
 
-    // Trigger update
     updateChart();
   }
 
   function clearAllSources() {
     if (!sourceSelector) return;
 
-    // Clear all selections
     Array.from(sourceSelector.options).forEach(option => {
       option.selected = false;
     });
 
-    // Update chart with empty data
     if (chart) {
       chart.data.datasets = [];
       chart.update();
-      
-      // Update status
-      const statusElement = document.querySelector('[id*="chart-status"]');
-      if (statusElement) {
-        statusElement.textContent = '📊 Chart cleared - select sources to display data';
-      }
     }
   }
 
-})(jQuery, Drupal, drupalSettings);
+  console.log('=== Bias Chart Script Loaded Successfully ===');
+
+})(Drupal, drupalSettings);
