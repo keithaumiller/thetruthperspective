@@ -100,42 +100,38 @@
         console.log('✅ Found source selector with ID:', selectorId);
       }
 
-      // Get chart data from settings
-      const chartData = settings.newsmotivationmetrics_bias || {};
+      // Get chart data from settings - follow working pattern from news-source-timeline-chart.js
+      const chartData = settings.newsmotivationmetrics_sources || {};
       
       if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
         throw new Error('No bias timeline data available');
       }
 
+      // Filter to only bias data
+      const biasData = {
+        timelineData: chartData.timelineData.filter(item => item.metric_type === 'bias'),
+        topSources: chartData.topSources,
+        debugInfo: chartData.debugInfo
+      };
+      
+      if (!biasData.timelineData || biasData.timelineData.length === 0) {
+        throw new Error('No bias timeline data available');
+      }
+
       console.log('📊 Bias chart data loaded:', {
-        dataPoints: chartData.timelineData ? chartData.timelineData.length : 0,
-        sourceCount: chartData.topSources ? chartData.topSources.length : 0,
+        dataPoints: biasData.timelineData ? biasData.timelineData.length : 0,
+        sourceCount: biasData.topSources ? biasData.topSources.length : 0,
         timestamp: Math.floor(Date.now() / 1000),
         date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        php_version: chartData.debugInfo?.php_version || 'unknown',
-        extendedSourcesAvailable: chartData.extendedSources ? 'Yes' : 'No',
-        extendedSourcesCount: chartData.extendedSources?.timelineData?.length || 0
+        php_version: biasData.debugInfo?.php_version || 'unknown'
       });
-      console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
-      
-      // Log extended sources availability
-      if (chartData.extendedSources) {
-        console.log('📈 Extended sources available:', chartData.extendedSources.timelineData?.length || 0, 'additional datasets');
-      } else {
-        console.log('⚠️ No extended sources data found');
-      }
+      console.log('Timeline data available:', biasData.timelineData ? biasData.timelineData.length : 0, 'datasets');
 
       console.log('🎯 Initializing Chart.js...');
       console.log('Canvas element:', canvas);
       console.log('Canvas ID:', canvasId);
-      console.log('Data structure:', {
-        timelineData: Array.isArray(chartData.timelineData) ? chartData.timelineData.length : 'invalid',
-        topSources: Array.isArray(chartData.topSources) ? chartData.topSources.length : 'invalid',
-        debugInfo: typeof chartData.debugInfo,
-        extendedSources: typeof chartData.extendedSources
-      });
 
-      createChart(canvas, chartData);
+      createChart(canvas, biasData);
       setupEventListeners(canvasId);
       
       // Set default selection to top 3 sources (highest article count)
@@ -379,14 +375,15 @@
     const selectedSourceIds = Array.from(sourceSelector.selectedOptions).map(option => option.value);
     console.log('📊 Updating bias chart with selected sources:', selectedSourceIds);
 
-    // Combine timeline data from both top sources and extended sources
-    let allData = drupalSettings.newsmotivationmetrics_bias.timelineData || [];
+    // Combine timeline data from news sources - filter for bias only
+    let allData = drupalSettings.newsmotivationmetrics_sources.timelineData || [];
+    allData = allData.filter(item => item.metric_type === 'bias');
     
     // Add extended sources data if available
-    if (drupalSettings.newsmotivationmetrics_bias.extendedSources && 
-        drupalSettings.newsmotivationmetrics_bias.extendedSources.timelineData) {
-      const extendedData = drupalSettings.newsmotivationmetrics_bias.extendedSources.timelineData;
-      console.log('📈 Found extended source data with', extendedData.length, 'datasets');
+    if (drupalSettings.newsmotivationmetrics_sources.extendedSources && 
+        drupalSettings.newsmotivationmetrics_sources.extendedSources.timelineData) {
+      const extendedData = drupalSettings.newsmotivationmetrics_sources.extendedSources.timelineData.filter(item => item.metric_type === 'bias');
+      console.log('📈 Found extended source data with', extendedData.length, 'bias datasets');
       
       // Merge extended data, avoiding duplicates
       const existingSourceKeys = new Set(allData.map(item => item.source_id + '_' + item.metric_type));

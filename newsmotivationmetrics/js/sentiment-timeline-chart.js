@@ -100,42 +100,38 @@
         console.log('✅ Found source selector with ID:', selectorId);
       }
 
-      // Get chart data from settings
-      const chartData = settings.newsmotivationmetrics_sentiment || {};
+      // Get chart data from settings - follow working pattern from news-source-timeline-chart.js
+      const chartData = settings.newsmotivationmetrics_sources || {};
       
       if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
         throw new Error('No sentiment timeline data available');
       }
 
+      // Filter to only sentiment data
+      const sentimentData = {
+        timelineData: chartData.timelineData.filter(item => item.metric_type === 'sentiment'),
+        topSources: chartData.topSources,
+        debugInfo: chartData.debugInfo
+      };
+      
+      if (!sentimentData.timelineData || sentimentData.timelineData.length === 0) {
+        throw new Error('No sentiment timeline data available');
+      }
+
       console.log('📊 Sentiment chart data loaded:', {
-        dataPoints: chartData.timelineData ? chartData.timelineData.length : 0,
-        sourceCount: chartData.topSources ? chartData.topSources.length : 0,
+        dataPoints: sentimentData.timelineData ? sentimentData.timelineData.length : 0,
+        sourceCount: sentimentData.topSources ? sentimentData.topSources.length : 0,
         timestamp: Math.floor(Date.now() / 1000),
         date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        php_version: chartData.debugInfo?.php_version || 'unknown',
-        extendedSourcesAvailable: chartData.extendedSources ? 'Yes' : 'No',
-        extendedSourcesCount: chartData.extendedSources?.timelineData?.length || 0
+        php_version: sentimentData.debugInfo?.php_version || 'unknown'
       });
-      console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
-      
-      // Log extended sources availability
-      if (chartData.extendedSources) {
-        console.log('📈 Extended sources available:', chartData.extendedSources.timelineData?.length || 0, 'additional datasets');
-      } else {
-        console.log('⚠️ No extended sources data found');
-      }
+      console.log('Timeline data available:', sentimentData.timelineData ? sentimentData.timelineData.length : 0, 'datasets');
 
       console.log('🎯 Initializing Chart.js...');
       console.log('Canvas element:', canvas);
       console.log('Canvas ID:', canvasId);
-      console.log('Data structure:', {
-        timelineData: Array.isArray(chartData.timelineData) ? chartData.timelineData.length : 'invalid',
-        topSources: Array.isArray(chartData.topSources) ? chartData.topSources.length : 'invalid',
-        debugInfo: typeof chartData.debugInfo,
-        extendedSources: typeof chartData.extendedSources
-      });
 
-      createChart(canvas, chartData);
+      createChart(canvas, sentimentData);
       setupEventListeners(canvasId);
       
       // Set default selection to top 3 sources (highest article count)
