@@ -101,9 +101,16 @@
         console.log(`Processing dataset ${index}: ${sourceData.source_name}`);
         
         const colors = [
-          '#DC2626', // Red for authoritarianism
-          '#F87171', // Light red
-          '#FCA5A5'  // Lighter red
+          '#7C3AED', // Purple
+          '#DC2626', // Red
+          '#2563EB', // Blue
+          '#059669', // Green
+          '#EA580C', // Orange
+          '#DB2777', // Pink
+          '#0891B2', // Cyan
+          '#84CC16', // Lime
+          '#F59E0B', // Amber
+          '#8B5CF6'  // Purple variant
         ];
         
         return {
@@ -241,7 +248,18 @@
     console.log('Found authoritarianism data for', filteredData.length, 'sources');
 
     // Update chart datasets
-    const colors = ['#DC2626', '#F87171', '#FCA5A5', '#FEE2E2', '#FEF2F2'];
+    const colors = [
+      '#7C3AED', // Purple
+      '#DC2626', // Red
+      '#2563EB', // Blue
+      '#059669', // Green
+      '#EA580C', // Orange
+      '#DB2777', // Pink
+      '#0891B2', // Cyan
+      '#84CC16', // Lime
+      '#F59E0B', // Amber
+      '#8B5CF6'  // Purple variant
+    ];
     
     chart.data.datasets = filteredData.map((sourceData, index) => ({
       label: sourceData.source_name,

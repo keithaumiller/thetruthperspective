@@ -107,9 +107,16 @@
         console.log(`Processing dataset ${index}: ${sourceData.source_name}`);
         
         const colors = [
-          '#DC2626', // Red for bias
-          '#EA580C', // Orange 
-          '#D97706'  // Amber
+          '#DC2626', // Red
+          '#2563EB', // Blue
+          '#059669', // Green
+          '#7C3AED', // Purple
+          '#EA580C', // Orange
+          '#DB2777', // Pink
+          '#0891B2', // Cyan
+          '#84CC16', // Lime
+          '#F59E0B', // Amber
+          '#EF4444'  // Red variant
         ];
         
         return {
@@ -247,7 +254,18 @@
     console.log('Found data for', filteredData.length, 'sources');
 
     // Update chart datasets
-    const colors = ['#DC2626', '#EA580C', '#D97706', '#B91C1C', '#C2410C'];
+    const colors = [
+      '#DC2626', // Red
+      '#2563EB', // Blue
+      '#059669', // Green
+      '#7C3AED', // Purple
+      '#EA580C', // Orange
+      '#DB2777', // Pink
+      '#0891B2', // Cyan
+      '#84CC16', // Lime
+      '#F59E0B', // Amber
+      '#EF4444'  // Red variant
+    ];
     
     chart.data.datasets = filteredData.map((sourceData, index) => ({
       label: sourceData.source_name,

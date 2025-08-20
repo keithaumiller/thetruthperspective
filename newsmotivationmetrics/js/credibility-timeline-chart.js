@@ -101,9 +101,16 @@
         console.log(`Processing dataset ${index}: ${sourceData.source_name}`);
         
         const colors = [
-          '#059669', // Green for credibility
-          '#0D9488', // Teal
-          '#0891B2'  // Sky blue
+          '#2563EB', // Blue
+          '#059669', // Green
+          '#DC2626', // Red
+          '#7C3AED', // Purple
+          '#EA580C', // Orange
+          '#DB2777', // Pink
+          '#0891B2', // Cyan
+          '#84CC16', // Lime
+          '#F59E0B', // Amber
+          '#6366F1'  // Indigo
         ];
         
         return {
@@ -241,7 +248,18 @@
     console.log('Found credibility data for', filteredData.length, 'sources');
 
     // Update chart datasets
-    const colors = ['#059669', '#0D9488', '#0891B2', '#06B6D4', '#10B981'];
+    const colors = [
+      '#2563EB', // Blue
+      '#059669', // Green
+      '#DC2626', // Red
+      '#7C3AED', // Purple
+      '#EA580C', // Orange
+      '#DB2777', // Pink
+      '#0891B2', // Cyan
+      '#84CC16', // Lime
+      '#F59E0B', // Amber
+      '#6366F1'  // Indigo
+    ];
     
     chart.data.datasets = filteredData.map((sourceData, index) => ({
       label: sourceData.source_name,
