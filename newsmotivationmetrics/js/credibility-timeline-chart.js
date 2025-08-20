@@ -141,9 +141,27 @@
 
   function createChart(canvas, data) {
     try {
+      // Ensure Chart.js is loaded
+      if (typeof Chart === 'undefined') {
+        throw new Error('Chart.js library not loaded');
+      }
+
       if (!data.timelineData || !Array.isArray(data.timelineData)) {
         throw new Error('Invalid timeline data structure');
       }
+
+      // Ensure canvas has proper dimensions
+      if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+        console.warn('Canvas has zero dimensions, setting fallback size');
+        canvas.style.width = '100%';
+        canvas.style.height = '400px';
+      }
+
+      console.log('Canvas dimensions:', { 
+        width: canvas.clientWidth, 
+        height: canvas.clientHeight,
+        style: canvas.style.cssText 
+      });
 
       // Check if canvas already has a chart and destroy it
       if (canvas.chart) {

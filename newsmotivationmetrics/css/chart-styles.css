@@ -122,7 +122,7 @@
 
 .chart-container canvas {
   width: 100% !important;
-  height: auto !important;
+  height: 400px !important;
   background: #fff;
   border-radius: 8px;
   border: 1px solid #dee2e6;
