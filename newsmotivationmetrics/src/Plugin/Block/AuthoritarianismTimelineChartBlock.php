@@ -158,7 +158,7 @@ class AuthoritarianismTimelineChartBlock extends BlockBase implements ContainerF
     
     return $this->authoritarianismTimelineChartService->buildAuthoritarianismTimelineChart([
       'canvas_id' => 'authoritarianism-timeline-chart-block-' . substr(md5(serialize($config)), 0, 8),
-      'title' => 'News Source Authoritarianism Trends Over Time',
+      'title' => 'Average News Source Article Authoritarian Tendency Score (AI-assessed)',
       'show_controls' => $config['show_controls'],
       'show_legend' => $config['show_legend'],
       'show_title' => $config['show_title'],

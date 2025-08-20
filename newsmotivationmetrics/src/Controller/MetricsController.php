@@ -311,7 +311,7 @@ class MetricsController extends ControllerBase {
   public function authoritarianismChart() {
     return $this->authoritarianismTimelineChartService->buildAuthoritarianismTimelineChart([
       'canvas_id' => 'authoritarianism-timeline-chart',
-      'title' => 'News Source Authoritarianism Trends Over Time',
+      'title' => 'Average News Source Article Authoritarian Tendency Score (AI-assessed)',
       'show_controls' => TRUE,
       'show_legend' => TRUE,
       'show_title' => TRUE,
