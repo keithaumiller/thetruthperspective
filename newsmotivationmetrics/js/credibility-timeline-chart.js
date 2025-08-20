@@ -100,38 +100,27 @@
         console.log('✅ Found source selector with ID:', selectorId);
       }
 
-      // Get chart data from settings - follow working pattern from news-source-timeline-chart.js
-      const chartData = settings.newsmotivationmetrics_sources || {};
+      // Get chart data from settings - use individual credibility namespace
+      const chartData = settings.newsmotivationmetrics_credibility || {};
       
       if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
         throw new Error('No credibility timeline data available');
       }
 
-      // Filter to only credibility data
-      const credibilityData = {
-        timelineData: chartData.timelineData.filter(item => item.metric_type === 'credibility'),
-        topSources: chartData.topSources,
-        debugInfo: chartData.debugInfo
-      };
-      
-      if (!credibilityData.timelineData || credibilityData.timelineData.length === 0) {
-        throw new Error('No credibility timeline data available');
-      }
-
       console.log('📊 Credibility chart data loaded:', {
-        dataPoints: credibilityData.timelineData ? credibilityData.timelineData.length : 0,
-        sourceCount: credibilityData.topSources ? credibilityData.topSources.length : 0,
+        dataPoints: chartData.timelineData ? chartData.timelineData.length : 0,
+        sourceCount: chartData.topSources ? chartData.topSources.length : 0,
         timestamp: Math.floor(Date.now() / 1000),
         date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        php_version: credibilityData.debugInfo?.php_version || 'unknown'
+        php_version: chartData.debugInfo?.php_version || 'unknown'
       });
-      console.log('Timeline data available:', credibilityData.timelineData ? credibilityData.timelineData.length : 0, 'datasets');
+      console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
 
       console.log('🎯 Initializing Chart.js...');
       console.log('Canvas element:', canvas);
       console.log('Canvas ID:', canvasId);
 
-      createChart(canvas, credibilityData);
+      createChart(canvas, chartData);
       setupEventListeners(canvasId);
       
       // Set default selection to top 3 sources (highest article count)
@@ -375,14 +364,13 @@
     const selectedSourceIds = Array.from(sourceSelector.selectedOptions).map(option => option.value);
     console.log('📊 Updating credibility chart with selected sources:', selectedSourceIds);
 
-    // Combine timeline data from news sources - filter for credibility only
-    let allData = drupalSettings.newsmotivationmetrics_sources.timelineData || [];
-    allData = allData.filter(item => item.metric_type === 'credibility');
+    // Combine timeline data from credibility sources
+    let allData = drupalSettings.newsmotivationmetrics_credibility.timelineData || [];
     
     // Add extended sources data if available
-    if (drupalSettings.newsmotivationmetrics_sources.extendedSources && 
-        drupalSettings.newsmotivationmetrics_sources.extendedSources.timelineData) {
-      const extendedData = drupalSettings.newsmotivationmetrics_sources.extendedSources.timelineData.filter(item => item.metric_type === 'credibility');
+    if (drupalSettings.newsmotivationmetrics_credibility.extendedSources && 
+        drupalSettings.newsmotivationmetrics_credibility.extendedSources.timelineData) {
+      const extendedData = drupalSettings.newsmotivationmetrics_credibility.extendedSources.timelineData;
       console.log('📈 Found extended source data with', extendedData.length, 'credibility datasets');
       
       // Merge extended data, avoiding duplicates

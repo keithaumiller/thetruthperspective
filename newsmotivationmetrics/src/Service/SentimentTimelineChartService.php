@@ -169,7 +169,7 @@ class SentimentTimelineChartService {
    */
   protected function filterSentimentData(array $timeline_data): array {
     return array_filter($timeline_data, function($item) {
-      return isset($item['metric_type']) && $item['metric_type'] === 'Sentiment Score';
+      return isset($item['metric_type']) && $item['metric_type'] === 'sentiment';
     });
   }
 

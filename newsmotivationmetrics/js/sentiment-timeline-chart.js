@@ -100,38 +100,27 @@
         console.log('✅ Found source selector with ID:', selectorId);
       }
 
-      // Get chart data from settings - follow working pattern from news-source-timeline-chart.js
-      const chartData = settings.newsmotivationmetrics_sources || {};
+      // Get chart data from settings - use individual sentiment namespace
+      const chartData = settings.newsmotivationmetrics_sentiment || {};
       
       if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
         throw new Error('No sentiment timeline data available');
       }
 
-      // Filter to only sentiment data
-      const sentimentData = {
-        timelineData: chartData.timelineData.filter(item => item.metric_type === 'sentiment'),
-        topSources: chartData.topSources,
-        debugInfo: chartData.debugInfo
-      };
-      
-      if (!sentimentData.timelineData || sentimentData.timelineData.length === 0) {
-        throw new Error('No sentiment timeline data available');
-      }
-
       console.log('📊 Sentiment chart data loaded:', {
-        dataPoints: sentimentData.timelineData ? sentimentData.timelineData.length : 0,
-        sourceCount: sentimentData.topSources ? sentimentData.topSources.length : 0,
+        dataPoints: chartData.timelineData ? chartData.timelineData.length : 0,
+        sourceCount: chartData.topSources ? chartData.topSources.length : 0,
         timestamp: Math.floor(Date.now() / 1000),
         date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        php_version: sentimentData.debugInfo?.php_version || 'unknown'
+        php_version: chartData.debugInfo?.php_version || 'unknown'
       });
-      console.log('Timeline data available:', sentimentData.timelineData ? sentimentData.timelineData.length : 0, 'datasets');
+      console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
 
       console.log('🎯 Initializing Chart.js...');
       console.log('Canvas element:', canvas);
       console.log('Canvas ID:', canvasId);
 
-      createChart(canvas, sentimentData);
+      createChart(canvas, chartData);
       setupEventListeners(canvasId);
       
       // Set default selection to top 3 sources (highest article count)
@@ -375,14 +364,14 @@
     const selectedSourceIds = Array.from(sourceSelector.selectedOptions).map(option => option.value);
     console.log('📊 Updating sentiment chart with selected sources:', selectedSourceIds);
 
-    // Combine timeline data from both top sources and extended sources
+    // Combine timeline data from sentiment sources
     let allData = drupalSettings.newsmotivationmetrics_sentiment.timelineData || [];
     
     // Add extended sources data if available
     if (drupalSettings.newsmotivationmetrics_sentiment.extendedSources && 
         drupalSettings.newsmotivationmetrics_sentiment.extendedSources.timelineData) {
       const extendedData = drupalSettings.newsmotivationmetrics_sentiment.extendedSources.timelineData;
-      console.log('📈 Found extended source data with', extendedData.length, 'datasets');
+      console.log('📈 Found extended source data with', extendedData.length, 'sentiment datasets');
       
       // Merge extended data, avoiding duplicates
       const existingSourceKeys = new Set(allData.map(item => item.source_id + '_' + item.metric_type));

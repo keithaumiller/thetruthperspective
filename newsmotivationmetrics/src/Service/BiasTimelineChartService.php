@@ -169,7 +169,7 @@ class BiasTimelineChartService {
    */
   protected function filterBiasData(array $timeline_data): array {
     return array_filter($timeline_data, function($item) {
-      return isset($item['metric_type']) && $item['metric_type'] === 'Bias Rating';
+      return isset($item['metric_type']) && $item['metric_type'] === 'bias';
     });
   }
 

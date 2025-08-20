@@ -169,7 +169,7 @@ class CredibilityTimelineChartService {
    */
   protected function filterCredibilityData(array $timeline_data): array {
     return array_filter($timeline_data, function($item) {
-      return isset($item['metric_type']) && $item['metric_type'] === 'Credibility Score';
+      return isset($item['metric_type']) && $item['metric_type'] === 'credibility';
     });
   }
 
