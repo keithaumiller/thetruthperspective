@@ -8,6 +8,11 @@
 
   Drupal.behaviors.biasTimelineChart = {
     attach: function (context, settings) {
+      // Only process if this is the document context or contains chart canvases
+      if (context !== document && !context.querySelector('canvas[id*="bias-timeline-chart"]')) {
+        return;
+      }
+
       console.log('=== Bias Timeline Chart Behavior Attach Called ===');
 
       // Check for Chart.js availability

@@ -1,19 +1,14 @@
 (function (Drupal, drupalSettings) {
   'use strict';
 
-  console.log('=== Sentiment Timeline Chart Script Loading ===');
+  console.log('=== Bias Timeline Chart Script Loading ===');
 
   let chart = null;
   let sourceSelector = null;
 
-  Drupal.behaviors.sentimentTimelineChart = {
+  Drupal.behaviors.biasTimelineChart = {
     attach: function (context, settings) {
-      // Only process if this is the document context or contains chart canvases
-      if (context !== document && !context.querySelector('canvas[id*="sentiment-timeline-chart"]')) {
-        return;
-      }
-
-      console.log('=== Sentiment Timeline Chart Behavior Attach Called ===');
+      console.log('=== Bias Timeline Chart Behavior Attach Called ===');
 
       // Check for Chart.js availability
       if (typeof Chart === 'undefined') {
@@ -21,12 +16,12 @@
         return;
       }
 
-      // Find sentiment timeline chart canvases
+      // Find bias timeline chart canvases
       const canvases = context.querySelectorAll ? 
-        context.querySelectorAll('canvas[id*="sentiment-timeline-chart"]') :
-        document.querySelectorAll('canvas[id*="sentiment-timeline-chart"]');
+        context.querySelectorAll('canvas[id*="bias-timeline-chart"]') :
+        document.querySelectorAll('canvas[id*="bias-timeline-chart"]');
       
-      console.log('Found', canvases.length, 'sentiment chart canvases');
+      console.log('Found', canvases.length, 'bias chart canvases');
       
       canvases.forEach((canvas) => {
         if (canvas.hasAttribute('data-chart-processed')) {
@@ -35,17 +30,17 @@
         
         canvas.setAttribute('data-chart-processed', 'true');
         const canvasId = canvas.id;
-        console.log('✅ Processing sentiment chart canvas:', canvasId);
+        console.log('✅ Processing bias chart canvas:', canvasId);
 
-        // Check if we have sentiment data
-        if (!settings.newsmotivationmetrics_sentiment) {
-          console.log('❌ No sentiment data found in settings');
+        // Check if we have bias data
+        if (!settings.newsmotivationmetrics_bias) {
+          console.log('❌ No bias data found in settings');
           console.log('Available settings:', Object.keys(settings));
           return;
         }
 
-        const chartData = settings.newsmotivationmetrics_sentiment;
-        console.log('📊 Sentiment chart data structure:', {
+        const chartData = settings.newsmotivationmetrics_bias;
+        console.log('📊 Bias chart data structure:', {
           timelineData: chartData.timelineData ? Object.keys(chartData.timelineData).length : 0,
           topSources: chartData.topSources ? chartData.topSources.length : 0
         });
@@ -57,10 +52,16 @@
         if (!sourceSelector) {
           sourceSelector = document.querySelector('.source-selector');
         }
+        
+        if (sourceSelector) {
+          console.log('✅ Found source selector');
+        } else {
+          console.log('❌ No source selector found');
+        }
 
         // Validate data structure
         if (!chartData.timelineData || typeof chartData.timelineData !== 'object') {
-          console.log('❌ Invalid sentiment timeline data structure');
+          console.log('❌ Invalid bias timeline data structure');
           return;
         }
 
@@ -72,7 +73,7 @@
   };
 
   function initializeChart(canvas, data, canvasId) {
-    console.log('🎯 Initializing Sentiment Chart...');
+    console.log('🎯 Initializing Bias Chart...');
     
     try {
       const ctx = canvas.getContext('2d');
@@ -93,7 +94,7 @@
       console.log('Timeline data points:', timelineArray.length);
 
       if (timelineArray.length === 0) {
-        throw new Error('No sentiment timeline data available');
+        throw new Error('No bias timeline data available');
       }
 
       // Prepare datasets - show top 3 sources initially
@@ -101,9 +102,9 @@
         console.log(`Processing dataset ${index}: ${sourceData.source_name}`);
         
         const colors = [
-          '#8B5CF6', // Purple for sentiment
-          '#A855F7', // Violet
-          '#C084FC'  // Light purple
+          '#DC2626', // Red for bias
+          '#EA580C', // Orange 
+          '#D97706'  // Amber
         ];
         
         return {
@@ -121,7 +122,7 @@
         };
       });
 
-      console.log('Creating sentiment chart with', datasets.length, 'datasets');
+      console.log('Creating bias chart with', datasets.length, 'datasets');
 
       chart = new Chart(ctx, {
         type: 'line',
@@ -136,7 +137,7 @@
           plugins: {
             title: {
               display: true,
-              text: 'News Source Sentiment Trends Over Time',
+              text: 'News Source Bias Trends Over Time',
               font: { size: 16 }
             },
             legend: {
@@ -157,11 +158,11 @@
               callbacks: {
                 afterLabel: function(context) {
                   const value = context.parsed.y;
-                  if (value >= 70) return 'Very Positive';
-                  if (value >= 60) return 'Positive';
-                  if (value >= 40) return 'Neutral';
-                  if (value >= 30) return 'Negative';
-                  return 'Very Negative';
+                  if (value <= 25) return 'Lean Left';
+                  if (value <= 45) return 'Center Left';
+                  if (value <= 55) return 'Center';
+                  if (value <= 75) return 'Center Right';
+                  return 'Lean Right';
                 }
               }
             }
@@ -188,7 +189,7 @@
               max: 100,
               title: {
                 display: true,
-                text: 'Sentiment Rating (0=Negative, 100=Positive)'
+                text: 'Bias Rating (0=Left, 50=Center, 100=Right)'
               },
               ticks: {
                 stepSize: 10
@@ -199,10 +200,10 @@
       });
 
       canvas.chart = chart;
-      console.log('✅ Sentiment chart initialized successfully');
+      console.log('✅ Bias chart initialized successfully');
       
     } catch (error) {
-      console.error('❌ Sentiment chart initialization failed:', error);
+      console.error('❌ Bias chart initialization failed:', error);
     }
   }
 
@@ -228,20 +229,20 @@
     if (!chart || !sourceSelector) return;
 
     const selectedSourceIds = Array.from(sourceSelector.selectedOptions).map(option => option.value);
-    console.log('📊 Updating sentiment chart with selected sources:', selectedSourceIds);
+    console.log('📊 Updating chart with selected sources:', selectedSourceIds);
 
     // Get timeline data
-    const allTimelineData = Object.values(drupalSettings.newsmotivationmetrics_sentiment.timelineData || {});
+    const allTimelineData = Object.values(drupalSettings.newsmotivationmetrics_bias.timelineData || {});
     
     // Filter by selected sources
     const filteredData = allTimelineData.filter(sourceData => 
       selectedSourceIds.includes(sourceData.source_id)
     );
 
-    console.log('Found sentiment data for', filteredData.length, 'sources');
+    console.log('Found data for', filteredData.length, 'sources');
 
     // Update chart datasets
-    const colors = ['#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE', '#E9D5FF'];
+    const colors = ['#DC2626', '#EA580C', '#D97706', '#B91C1C', '#C2410C'];
     
     chart.data.datasets = filteredData.map((sourceData, index) => ({
       label: sourceData.source_name,
@@ -290,6 +291,6 @@
     }
   }
 
-  console.log('=== Sentiment Chart Script Loaded Successfully ===');
+  console.log('=== Bias Chart Script Loaded Successfully ===');
 
 })(Drupal, drupalSettings);

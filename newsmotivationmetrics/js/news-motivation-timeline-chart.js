@@ -10,6 +10,11 @@
 
   Drupal.behaviors.newsMotivationTimelineChart = {
     attach: function (context, settings) {
+      // Only process if this is the document context or contains chart canvases
+      if (context !== document && !context.querySelector('canvas[id^="news-motivation-timeline-chart"]')) {
+        return;
+      }
+
       console.log('=== Drupal Behavior Attach Called ===');
       console.log('Context type:', typeof context);
       console.log('Context element:', context);
