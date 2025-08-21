@@ -1,7 +1,7 @@
 (function (Drupal, drupalSettings) {
   'use strict';
 
-  console.log('=== Authoritarianism Timeline Chart Script Loading ===');
+  console.log('=== Authoritarianism Timeline Chart Script Loading - VERSION 2025-08-21-v2 ===');
 
   let chart = null;
   let sourceSelector = null;
@@ -90,11 +90,13 @@
 
       // Convert object-based timeline data to array format for processing
       const timelineArray = Object.values(data.timelineData);
-      console.log('=== AUTHORITARIANISM DEBUG ===');
+      console.log('=== AUTHORITARIANISM DEBUG - CACHE BUST VERSION 2 ===');
+      console.log('🔥🔥🔥 TIMELINE DATA DEBUG 🔥🔥🔥');
       console.log('Timeline data points:', timelineArray.length);
       console.log('Full timeline data:', data.timelineData);
       console.log('Timeline array:', timelineArray);
       console.log('Timeline array slice(0,5):', timelineArray.slice(0, 5));
+      console.log('🔥🔥🔥 END TIMELINE DATA DEBUG 🔥🔥🔥');
 
       if (timelineArray.length === 0) {
         throw new Error('No authoritarianism timeline data available');
