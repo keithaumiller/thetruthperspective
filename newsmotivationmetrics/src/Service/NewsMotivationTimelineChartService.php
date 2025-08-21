@@ -120,8 +120,7 @@ class NewsMotivationTimelineChartService implements NewsMotivationTimelineChartS
     // Chart container and canvas
     $build['chart_container'] = $this->buildChartContainer($options, $chart_data);
 
-    // Chart actions (reset/clear buttons)
-    $build['actions'] = $this->buildChartActions($options['canvas_id'], $options['term_limit']);
+    // Action buttons removed for simplified interface
 
     // Attach JavaScript libraries and settings
     $build['#attached']['library'][] = $options['library'];
@@ -266,48 +265,6 @@ class NewsMotivationTimelineChartService implements NewsMotivationTimelineChartS
     ];
 
     return $container;
-  }
-
-  /**
-   * Build chart action buttons.
-   *
-   * @param string $canvas_id
-   *   The canvas element ID.
-   * @param int $term_limit
-   *   The default number of terms to show.
-   *
-   * @return array
-   *   Render array for chart actions.
-   */
-  protected function buildChartActions(string $canvas_id, int $term_limit): array {
-    $unique_id = $this->getUniqueId($canvas_id);
-
-    return [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['chart-actions']],
-      'reset' => [
-        '#type' => 'html_tag',
-        '#tag' => 'button',
-        '#value' => t('🔄 Reset to Top ' . $term_limit),
-        '#attributes' => [
-          'id' => 'reset-chart-' . $unique_id,
-          'class' => ['btn', 'btn-secondary', 'chart-reset-btn'],
-          'type' => 'button',
-          'data-canvas-id' => $canvas_id,
-        ],
-      ],
-      'clear' => [
-        '#type' => 'html_tag',
-        '#tag' => 'button',
-        '#value' => t('🧹 Clear All'),
-        '#attributes' => [
-          'id' => 'clear-chart-' . $unique_id,
-          'class' => ['btn', 'btn-outline', 'chart-clear-btn'],
-          'type' => 'button',
-          'data-canvas-id' => $canvas_id,
-        ],
-      ],
-    ];
   }
 
   /**

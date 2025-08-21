@@ -296,19 +296,7 @@
       termSelector.addEventListener('change', updateChart);
     }
 
-    // Reset button
-    const resetId = canvasId === 'news-motivation-timeline-chart' ? 'reset-chart' : 'reset-chart-' + canvasId.split('-').pop();
-    const resetButton = document.getElementById(resetId) || document.querySelector('[id*="reset-chart"]');
-    if (resetButton) {
-      resetButton.addEventListener('click', resetToTop10);
-    }
-
-    // Clear button
-    const clearId = canvasId === 'news-motivation-timeline-chart' ? 'clear-chart' : 'clear-chart-' + canvasId.split('-').pop();
-    const clearButton = document.getElementById(clearId) || document.querySelector('[id*="clear-chart"]');
-    if (clearButton) {
-      clearButton.addEventListener('click', clearAllTerms);
-    }
+    // Button functionality removed for simplified interface
   }
 
   function updateChart() {
@@ -375,34 +363,6 @@
       }
       statusElement.textContent = message;
     }
-  }
-
-  function resetToTop10() {
-    if (!termSelector) return;
-
-    // Clear all selections
-    Array.from(termSelector.options).forEach(option => {
-      option.selected = false;
-    });
-
-    // Select top 10 options
-    const options = Array.from(termSelector.options);
-    for (let i = 0; i < Math.min(10, options.length); i++) {
-      options[i].selected = true;
-    }
-
-    updateChart();
-  }
-
-  function clearAllTerms() {
-    if (!termSelector) return;
-
-    // Clear all selections
-    Array.from(termSelector.options).forEach(option => {
-      option.selected = false;
-    });
-
-    updateChart();
   }
 
   // Debug information on script load
