@@ -22,10 +22,20 @@ class MastodonClient implements PlatformInterface {
    *
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
-  protected $configFactory;
-
-  /**
-   * The logger service.
+  protected $configFactor  /**
+   * Build content generation prompt for social media post.
+   *
+   * @param string $article_title
+   *   The article title.
+   * @param string $article_url
+   *   The article URL.
+   * @param string $motivation_analysis
+   *   The motivation analysis data.
+   *
+   * @return string
+   *   The prompt for AI.
+   */
+  protected function buildContentPrompt($article_title, $article_url, $motivation_analysis): string { The logger service.
    *
    * @var \Drupal\Core\Logger\LoggerChannelInterface
    */
@@ -226,17 +236,17 @@ class MastodonClient implements PlatformInterface {
   }
 
   /**
-   * Test Mastodon by posting an AI-generated social media message.
+   * Post to Mastodon using AI-generated social media content.
    * 
    * @return bool
-   *   TRUE if the test post was successful, FALSE otherwise.
+   *   TRUE if the post was successful, FALSE otherwise.
    */
   public function testPost(): bool {
-    $this->logger->info('=== Starting Mastodon test post with AI-generated content ===');
+    $this->logger->info('=== Starting Mastodon post with AI-generated content ===');
     
     // Step 1: Test connection first
     if (!$this->testConnection()) {
-      $this->logger->error('Connection test failed, cannot proceed with test post');
+      $this->logger->error('Connection test failed, cannot proceed with post');
       return FALSE;
     }
     
@@ -249,12 +259,12 @@ class MastodonClient implements PlatformInterface {
     ]);
     
     if (empty($test_message)) {
-      // Fallback to basic test message if AI generation fails
+      // Fallback to basic message if AI generation fails
       // Keep it very short to handle low character limits
-      $test_message = "🤖 Test from Truth Perspective #Test";
-      $this->logger->warning('AI content generation failed, using fallback test message');
+      $test_message = "🤖 Latest analysis from Truth Perspective #MediaAnalysis";
+      $this->logger->warning('AI content generation failed, using fallback message');
     } else {
-      $this->logger->info('Using AI-generated content for test post');
+      $this->logger->info('Using AI-generated content for post');
     }
 
     // Ensure message fits within character limit
@@ -276,12 +286,12 @@ class MastodonClient implements PlatformInterface {
     ]);
     
     if ($result === FALSE) {
-      $this->logger->error('Test post failed');
+      $this->logger->error('Post failed');
       return FALSE;
     }
     
     // Step 4: Success
-    $this->logger->info('✅ Test post successful!');
+    $this->logger->info('✅ Post successful!');
     if (isset($result['url'])) {
       $this->logger->info('Post URL: @url', ['@url' => $result['url']]);
     }
@@ -289,7 +299,7 @@ class MastodonClient implements PlatformInterface {
       $this->logger->info('Post ID: @id', ['@id' => $result['id']]);
     }
     
-    $this->logger->info('=== Mastodon test post completed successfully ===');
+    $this->logger->info('=== Mastodon post completed successfully ===');
     return TRUE;
   }
 
@@ -516,7 +526,7 @@ class MastodonClient implements PlatformInterface {
   }
 
   /**
-   * Generate AI-powered social media content for test posting.
+   * Generate AI-powered social media content for posting.
    *
    * @return string
    *   The generated social media content, or empty string if generation fails.
@@ -598,7 +608,7 @@ class MastodonClient implements PlatformInterface {
       $this->logger->info('AI processing service loaded successfully');
       
       // Build prompt for social media generation
-      $prompt = $this->buildTestPrompt($article_title, $article_url, $motivation_analysis);
+      $prompt = $this->buildContentPrompt($article_title, $article_url, $motivation_analysis);
       $this->logger->info('Built prompt for AI: @length characters', ['@length' => strlen($prompt)]);
       
       // Call AI service
@@ -649,7 +659,7 @@ class MastodonClient implements PlatformInterface {
   }
 
   /**
-   * Build prompt for AI test content generation.
+   * Build content generation prompt for social media post.
    *
    * @param string $article_title
    *   The article title.
@@ -661,8 +671,8 @@ class MastodonClient implements PlatformInterface {
    * @return string
    *   The prompt for AI.
    */
-  protected function buildTestPrompt($article_title, $article_url, $motivation_analysis): string {
-    $prompt = "As a social scientist, create a compelling social media post for Mastodon based on the motivation analysis below. This is a TEST POST for The Truth Perspective platform.\n\n";
+  protected function buildContentPrompt($article_title, $article_url, $motivation_analysis): string {
+    $prompt = "As a social scientist, create a compelling social media post for Mastodon based on the motivation analysis below. This is for The Truth Perspective platform.\n\n";
     
     $prompt .= "ARTICLE TITLE: {$article_title}\n\n";
     $prompt .= "ARTICLE URL: {$article_url}\n\n";
@@ -673,10 +683,9 @@ class MastodonClient implements PlatformInterface {
     $prompt .= "- Write from a social scientist's analytical perspective\n";
     $prompt .= "- Keep under {$instance_limit} characters total (Mastodon instance limit)\n";
     $prompt .= "- Highlight the most compelling motivational insights from the analysis\n";
-    $prompt .= "- Include 2-4 relevant hashtags (e.g., #MotivationAnalysis #SocialScience #TestPost)\n";
+    $prompt .= "- Include 2-4 relevant hashtags (e.g., #MotivationAnalysis #SocialScience #MediaAnalysis)\n";
     $prompt .= "- Include the article URL\n";
-    $prompt .= "- Focus on what drives the key players and what this reveals about societal patterns\n";
-    $prompt .= "- Add a note that this is a test post for platform verification\n\n";
+    $prompt .= "- Focus on what drives the key players and what this reveals about societal patterns\n\n";
     
     $prompt .= "TONE: Professional yet accessible, insightful, thought-provoking\n\n";
     
