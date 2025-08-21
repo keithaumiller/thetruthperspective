@@ -90,7 +90,11 @@
 
       // Convert object-based timeline data to array format for processing
       const timelineArray = Object.values(data.timelineData);
+      console.log('=== AUTHORITARIANISM DEBUG ===');
       console.log('Timeline data points:', timelineArray.length);
+      console.log('Full timeline data:', data.timelineData);
+      console.log('Timeline array:', timelineArray);
+      console.log('Timeline array slice(0,5):', timelineArray.slice(0, 5));
 
       if (timelineArray.length === 0) {
         throw new Error('No authoritarianism timeline data available');
@@ -98,7 +102,7 @@
 
       // Prepare datasets - show top 5 sources initially
       const datasets = timelineArray.slice(0, 5).map((sourceData, index) => {
-        console.log(`Processing dataset ${index}: ${sourceData.source_name}`);
+        console.log(`=== Processing dataset ${index}: ${sourceData.source_name} ===`);
         
         const colors = [
           '#7C3AED', // Purple
@@ -128,6 +132,9 @@
         };
       });
 
+      console.log('=== DATASETS CREATED ===');
+      console.log('Number of datasets created:', datasets.length);
+      console.log('Dataset labels:', datasets.map(d => d.label));
       console.log('Creating authoritarianism chart with', datasets.length, 'datasets');
 
       chart = new Chart(ctx, {
@@ -279,6 +286,7 @@
   }
 
   function resetToTopSources() {
+    console.log('=== RESET TO TOP SOURCES CALLED ===');
     if (!sourceSelector) return;
 
     // Clear selections
@@ -288,8 +296,11 @@
 
     // Select top 5
     const options = Array.from(sourceSelector.options);
+    console.log('Total source options available:', options.length);
+    console.log('Selecting top 5 sources...');
     for (let i = 0; i < Math.min(5, options.length); i++) {
       options[i].selected = true;
+      console.log(`Selected option ${i}: ${options[i].text}`);
     }
 
     updateChart();
