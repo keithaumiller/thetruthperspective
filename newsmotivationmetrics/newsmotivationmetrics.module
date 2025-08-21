@@ -168,6 +168,7 @@ function newsmotivationmetrics_check_block_status() {
     foreach ($status_report as $row) {
       \Drupal::messenger()->addMessage(
         t('@block: @status in @region (weight: @weight, front page only: @front_page_only)', $row)
+      );
     }
   }
 }
