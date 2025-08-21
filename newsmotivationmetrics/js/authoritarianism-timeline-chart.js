@@ -1,8 +1,6 @@
 (function (Drupal, drupalSettings) {
   'use strict';
 
-  console.log('=== Authoritarianism Timeline Chart Script Loading - VERSION 2025-08-21-v2 ===');
-
   let chart = null;
   let sourceSelector = null;
 
@@ -12,8 +10,6 @@
       if (context !== document && !context.querySelector('canvas[id*="authoritarianism-timeline-chart"]')) {
         return;
       }
-
-      console.log('=== Authoritarianism Timeline Chart Behavior Attach Called ===');
 
       // Check for Chart.js availability
       if (typeof Chart === 'undefined') {
@@ -26,8 +22,6 @@
         context.querySelectorAll('canvas[id*="authoritarianism-timeline-chart"]') :
         document.querySelectorAll('canvas[id*="authoritarianism-timeline-chart"]');
       
-      console.log('Found', canvases.length, 'authoritarianism chart canvases');
-      
       canvases.forEach((canvas) => {
         if (canvas.hasAttribute('data-chart-processed')) {
           return;
@@ -35,20 +29,14 @@
         
         canvas.setAttribute('data-chart-processed', 'true');
         const canvasId = canvas.id;
-        console.log('✅ Processing authoritarianism chart canvas:', canvasId);
 
         // Check if we have authoritarianism data
         if (!settings.newsmotivationmetrics_authoritarianism) {
-          console.log('❌ No authoritarianism data found in settings');
-          console.log('Available settings:', Object.keys(settings));
+          console.error('❌ No authoritarianism data found in settings');
           return;
         }
 
         const chartData = settings.newsmotivationmetrics_authoritarianism;
-        console.log('📊 Authoritarianism chart data structure:', {
-          timelineData: chartData.timelineData ? Object.keys(chartData.timelineData).length : 0,
-          topSources: chartData.topSources ? chartData.topSources.length : 0
-        });
 
         // Find source selector
         const selectorId = 'source-selector';
@@ -60,7 +48,7 @@
 
         // Validate data structure
         if (!chartData.timelineData || typeof chartData.timelineData !== 'object') {
-          console.log('❌ Invalid authoritarianism timeline data structure');
+          console.error('❌ Invalid authoritarianism timeline data structure');
           return;
         }
 
@@ -72,8 +60,6 @@
   };
 
   function initializeChart(canvas, data, canvasId) {
-    console.log('🎯 Initializing Authoritarianism Chart...');
-    
     try {
       const ctx = canvas.getContext('2d');
       
@@ -90,13 +76,6 @@
 
       // Convert object-based timeline data to array format for processing
       const timelineArray = Object.values(data.timelineData);
-      console.log('=== AUTHORITARIANISM DEBUG - CACHE BUST VERSION 2 ===');
-      console.log('🔥🔥🔥 TIMELINE DATA DEBUG 🔥🔥🔥');
-      console.log('Timeline data points:', timelineArray.length);
-      console.log('Full timeline data:', data.timelineData);
-      console.log('Timeline array:', timelineArray);
-      console.log('Timeline array slice(0,5):', timelineArray.slice(0, 5));
-      console.log('🔥🔥🔥 END TIMELINE DATA DEBUG 🔥🔥🔥');
 
       if (timelineArray.length === 0) {
         throw new Error('No authoritarianism timeline data available');
@@ -104,8 +83,6 @@
 
       // Prepare datasets - show top 5 sources initially
       const datasets = timelineArray.slice(0, 5).map((sourceData, index) => {
-        console.log(`=== Processing dataset ${index}: ${sourceData.source_name} ===`);
-        
         const colors = [
           '#7C3AED', // Purple
           '#DC2626', // Red
@@ -133,11 +110,6 @@
           pointHoverRadius: 6
         };
       });
-
-      console.log('=== DATASETS CREATED ===');
-      console.log('Number of datasets created:', datasets.length);
-      console.log('Dataset labels:', datasets.map(d => d.label));
-      console.log('Creating authoritarianism chart with', datasets.length, 'datasets');
 
       chart = new Chart(ctx, {
         type: 'line',
@@ -215,7 +187,6 @@
       });
 
       canvas.chart = chart;
-      console.log('✅ Authoritarianism chart initialized successfully');
       
     } catch (error) {
       console.error('❌ Authoritarianism chart initialization failed:', error);
@@ -228,23 +199,12 @@
     }
 
     // Reset and clear buttons removed for cleaner interface
-    // const resetButton = document.querySelector('[id*="reset-chart"]');
-    // const clearButton = document.querySelector('[id*="clear-chart"]');
-
-    // if (resetButton) {
-    //   resetButton.addEventListener('click', resetToTopSources);
-    // }
-
-    // if (clearButton) {
-    //   clearButton.addEventListener('click', clearAllSources);
-    // }
   }
 
   function updateChart() {
     if (!chart || !sourceSelector) return;
 
     const selectedSourceIds = Array.from(sourceSelector.selectedOptions).map(option => option.value);
-    console.log('📊 Updating authoritarianism chart with selected sources:', selectedSourceIds);
 
     // Get timeline data
     const allTimelineData = Object.values(drupalSettings.newsmotivationmetrics_authoritarianism.timelineData || {});
@@ -253,8 +213,6 @@
     const filteredData = allTimelineData.filter(sourceData => 
       selectedSourceIds.includes(sourceData.source_id)
     );
-
-    console.log('Found authoritarianism data for', filteredData.length, 'sources');
 
     // Update chart datasets
     const colors = [
@@ -288,7 +246,6 @@
   }
 
   function resetToTopSources() {
-    console.log('=== RESET TO TOP SOURCES CALLED ===');
     if (!sourceSelector) return;
 
     // Clear selections
@@ -298,11 +255,8 @@
 
     // Select top 5
     const options = Array.from(sourceSelector.options);
-    console.log('Total source options available:', options.length);
-    console.log('Selecting top 5 sources...');
     for (let i = 0; i < Math.min(5, options.length); i++) {
       options[i].selected = true;
-      console.log(`Selected option ${i}: ${options[i].text}`);
     }
 
     updateChart();
@@ -320,7 +274,5 @@
       chart.update();
     }
   }
-
-  console.log('=== Authoritarianism Chart Script Loaded Successfully ===');
 
 })(Drupal, drupalSettings);

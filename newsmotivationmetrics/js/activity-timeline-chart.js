@@ -8,30 +8,16 @@
 
   Drupal.behaviors.recentActivityTimelineChart = {
     attach: function (context, settings) {
-      console.log('=== Recent Activity Timeline Chart Script Loading ===');
-      console.log('Drupal object:', typeof Drupal);
-      console.log('drupalSettings object:', typeof drupalSettings);
-
       // Check if Chart.js is loaded
       if (typeof Chart === 'undefined') {
         console.error('Chart.js is not loaded for Recent Activity Timeline Chart');
         return;
       }
 
-      console.log('=== Chart Script Loaded Successfully ===');
-      console.log('Environment check:');
-      console.log('- Drupal available:', typeof Drupal !== 'undefined');
-      console.log('- jQuery available:', typeof $ !== 'undefined');
-      console.log('- drupalSettings available:', typeof drupalSettings !== 'undefined');
-
       const charts = context.querySelectorAll('.activity-timeline-chart');
-      console.log('Found', charts.length, 'activity timeline chart canvases to process');
       
       charts.forEach(function(canvas) {
-        console.log('✅ Processing canvas with ID:', canvas.getAttribute('id'));
-        
         if (canvas.getAttribute('data-chart-initialized')) {
-          console.log('Skipping already processed canvas:', canvas.getAttribute('id'));
           return;
         }
         
@@ -39,15 +25,9 @@
         const chartData = settings.newsmotivationmetrics_activity?.[chartId];
         
         if (!chartData) {
-          console.warn('❌ No chart data found for', chartId);
-          console.log('Available activity data keys:', Object.keys(settings.newsmotivationmetrics_activity || {}));
+          console.error('❌ No chart data found for', chartId);
           return;
         }
-        
-        console.log('📊 Chart data loaded:', typeof chartData);
-        console.log('Activity data available:', chartData.timelineData?.length || 0, 'datasets');
-        
-        console.log('Initializing Recent Activity Timeline Chart:', chartId, chartData);
         
         // Initialize the timeline chart
         initializeActivityTimelineChart(canvas, chartData);
@@ -72,10 +52,13 @@
         return;
       }
 
+      // Show 5 datasets by default
+      const datasets = (chartData.timelineData || []).slice(0, 5);
+
       const config = {
         type: 'line',
         data: {
-          datasets: chartData.timelineData || []
+          datasets: datasets
         },
         options: {
           responsive: true,
@@ -101,99 +84,58 @@
             legend: {
               display: true,
               position: 'top',
+              onClick: function(e, legendItem, legend) {
+                const chart = legend.chart;
+                const index = legendItem.datasetIndex;
+                const meta = chart.getDatasetMeta(index);
+                
+                // Toggle visibility
+                meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+                
+                chart.update();
+              },
               labels: {
                 usePointStyle: true,
-                padding: 15,
-                font: {
-                  size: 12
-                },
+                padding: 20,
                 generateLabels: function(chart) {
                   const original = Chart.defaults.plugins.legend.labels.generateLabels;
                   const labels = original.call(this, chart);
                   
-                  // Group published and processing for same source
-                  const groupedLabels = [];
-                  const processedSources = new Set();
-                  
-                  labels.forEach(label => {
-                    const sourceName = label.text.replace(/ \(Published\)| \(Processing\)/, '');
-                    
-                    if (!processedSources.has(sourceName)) {
-                      processedSources.add(sourceName);
-                      
-                      // Find both published and processing datasets for this source
-                      const publishedDataset = chart.data.datasets.find(d => 
-                        d.label === sourceName + ' (Published)'
-                      );
-                      const processingDataset = chart.data.datasets.find(d => 
-                        d.label === sourceName + ' (Processing)'
-                      );
-                      
-                      if (publishedDataset) {
-                        groupedLabels.push({
-                          text: sourceName,
-                          fillStyle: publishedDataset.borderColor,
-                          strokeStyle: publishedDataset.borderColor,
-                          pointStyle: 'line',
-                          datasetIndex: chart.data.datasets.indexOf(publishedDataset),
-                          hidden: publishedDataset.hidden || false
-                        });
-                      }
-                    }
+                  labels.forEach(function(label) {
+                    // Check if dataset is hidden
+                    const meta = chart.getDatasetMeta(label.datasetIndex);
+                    label.hidden = meta.hidden;
                   });
                   
-                  return groupedLabels;
+                  return labels;
                 }
-              },
-              onClick: function(e, legendItem, legend) {
-                const chart = legend.chart;
-                const sourceName = legendItem.text;
-                
-                // Toggle visibility for both published and processing datasets
-                chart.data.datasets.forEach((dataset, index) => {
-                  if (dataset.label.startsWith(sourceName + ' (')) {
-                    const meta = chart.getDatasetMeta(index);
-                    meta.hidden = meta.hidden === null ? !dataset.hidden : null;
-                  }
-                });
-                
-                chart.update();
               }
             },
             tooltip: {
               mode: 'index',
               intersect: false,
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-              borderColor: '#ccc',
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleColor: 'white',
+              bodyColor: 'white',
+              borderColor: 'rgba(255,255,255,0.2)',
               borderWidth: 1,
-              cornerRadius: 6,
-              displayColors: true,
               callbacks: {
                 title: function(tooltipItems) {
-                  const date = new Date(tooltipItems[0].parsed.x);
-                  return date.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  });
+                  // Format date for tooltip title
+                  if (tooltipItems.length > 0) {
+                    const date = new Date(tooltipItems[0].parsed.x);
+                    return date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    });
+                  }
+                  return '';
                 },
                 label: function(context) {
                   const label = context.dataset.label || '';
                   const value = context.parsed.y;
-                  const isProcessing = label.includes('(Processing)');
-                  const icon = isProcessing ? '⏳' : '📰';
-                  
-                  return `${icon} ${label}: ${value} article${value !== 1 ? 's' : ''}`;
-                },
-                footer: function(tooltipItems) {
-                  let total = 0;
-                  tooltipItems.forEach(item => {
-                    total += item.parsed.y;
-                  });
-                  return total > 0 ? `Total: ${total} articles` : '';
+                  return `${label}: ${value} articles`;
                 }
               }
             }
@@ -268,7 +210,6 @@
         resizeObserver.observe(canvas.parentElement);
       }
       
-      console.log('Recent Activity Timeline Chart created successfully with', config.data.datasets.length, 'datasets');
       return chart;
       
     } catch (error) {
@@ -288,14 +229,14 @@
                        canvas.parentElement;
       
       if (!container) {
-        console.warn('Activity Timeline Chart container not found for canvas:', canvas.id);
+        console.error('Activity Timeline Chart container not found for canvas:', canvas.id);
         return;
       }
 
       // Source toggle functionality - look for select elements with activity-source-selector prefix
       const sourceSelectors = container.querySelectorAll('select[id^="activity-source-selector"]');
       if (sourceSelectors.length === 0) {
-        console.warn('No source selectors found in Activity Timeline Chart for canvas:', canvas.id);
+        console.error('No source selectors found in Activity Timeline Chart for canvas:', canvas.id);
         return;
       }
 
@@ -322,11 +263,8 @@
           });
 
           chart.update();
-          console.log(`Updated visibility for selected sources:`, selectedSources);
         });
       });
-
-      console.log(`Source filtering setup complete for ${sourceSelectors.length} selectors`);
       
     } catch (error) {
       console.error('Error setting up source filtering:', error);
@@ -343,34 +281,5 @@
       day: 'numeric'
     });
   }
-
-  /**
-   * Debug helper function
-   */
-  window.debugActivityChart = function(chartId) {
-    const canvas = document.getElementById(chartId);
-    if (!canvas || !canvas.chartInstance) {
-      console.log('Chart not found or not initialized');
-      return;
-    }
-    
-    const chart = canvas.chartInstance;
-    const chartData = drupalSettings.newsmotivationmetrics_activity?.[chartId];
-    
-    console.log('Chart Debug Info:', {
-      chartId: chartId,
-      datasetsCount: chart.data.datasets.length,
-      visibleDatasets: chart.data.datasets.filter((_, i) => !chart.getDatasetMeta(i).hidden).length,
-      chartData: chartData,
-      canvas: canvas,
-      chart: chart
-    });
-    
-    return {
-      chart: chart,
-      data: chartData,
-      canvas: canvas
-    };
-  };
 
 })(Drupal, drupalSettings);

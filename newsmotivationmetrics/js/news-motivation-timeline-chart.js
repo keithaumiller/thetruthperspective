@@ -1,10 +1,6 @@
 (function (Drupal, drupalSettings) {
   'use strict';
 
-  console.log('=== News Motivation Timeline Chart Script Loading ===');
-  console.log('Drupal object:', typeof Drupal);
-  console.log('drupalSettings object:', typeof drupalSettings);
-
   let chart = null;
   let termSelector = null;
 
@@ -14,11 +10,6 @@
       if (context !== document && !context.querySelector('canvas[id^="news-motivation-timeline-chart"]')) {
         return;
       }
-
-      console.log('=== Drupal Behavior Attach Called ===');
-      console.log('Context type:', typeof context);
-      console.log('Context element:', context);
-      console.log('Settings keys:', Object.keys(settings));
 
       // Check for Chart.js availability
       if (typeof Chart === 'undefined') {
@@ -36,12 +27,9 @@
         context.querySelectorAll('canvas[id^="news-motivation-timeline-chart"]') :
         document.querySelectorAll('canvas[id^="news-motivation-timeline-chart"]');
       
-      console.log('Found', canvases.length, 'chart canvases to process');
-      
       canvases.forEach((canvas) => {
         // Skip if already processed
         if (canvas.hasAttribute('data-chart-processed')) {
-          console.log('Skipping already processed canvas:', canvas.id);
           return;
         }
         
@@ -49,34 +37,26 @@
         canvas.setAttribute('data-chart-processed', 'true');
         
         const canvasId = canvas.id;
-        console.log('✅ Processing canvas with ID:', canvasId);
 
         // Find term selector based on canvas ID
         const selectorId = canvasId === 'news-motivation-timeline-chart' ? 'term-selector' : 'term-selector-' + canvasId.split('-').pop();
         termSelector = document.getElementById(selectorId) || context.querySelector('#' + selectorId);
         
         if (!termSelector) {
-          console.log('❌ Term selector not found with ID:', selectorId);
           // Try fallback selector
           termSelector = document.querySelector('.term-selector') || context.querySelector('.term-selector');
-          if (termSelector) {
-            console.log('✅ Found term selector using class fallback');
-          } else {
-            console.log('❌ Term selector not found at all');
+          if (!termSelector) {
             const statusElement = document.querySelector('[id*="chart-status"]');
             if (statusElement) {
               statusElement.textContent = '⚠️ Term selector not found. Controls may not work.';
             }
             return;
           }
-        } else {
-          console.log('✅ Term selector found:', termSelector);
         }
 
         // Check if we have the necessary data
         if (!settings.newsmotivationmetrics) {
-          console.log('❌ Chart data not available in drupalSettings');
-          console.log('Available settings keys:', Object.keys(settings));
+          console.error('Chart data not available in drupalSettings');
           const statusElement = document.querySelector('[id*="chart-status"]');
           if (statusElement) {
             statusElement.textContent = '⚠️ Chart data not available in drupalSettings.';
@@ -85,25 +65,10 @@
         }
 
         const chartData = settings.newsmotivationmetrics;
-        console.log('📊 Chart data loaded:', {
-          dataPoints: chartData.timelineData ? chartData.timelineData.length : 0,
-          termCount: chartData.topTerms ? chartData.topTerms.length : 0,
-          timestamp: Math.floor(Date.now() / 1000),
-          date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-          php_version: chartData.debugInfo?.php_version || 'unknown',
-          extendedTermsAvailable: chartData.extendedTerms ? 'Yes' : 'No',
-          extendedTermsCount: chartData.extendedTerms?.timelineData?.length || 0
-        });
-        console.log('Timeline data available:', chartData.timelineData ? chartData.timelineData.length : 0, 'datasets');
         
-        // Log extended terms availability
-        if (chartData.extendedTerms) {
-          console.log('📈 Extended terms available:', chartData.extendedTerms.timelineData?.length || 0, 'additional terms');
-        } else {
-          console.log('⚠️ No extended terms data found');
-        }        // Validate chart data structure
+        // Validate chart data structure
         if (!chartData.timelineData || !Array.isArray(chartData.timelineData) || chartData.timelineData.length === 0) {
-          console.log('❌ No timeline data available or invalid format');
+          console.error('No timeline data available or invalid format');
           const statusElement = document.querySelector('[id*="chart-status"]');
           if (statusElement) {
             statusElement.textContent = '⚠️ No timeline data available for chart display.';
@@ -128,13 +93,7 @@
   };
 
   function initializeChart(canvas, data, canvasId) {
-    console.log('🎯 Initializing Chart.js...');
-    console.log('Canvas element:', canvas);
-    console.log('Canvas ID:', canvasId);
-    console.log('Data structure:', data);
-    
     if (chart) {
-      console.log('Destroying existing chart...');
       chart.destroy();
     }
 
@@ -151,7 +110,6 @@
 
       // Check if canvas already has a chart and destroy it
       if (canvas.chart) {
-        console.log('Destroying existing chart on canvas...');
         canvas.chart.destroy();
         canvas.chart = null;
       }
@@ -160,17 +118,12 @@
       if (window.Chart && window.Chart.getChart) {
         const existingChart = window.Chart.getChart(canvas);
         if (existingChart) {
-          console.log('Destroying existing chart from Chart.js registry...');
           existingChart.destroy();
         }
       }
 
-      console.log('Processing', data.timelineData.length, 'datasets...');
-    
-      // Prepare datasets from timeline data
-      const datasets = data.timelineData.map((termData, index) => {
-        console.log(`Dataset ${index}: ${termData.term_name} with ${termData.data ? termData.data.length : 0} data points`);
-        
+      // Prepare datasets from timeline data - Show 5 datasets by default
+      const datasets = data.timelineData.slice(0, 5).map((termData, index) => {
         const colors = [
           '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
           '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
@@ -192,9 +145,6 @@
       // Get date labels from the first dataset
       const labels = data.timelineData.length > 0 && data.timelineData[0].data ? 
         data.timelineData[0].data.map(point => point.date) : [];
-
-      console.log('Chart labels:', labels.slice(0, 5), '... (showing first 5)');
-      console.log('Chart datasets:', datasets.length, 'total datasets');
 
       chart = new Chart(ctx, {
         type: 'line',
@@ -269,8 +219,6 @@
 
       // Store chart reference on canvas for future cleanup
       canvas.chart = chart;
-
-      console.log('✅ Chart initialized successfully');
       
       // Update status element with success message
       const statusId = canvasId === 'news-motivation-timeline-chart' ? 'chart-status' : 'chart-status-' + canvasId.split('-').pop();
@@ -295,15 +243,12 @@
     if (termSelector) {
       termSelector.addEventListener('change', updateChart);
     }
-
-    // Button functionality removed for simplified interface
   }
 
   function updateChart() {
     if (!chart || !termSelector) return;
 
     const selectedTermIds = Array.from(termSelector.selectedOptions).map(option => parseInt(option.value));
-    console.log('📊 Updating chart with selected terms:', selectedTermIds);
 
     // Combine timeline data from both top terms and extended terms
     let allData = drupalSettings.newsmotivationmetrics.timelineData || [];
@@ -312,27 +257,15 @@
     if (drupalSettings.newsmotivationmetrics.extendedTerms && 
         drupalSettings.newsmotivationmetrics.extendedTerms.timelineData) {
       const extendedData = drupalSettings.newsmotivationmetrics.extendedTerms.timelineData;
-      console.log('📈 Found extended timeline data with', extendedData.length, 'terms');
       
       // Merge extended data, avoiding duplicates
       const existingTermIds = new Set(allData.map(item => parseInt(item.term_id)));
       const newExtendedData = extendedData.filter(item => !existingTermIds.has(parseInt(item.term_id)));
       allData = [...allData, ...newExtendedData];
-      
-      console.log('📊 Total available timeline data:', allData.length, 'terms');
     }
 
     // Filter datasets based on selected terms
     const filteredData = allData.filter(termData => selectedTermIds.includes(parseInt(termData.term_id)));
-    
-    console.log('🎯 Found timeline data for', filteredData.length, 'of', selectedTermIds.length, 'selected terms');
-
-    // Warn about terms without timeline data
-    const foundTermIds = new Set(filteredData.map(item => parseInt(item.term_id)));
-    const missingTermIds = selectedTermIds.filter(id => !foundTermIds.has(id));
-    if (missingTermIds.length > 0) {
-      console.warn('⚠️ No timeline data available for term IDs:', missingTermIds);
-    }
 
     // Update chart datasets
     const colors = [
@@ -357,19 +290,8 @@
     // Update status message
     const statusElement = document.querySelector('[id*="chart-status"]');
     if (statusElement) {
-      let message = `📊 Chart updated with ${filteredData.length} trend lines`;
-      if (missingTermIds.length > 0) {
-        message += ` (${missingTermIds.length} terms have no timeline data)`;
-      }
-      statusElement.textContent = message;
+      statusElement.textContent = `📊 Chart updated with ${filteredData.length} trend lines`;
     }
   }
-
-  // Debug information on script load
-  console.log('=== Chart Script Loaded Successfully ===');
-  console.log('Environment check:');
-  console.log('- Drupal available:', typeof Drupal !== 'undefined');
-  console.log('- jQuery available:', typeof jQuery !== 'undefined');
-  console.log('- drupalSettings available:', typeof drupalSettings !== 'undefined');
 
 })(Drupal, drupalSettings);
