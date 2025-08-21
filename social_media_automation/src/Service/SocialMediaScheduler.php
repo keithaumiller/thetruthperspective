@@ -6,6 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\Core\State\StateInterface;
+use Drupal\social_media_automation\Traits\ConfigurableLoggingTrait;
 
 /**
  * Social media scheduler service for managing automated posting across platforms.
@@ -13,6 +14,8 @@ use Drupal\Core\State\StateInterface;
  * Handles scheduling and execution of automated posts to multiple social media platforms.
  */
 class SocialMediaScheduler {
+
+  use ConfigurableLoggingTrait;
 
   /**
    * The config factory.
@@ -125,7 +128,7 @@ class SocialMediaScheduler {
     
     $queue->createItem($item);
     $this->state->set('social_media_automation.last_content_type', $next_type);
-    $this->logger->info('Daily social media post queued with type: @type', ['@type' => $next_type]);
+    $this->logInfo('Daily social media post queued with type: @type', ['@type' => $next_type]);
   }
 
   /**
@@ -142,7 +145,7 @@ class SocialMediaScheduler {
       $config = $this->configFactory->get('social_media_automation.settings');
       
       if (!$config->get('enabled')) {
-        $this->logger->info('Social media automation disabled, skipping post');
+        $this->logInfo('Social media automation disabled, skipping post');
         return TRUE;
       }
 
@@ -150,7 +153,7 @@ class SocialMediaScheduler {
       $platform_content = $this->contentGenerator->generateContent($data['content_type']);
       
       if (empty($platform_content)) {
-        $this->logger->error('Failed to generate content for type: @type', ['@type' => $data['content_type']]);
+        $this->logError('Failed to generate content for type: @type', ['@type' => $data['content_type']]);
         return FALSE;
       }
 
@@ -162,7 +165,7 @@ class SocialMediaScheduler {
         $platform = $this->platformManager->getPlatform($platform_name);
         
         if (!$platform) {
-          $this->logger->error('Platform not found: @platform', ['@platform' => $platform_name]);
+          $this->logError('Platform not found: @platform', ['@platform' => $platform_name]);
           continue;
         }
 
@@ -171,16 +174,16 @@ class SocialMediaScheduler {
           
           if ($result) {
             $success_count++;
-            $this->logger->info('Successfully posted to @platform: @content', [
+            $this->logInfo('Successfully posted to @platform: @content', [
               '@platform' => $platform->getName(),
               '@content' => substr($content, 0, 100) . '...',
             ]);
           } else {
-            $this->logger->error('Failed to post to @platform', ['@platform' => $platform->getName()]);
+            $this->logError('Failed to post to @platform', ['@platform' => $platform->getName()]);
           }
           
         } catch (\Exception $e) {
-          $this->logger->error('Exception posting to @platform: @message', [
+          $this->logError('Exception posting to @platform: @message', [
             '@platform' => $platform->getName(),
             '@message' => $e->getMessage(),
           ]);
@@ -201,7 +204,7 @@ class SocialMediaScheduler {
         }
         
         $type_display = $data['type'] === 'forced_daily' ? 'forced daily' : $data['type'];
-        $this->logger->info('Completed @type post to @success/@total platforms', [
+        $this->logInfo('Completed @type post to @success/@total platforms', [
           '@type' => $type_display,
           '@success' => $success_count,
           '@total' => $total_platforms,
@@ -211,7 +214,7 @@ class SocialMediaScheduler {
       return $overall_success;
 
     } catch (\Exception $e) {
-      $this->logger->error('Exception processing social media post: @message', ['@message' => $e->getMessage()]);
+      $this->logError('Exception processing social media post: @message', ['@message' => $e->getMessage()]);
       return FALSE;
     }
   }
@@ -233,7 +236,7 @@ class SocialMediaScheduler {
       $platform_content = $this->contentGenerator->generateContent($content_type);
       
       if (empty($platform_content)) {
-        $this->logger->error('Failed to generate test content');
+        $this->logError('Failed to generate test content');
         return [];
       }
 
@@ -264,9 +267,9 @@ class SocialMediaScheduler {
           ];
           
           if ($result) {
-            $this->logger->info('Successfully posted test to @platform', ['@platform' => $platform->getName()]);
+            $this->logInfo('Successfully posted test to @platform', ['@platform' => $platform->getName()]);
           } else {
-            $this->logger->error('Failed to post test to @platform', ['@platform' => $platform->getName()]);
+            $this->logError('Failed to post test to @platform', ['@platform' => $platform->getName()]);
           }
           
         } catch (\Exception $e) {
@@ -275,7 +278,7 @@ class SocialMediaScheduler {
             'error' => $e->getMessage(),
           ];
           
-          $this->logger->error('Exception sending test to @platform: @message', [
+          $this->logError('Exception sending test to @platform: @message', [
             '@platform' => $platform->getName(),
             '@message' => $e->getMessage(),
           ]);
@@ -283,7 +286,7 @@ class SocialMediaScheduler {
       }
 
     } catch (\Exception $e) {
-      $this->logger->error('Exception sending test posts: @message', ['@message' => $e->getMessage()]);
+      $this->logError('Exception sending test posts: @message', ['@message' => $e->getMessage()]);
     }
     
     return $results;
@@ -305,7 +308,7 @@ class SocialMediaScheduler {
       $platform = $this->platformManager->getPlatform($platform_name);
       
       if (!$platform) {
-        $this->logger->error('Platform not found: @platform', ['@platform' => $platform_name]);
+        $this->logError('Platform not found: @platform', ['@platform' => $platform_name]);
         return FALSE;
       }
 
@@ -313,7 +316,7 @@ class SocialMediaScheduler {
       $platform_content = $this->contentGenerator->generateContent($content_type);
       
       if (empty($platform_content[$platform_name])) {
-        $this->logger->error('No content generated for platform: @platform', ['@platform' => $platform_name]);
+        $this->logError('No content generated for platform: @platform', ['@platform' => $platform_name]);
         return FALSE;
       }
 
@@ -328,15 +331,15 @@ class SocialMediaScheduler {
       $result = $platform->postContent($test_content);
       
       if ($result !== FALSE) {
-        $this->logger->info('Successfully posted test to @platform', ['@platform' => $platform->getName()]);
+        $this->logInfo('Successfully posted test to @platform', ['@platform' => $platform->getName()]);
         return TRUE;
       } else {
-        $this->logger->error('Failed to post test to @platform', ['@platform' => $platform->getName()]);
+        $this->logError('Failed to post test to @platform', ['@platform' => $platform->getName()]);
         return FALSE;
       }
 
     } catch (\Exception $e) {
-      $this->logger->error('Exception sending test to @platform: @message', [
+      $this->logError('Exception sending test to @platform: @message', [
         '@platform' => $platform_name,
         '@message' => $e->getMessage(),
       ]);
@@ -357,11 +360,11 @@ class SocialMediaScheduler {
     $config = $this->configFactory->get('social_media_automation.settings');
     
     if (!$config->get('enabled')) {
-      $this->logger->warning('Cannot force post: automation is disabled');
+      $this->logWarning('Cannot force post: automation is disabled');
       return FALSE;
     }
 
-    $this->logger->info('=== FORCING DAILY POST (Manual Override) ===');
+    $this->logInfo('=== FORCING DAILY POST (Manual Override) ===');
     
     // Determine content type
     if (!$content_type) {
@@ -375,7 +378,7 @@ class SocialMediaScheduler {
       $content_type = $content_types[$next_index];
     }
     
-    $this->logger->info('Force posting with content type: @type', ['@type' => $content_type]);
+    $this->logInfo('Force posting with content type: @type', ['@type' => $content_type]);
     
     // Queue the post
     $queue = $this->queueFactory->get('social_media_automation_posts');
@@ -389,13 +392,13 @@ class SocialMediaScheduler {
     
     $queue->createItem($item);
     $this->state->set('social_media_automation.last_content_type', $content_type);
-    $this->logger->info('Forced post queued with type: @type', ['@type' => $content_type]);
+    $this->logInfo('Forced post queued with type: @type', ['@type' => $content_type]);
     
     // Immediately process the queue
     $processed = FALSE;
     while ($queued_item = $queue->claimItem()) {
       if ($queued_item->data['forced'] ?? FALSE) {
-        $this->logger->info('Processing forced post item: @id', ['@id' => $queued_item->item_id]);
+        $this->logInfo('Processing forced post item: @id', ['@id' => $queued_item->item_id]);
         
         try {
           $result = $this->processQueuedPost($queued_item->data);
@@ -403,17 +406,17 @@ class SocialMediaScheduler {
           if ($result) {
             $queue->deleteItem($queued_item);
             $processed = TRUE;
-            $this->logger->info('✅ Forced post processed successfully');
+            $this->logInfo('✅ Forced post processed successfully');
             break;
           } else {
             $queue->releaseItem($queued_item);
-            $this->logger->error('❌ Failed to process forced post');
+            $this->logError('❌ Failed to process forced post');
             break;
           }
           
         } catch (\Exception $e) {
           $queue->releaseItem($queued_item);
-          $this->logger->error('❌ Exception processing forced post: @message', ['@message' => $e->getMessage()]);
+          $this->logError('❌ Exception processing forced post: @message', ['@message' => $e->getMessage()]);
           break;
         }
       } else {
@@ -423,9 +426,9 @@ class SocialMediaScheduler {
     }
     
     if ($processed) {
-      $this->logger->info('=== FORCED POST COMPLETED SUCCESSFULLY ===');
+      $this->logInfo('=== FORCED POST COMPLETED SUCCESSFULLY ===');
     } else {
-      $this->logger->error('=== FORCED POST FAILED ===');
+      $this->logError('=== FORCED POST FAILED ===');
     }
     
     return $processed;

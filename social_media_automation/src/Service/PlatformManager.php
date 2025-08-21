@@ -5,6 +5,7 @@ namespace Drupal\social_media_automation\Service;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\social_media_automation\Service\Platform\PlatformInterface;
+use Drupal\social_media_automation\Traits\ConfigurableLoggingTrait;
 
 /**
  * Platform manager service for social media automation.
@@ -12,6 +13,8 @@ use Drupal\social_media_automation\Service\Platform\PlatformInterface;
  * Manages registration and access to different social media platform clients.
  */
 class PlatformManager {
+
+  use ConfigurableLoggingTrait;
 
   /**
    * The config factory.
@@ -97,11 +100,11 @@ class PlatformManager {
         if (\Drupal::hasService($service_id)) {
           $this->instances[$machine_name] = \Drupal::service($service_id);
         } else {
-          $this->logger->warning('Platform service not found: @service_id', ['@service_id' => $service_id]);
+          $this->logWarning('Platform service not found: @service_id', ['@service_id' => $service_id]);
           return NULL;
         }
       } catch (\Exception $e) {
-        $this->logger->error('Error getting platform service @service_id: @error', [
+        $this->logError('Error getting platform service @service_id: @error', [
           '@service_id' => $service_id,
           '@error' => $e->getMessage()
         ]);
@@ -232,9 +235,9 @@ class PlatformManager {
         ];
 
         if ($result !== FALSE) {
-          $this->logger->info('Successfully posted to @platform', ['@platform' => $platform->getName()]);
+          $this->logInfo('Successfully posted to @platform', ['@platform' => $platform->getName()]);
         } else {
-          $this->logger->error('Failed to post to @platform', ['@platform' => $platform->getName()]);
+          $this->logError('Failed to post to @platform', ['@platform' => $platform->getName()]);
         }
       }
     }

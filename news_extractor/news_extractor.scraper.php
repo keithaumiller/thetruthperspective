@@ -28,7 +28,7 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
       // STEP 1: Store complete Diffbot JSON response
       if ($entity->hasField('field_json_scraped_article_data')) {
         $entity->set('field_json_scraped_article_data', json_encode($diffbot_response, JSON_PRETTY_PRINT));
-        \Drupal::logger('news_extractor')->info('Stored complete Diffbot JSON data (@size chars) for: @title', [
+        \Drupal::service('newsmotivationmetrics.logging_config')->info('news_extractor', 'Stored complete Diffbot JSON data (@size chars) for: @title', [
           '@size' => strlen(json_encode($diffbot_response)),
           '@title' => $entity->getTitle(),
         ]);
@@ -136,7 +136,7 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         $entity->save();
         
         // Enhanced logging to track what's stored where
-        \Drupal::logger('news_extractor')->info('Complete processing for @title: Diffbot JSON (@json_size chars), AI raw (@raw_len chars), Structured data (@struct_items entities), Formatted analysis (@format_len chars)', [
+        \Drupal::service('newsmotivationmetrics.logging_config')->info('news_extractor', 'Complete processing for @title: Diffbot JSON (@json_size chars), AI raw (@raw_len chars), Structured data (@struct_items entities), Formatted analysis (@format_len chars)', [
           '@title' => $entity->getTitle(),
           '@json_size' => strlen(json_encode($diffbot_response)),
           '@raw_len' => strlen($ai_summary),
@@ -145,16 +145,16 @@ function _news_extractor_extract_content(EntityInterface $entity, $url) {
         ]);
       }
 
-      \Drupal::logger('news_extractor')->info('Successfully processed article: @title', [
+      \Drupal::service('newsmotivationmetrics.logging_config')->info('news_extractor', 'Successfully processed article: @title', [
         '@title' => $entity->getTitle(),
       ]);
     } else {
-      \Drupal::logger('news_extractor')->warning('No article text returned from Diffbot for URL: @url', [
+      \Drupal::service('newsmotivationmetrics.logging_config')->warning('news_extractor', 'No article text returned from Diffbot for URL: @url', [
         '@url' => $url,
       ]);
     }
   } catch (\Exception $e) {
-    \Drupal::logger('news_extractor')->error('Error extracting content from @url: @message', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->error('news_extractor', 'Error extracting content from @url: @message', [
       '@url' => $url,
       '@message' => $e->getMessage(),
     ]);
@@ -205,7 +205,7 @@ function _news_extractor_update_article(EntityInterface $entity, array $article_
 function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response) {
   $article_data = $diffbot_response['objects'][0] ?? null;
   if (!$article_data) {
-    \Drupal::logger('news_extractor')->warning('No article object found in Diffbot response for: @title', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->warning('news_extractor', 'No article object found in Diffbot response for: @title', [
       '@title' => $entity->getTitle(),
     ]);
     return;
@@ -220,7 +220,7 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
       'format' => 'basic_html',
     ]);
     $updated = TRUE;
-    \Drupal::logger('news_extractor')->info('Updated body content (@chars chars) for: @title', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->info('Updated body content (@chars chars) for: @title', [
       '@chars' => strlen($article_data['text']),
       '@title' => $entity->getTitle(),
     ]);
@@ -230,7 +230,7 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
   if (empty($entity->getTitle()) && !empty($article_data['title'])) {
     $entity->setTitle($article_data['title']);
     $updated = TRUE;
-    \Drupal::logger('news_extractor')->info('Updated title to: @title', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->info('Updated title to: @title', [
       '@title' => $article_data['title'],
     ]);
   }
@@ -238,7 +238,7 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
   // Update publication date - ENSURE THIS HAPPENS BEFORE SAVE
   if (_news_extractor_scraper_update_publication_date($entity, $article_data, TRUE)) {
     $updated = TRUE;
-    \Drupal::logger('news_extractor')->info('Publication date updated during basic fields processing for: @title', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->info('Publication date updated during basic fields processing for: @title', [
       '@title' => $entity->getTitle(),
     ]);
   }
@@ -261,7 +261,7 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
   // Save only once at the end if anything was updated
   if ($updated) {
     $entity->save();
-    \Drupal::logger('news_extractor')->info('Saved entity with updated basic fields for: @title', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->info('Saved entity with updated basic fields for: @title', [
       '@title' => $entity->getTitle(),
     ]);
   }
@@ -282,7 +282,7 @@ function _news_extractor_scraper_update_basic_fields($entity, $diffbot_response)
  */
 function _news_extractor_scraper_update_publication_date($entity, $article_data, $use_creation_fallback = TRUE) {
   if (!$entity->hasField('field_publication_date')) {
-    \Drupal::logger('news_extractor')->info('Node @nid does not have field_publication_date field', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->info('Node @nid does not have field_publication_date field', [
       '@nid' => $entity->id(),
     ]);
     return FALSE;
@@ -290,7 +290,7 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data,
 
   // Skip if publication date is already set
   if (!$entity->get('field_publication_date')->isEmpty()) {
-    \Drupal::logger('news_extractor')->info('Publication date already set for node @nid, skipping', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->info('Publication date already set for node @nid, skipping', [
       '@nid' => $entity->id(),
     ]);
     return FALSE;
