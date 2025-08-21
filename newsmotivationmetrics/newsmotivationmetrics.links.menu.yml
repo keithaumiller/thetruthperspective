@@ -30,3 +30,11 @@ newsmotivationmetrics.reports_dashboard:
   route_name: newsmotivationmetrics.admin_dashboard
   parent: system.admin_reports
   weight: 10
+
+# Platform logging configuration
+thetruthperspective.logging_config:
+  title: 'Platform Logging Configuration'
+  description: 'Configure logging levels for The Truth Perspective modules'
+  route_name: newsmotivationmetrics.logging_config
+  parent: system.admin_config_development
+  weight: 5

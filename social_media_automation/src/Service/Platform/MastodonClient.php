@@ -4,6 +4,7 @@ namespace Drupal\social_media_automation\Service\Platform;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\social_media_automation\Traits\ConfigurableLoggingTrait;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
 
@@ -13,6 +14,8 @@ use GuzzleHttp\Exception\RequestException;
  * Handles authentication and communication with Mastodon API.
  */
 class MastodonClient implements PlatformInterface {
+
+  use ConfigurableLoggingTrait;
 
   /**
    * The config factory.
@@ -69,22 +72,22 @@ class MastodonClient implements PlatformInterface {
     $config = $this->configFactory->get('social_media_automation.settings');
     $credentials = $this->getRequiredCredentials();
     
-    $this->logger->debug('Checking Mastodon configuration...');
+    $this->logDebug('Checking Mastodon configuration...');
     
     foreach ($credentials as $credential) {
       $value = $config->get("mastodon.{$credential}");
       if (empty($value)) {
-        $this->logger->debug('Missing credential: mastodon.@credential', ['@credential' => $credential]);
+        $this->logDebug('Missing credential: mastodon.@credential', ['@credential' => $credential]);
         return FALSE;
       } else {
-        $this->logger->debug('Credential present: mastodon.@credential (@length chars)', [
+        $this->logDebug('Credential present: mastodon.@credential (@length chars)', [
           '@credential' => $credential,
           '@length' => strlen($value),
         ]);
       }
     }
     
-    $this->logger->debug('All Mastodon credentials present');
+    $this->logDebug('All Mastodon credentials present');
     return TRUE;
   }
 
@@ -92,7 +95,7 @@ class MastodonClient implements PlatformInterface {
    * {@inheritdoc}
    */
   public function testConnection(): bool {
-    $this->logger->info('=== Starting Mastodon connection test ===');
+    $this->logInfo('=== Starting Mastodon connection test ===');
     
     // Step 1: Check if configured
     if (!$this->isConfigured()) {
@@ -100,9 +103,9 @@ class MastodonClient implements PlatformInterface {
       $server_url = $config->get('mastodon.server_url');
       $access_token = $config->get('mastodon.access_token');
       
-      $this->logger->error('Mastodon not configured. Missing credentials:');
-      $this->logger->error('- server_url: @server_url', ['@server_url' => $server_url ? 'Present' : 'MISSING']);
-      $this->logger->error('- access_token: @access_token', ['@access_token' => $access_token ? 'Present (' . strlen($access_token) . ' chars)' : 'MISSING']);
+      $this->logError('Mastodon not configured. Missing credentials:');
+      $this->logError('- server_url: @server_url', ['@server_url' => $server_url ? 'Present' : 'MISSING']);
+      $this->logError('- access_token: @access_token', ['@access_token' => $access_token ? 'Present (' . strlen($access_token) . ' chars)' : 'MISSING']);
       
       return FALSE;
     }
@@ -111,9 +114,9 @@ class MastodonClient implements PlatformInterface {
     $server_url = $config->get('mastodon.server_url');
     $access_token = $config->get('mastodon.access_token');
 
-    $this->logger->info('Step 1: Configuration check passed');
-    $this->logger->info('- Server URL: @server', ['@server' => $server_url]);
-    $this->logger->info('- Access Token: @token_length chars, ends with @token_end', [
+    $this->logInfo('Step 1: Configuration check passed');
+    $this->logInfo('- Server URL: @server', ['@server' => $server_url]);
+    $this->logInfo('- Access Token: @token_length chars, ends with @token_end', [
       '@token_length' => strlen($access_token),
       '@token_end' => substr($access_token, -8),
     ]);

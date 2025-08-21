@@ -168,7 +168,67 @@ function newsmotivationmetrics_check_block_status() {
     foreach ($status_report as $row) {
       \Drupal::messenger()->addMessage(
         t('@block: @status in @region (weight: @weight, front page only: @front_page_only)', $row)
-      );
     }
   }
+}
+
+/**
+ * Implements hook_logger_log_alter().
+ * 
+ * Filter log messages based on configured levels to reduce log noise.
+ */
+function newsmotivationmetrics_logger_log_alter(&$log) {
+  $config = \Drupal::config('thetruthperspective.logging');
+  
+  if (!$config) {
+    return; // No configuration, allow all logging
+  }
+  
+  $channel = $log['channel'] ?? 'default';
+  
+  // Get the configured log level for this channel/module
+  $module_level = $config->get("modules.{$channel}.level");
+  if ($module_level === NULL) {
+    $module_level = $config->get('global.level') ?? 1; // Default to ERROR only
+  }
+  
+  // Map Drupal log levels to our simplified levels
+  $drupal_to_simple_level = [
+    0 => 1, // EMERGENCY -> ERROR
+    1 => 1, // ALERT -> ERROR
+    2 => 1, // CRITICAL -> ERROR
+    3 => 1, // ERROR -> ERROR
+    4 => 2, // WARNING -> WARNING
+    5 => 3, // NOTICE -> INFO
+    6 => 3, // INFO -> INFO
+    7 => 4, // DEBUG -> DEBUG
+  ];
+  
+  $message_level = $drupal_to_simple_level[$log['severity']] ?? 1;
+  
+  // Block the log message if it's above the configured level
+  if ($message_level > $module_level) {
+    $log = NULL; // This prevents the log from being written
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for system_logging_settings.
+ * 
+ * Add a link to our logging configuration form.
+ */
+function newsmotivationmetrics_form_system_logging_settings_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+  $form['thetruthperspective_logging'] = [
+    '#type' => 'fieldset',
+    '#title' => t('The Truth Perspective Logging'),
+    '#weight' => -10,
+  ];
+  
+  $form['thetruthperspective_logging']['info'] = [
+    '#markup' => '<div class="messages messages--info">' .
+      '<strong>Platform-Specific Logging Control:</strong> ' .
+      'The Truth Perspective platform has additional logging controls to reduce log noise. ' .
+      '<a href="/admin/config/development/thetruthperspective/logging">Configure Platform Logging Levels</a>' .
+      '</div>',
+  ];
 }

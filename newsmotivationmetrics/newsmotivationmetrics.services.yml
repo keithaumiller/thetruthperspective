@@ -43,8 +43,18 @@ services:
     class: Drupal\newsmotivationmetrics\Service\AuthoritarianismTimelineChartService
     arguments: ['@newsmotivationmetrics.chart_data_service', '@logger.factory']
 
+  newsmotivationmetrics.logging_config:
+    class: Drupal\newsmotivationmetrics\Service\LoggingConfigService
+    arguments: ['@config.factory', '@logger.factory']
+
   newsmotivationmetrics.news_sources_commands:
     class: Drupal\newsmotivationmetrics\Commands\NewsSourcesCommands
     arguments: ['@database']
+    tags:
+      - { name: drush.command }
+
+  newsmotivationmetrics.logging_commands:
+    class: Drupal\newsmotivationmetrics\Commands\LoggingCommands
+    arguments: ['@config.factory']
     tags:
       - { name: drush.command }

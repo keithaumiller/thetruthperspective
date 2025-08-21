@@ -95,3 +95,11 @@ newsmotivationmetrics.chart_debug_test:
     _controller: '\Drupal\newsmotivationmetrics\Controller\ChartDebugController::testLibraries'
   requirements:
     _permission: 'access administration pages'
+
+newsmotivationmetrics.logging_config:
+  path: '/admin/config/development/thetruthperspective/logging'
+  defaults:
+    _form: '\Drupal\newsmotivationmetrics\Form\LoggingConfigForm'
+    _title: 'Platform Logging Configuration'
+  requirements:
+    _permission: 'administer site configuration'

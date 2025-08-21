@@ -1,0 +1,15 @@
+global:
+  level: 1  # Error only by default
+modules:
+  news_extractor:
+    level: 1  # Error only
+  newsmotivationmetrics:
+    level: 1  # Error only
+  social_media_automation:
+    level: 1  # Error only
+  ai_conversation:
+    level: 1  # Error only
+  job_application_automation:
+    level: 1  # Error only
+  twitter_automation:
+    level: 1  # Error only

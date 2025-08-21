@@ -14,6 +14,34 @@ use Drupal\Core\Config\FileStorage;
 function newsmotivationmetrics_install() {
   // Configure blocks to be placed in hero region and visible only on front page
   _newsmotivationmetrics_configure_default_blocks();
+  
+  // Initialize platform logging configuration
+  _newsmotivationmetrics_initialize_logging_config();
+}
+
+/**
+ * Initialize platform logging configuration with ERROR level only.
+ */
+function _newsmotivationmetrics_initialize_logging_config() {
+  $config = \Drupal::configFactory()->getEditable('thetruthperspective.logging');
+  
+  $config->setData([
+    'global' => [
+      'level' => 1, // Error only by default
+    ],
+    'modules' => [
+      'news_extractor' => ['level' => 1],
+      'newsmotivationmetrics' => ['level' => 1],
+      'social_media_automation' => ['level' => 1],
+      'ai_conversation' => ['level' => 1],
+      'job_application_automation' => ['level' => 1],
+      'twitter_automation' => ['level' => 1],
+    ],
+  ]);
+  
+  $config->save();
+  
+  \Drupal::logger('newsmotivationmetrics')->info('Platform logging configuration initialized with ERROR level only for production environment.');
 }
 
 /**

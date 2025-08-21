@@ -7,12 +7,15 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\social_media_automation\Service\PlatformManager;
 use Drupal\social_media_automation\Service\SocialMediaScheduler;
+use Drupal\social_media_automation\Traits\ConfigurableLoggingTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Configuration form for social media automation settings.
  */
 class SocialMediaAutomationSettingsForm extends ConfigFormBase {
+
+  use ConfigurableLoggingTrait;
 
   /**
    * The platform manager.
