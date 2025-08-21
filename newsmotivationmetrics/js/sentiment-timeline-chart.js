@@ -1,8 +1,7 @@
 (function (Drupal, drupalSettings) {
   'use strict';
 
-  console.log('=== Sentiment Timeline Chart       // Prepare datasets - show top 5 sources initially
-      const datasets = timelineArray.slice(0, 5).map((sourceData, index) => {ript Loading ===');
+  console.log('=== Sentiment Timeline Chart Script Loading ===');
 
   let chart = null;
   let sourceSelector = null;
