@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for thetruthperspective logging config.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function thetruthperspective_logging_install() {
+  // Set default logging configuration
+  $config = \Drupal::configFactory()->getEditable('thetruthperspective.logging');
+  
+  $config->setData([
+    'global' => [
+      'level' => 1, // Error only by default
+    ],
+    'modules' => [
+      'news_extractor' => ['level' => 1],
+      'newsmotivationmetrics' => ['level' => 1],
+      'social_media_automation' => ['level' => 1],
+      'ai_conversation' => ['level' => 1],
+      'job_application_automation' => ['level' => 1],
+      'twitter_automation' => ['level' => 1],
+    ],
+  ]);
+  
+  $config->save();
+  
+  \Drupal::logger('thetruthperspective_logging')->info('Platform logging configuration initialized with ERROR level only.');
+}
