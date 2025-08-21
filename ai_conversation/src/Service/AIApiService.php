@@ -5,11 +5,14 @@ namespace Drupal\ai_conversation\Service;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\node\NodeInterface;
+use Drupal\ai_conversation\Traits\ConfigurableLoggingTrait;
 
 /**
  * Service for AI API communication using AWS Bedrock with rolling conversation summary.
  */
 class AIApiService {
+
+  use ConfigurableLoggingTrait;
 
   /**
    * The config factory.
@@ -82,7 +85,7 @@ class AIApiService {
       // Validate and fix common model ID issues
       if (strpos($model, 'claude-sonnet-4') !== false) {
         $model = 'anthropic.claude-3-5-sonnet-20240620-v1:0';
-        $this->logger->warning('Invalid model ID detected, using default: @model', ['@model' => $model]);
+        $this->logWarning('Invalid model ID detected, using default: @model', ['@model' => $model]);
       }
 
       // Build the optimized conversation context (summary + recent messages).
@@ -121,11 +124,11 @@ class AIApiService {
         return $ai_response;
       }
       
-      $this->logger->error('Unexpected API response format: @response', ['@response' => print_r($result, TRUE)]);
+      $this->logError('Unexpected API response format: @response', ['@response' => print_r($result, TRUE)]);
       throw new \Exception('Unexpected API response format');
       
     } catch (\Exception $e) {
-      $this->logger->error('Error communicating with AI service: @message', [
+      $this->logError('Error communicating with AI service: @message', [
         '@message' => $e->getMessage(),
       ]);
       throw new \Exception('Failed to communicate with AI service: ' . $e->getMessage());
@@ -140,7 +143,7 @@ class AIApiService {
     $new_total = $current_tokens + $tokens;
     $conversation->set('field_total_tokens', $new_total);
     
-    $this->logger->info('Updated token count for conversation @nid: +@tokens (total: @total)', [
+    $this->logInfo('Updated token count for conversation @nid: +@tokens (total: @total)', [
       '@nid' => $conversation->id(),
       '@tokens' => $tokens,
       '@total' => $new_total,
@@ -264,14 +267,14 @@ class AIApiService {
       $recent_messages = array_slice($all_messages, -$this->maxRecentMessages);
       $this->updateMessagesField($conversation, $recent_messages);
       
-      $this->logger->info('Updated conversation summary for node @nid: summarized @count messages, kept @keep recent', [
+      $this->logInfo('Updated conversation summary for node @nid: summarized @count messages, kept @keep recent', [
         '@nid' => $conversation->id(),
         '@count' => count($messages_to_summarize),
         '@keep' => count($recent_messages),
       ]);
       
     } catch (\Exception $e) {
-      $this->logger->error('Error updating conversation summary: @message', [
+      $this->logError('Error updating conversation summary: @message', [
         '@message' => $e->getMessage(),
       ]);
     }
@@ -312,7 +315,7 @@ class AIApiService {
       throw new \Exception('Unexpected API response format');
       
     } catch (\Exception $e) {
-      $this->logger->error('Error generating summary: @message', [
+      $this->logError('Error generating summary: @message', [
         '@message' => $e->getMessage(),
       ]);
       return 'Summary generation failed.';

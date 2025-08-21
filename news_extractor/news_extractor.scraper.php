@@ -10,13 +10,13 @@ use Drupal\node\Entity\Node;
 function _news_extractor_extract_content(EntityInterface $entity, $url) {
   $api_token = news_extractor_get_diffbot_token();
   if (empty($api_token)) {
-    \Drupal::logger('news_extractor')->error('Diffbot token not set in configuration.');
+    \Drupal::service('newsmotivationmetrics.logging_config')->error('news_extractor', 'Diffbot token not set in configuration.');
     return;
   }
   
   // Check if URL is valid for article processing
   if (!_news_extractor_scraper_is_article_url($url)) {
-    \Drupal::logger('news_extractor')->info('Skipping non-article URL: @url', ['@url' => $url]);
+    \Drupal::service('newsmotivationmetrics.logging_config')->info('news_extractor', 'Skipping non-article URL: @url', ['@url' => $url]);
     return;
   }
   

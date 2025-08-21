@@ -212,7 +212,7 @@ class ChatController extends ControllerBase {
       ]);
 
     } catch (\Exception $e) {
-      \Drupal::logger('ai_conversation')->error('Error sending message: @error', ['@error' => $e->getMessage()]);
+      \Drupal::service('newsmotivationmetrics.logging_config')->error('ai_conversation', 'Error sending message: @error', ['@error' => $e->getMessage()]);
       return new JsonResponse(['error' => 'Failed to send message: ' . $e->getMessage()], 500);
     }
   }
@@ -258,7 +258,7 @@ class ChatController extends ControllerBase {
     $node->set('field_message_count', $current_count + 1);
 
     // Log the message addition.
-    \Drupal::logger('ai_conversation')->info('Added message to conversation @nid. Total messages: @count', [
+    \Drupal::service('newsmotivationmetrics.logging_config')->info('ai_conversation', 'Added message to conversation @nid. Total messages: @count', [
       '@nid' => $node->id(),
       '@count' => $current_count + 1,
     ]);
@@ -292,7 +292,7 @@ class ChatController extends ControllerBase {
       ]);
 
     } catch (\Exception $e) {
-      \Drupal::logger('ai_conversation')->error('Error updating summary: @error', ['@error' => $e->getMessage()]);
+      \Drupal::service('newsmotivationmetrics.logging_config')->error('ai_conversation', 'Error updating summary: @error', ['@error' => $e->getMessage()]);
       return new JsonResponse(['error' => 'Failed to update summary: ' . $e->getMessage()], 500);
     }
   }

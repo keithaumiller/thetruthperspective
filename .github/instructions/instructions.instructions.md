@@ -35,7 +35,6 @@ Drush version    : 13.6.0.0
 Drupal root      : /var/www/html/drupal
 
 
-
 Skip giving "Immediate Fix:" solutions
 Always generate the commit and push commands for the code changes after changes are generated and applied to the workspace. Do not include curl commands or testing commands just commit and push commands
 Always highlight which file is recomended to update.
@@ -53,6 +52,10 @@ all curl testing functions should assume they need to run against the production
 https://thetruthperspective.org
 
 Do not SSH out or create debug php files to be deployed to the server.
+Always use the logging system outlined in the README.md for error handling and debugging.
+
+When generating code, always ensure it is compatible with the current Drupal 11 environment and follows the coding standards outlined in the ARCHITECTURE.md.
+
 I will copy and paste any command lines required.
 Remember to sudo into www-data when appropriate
 The autodeploy clears the cache on the server during deployment. Do not recomend a drush cr.

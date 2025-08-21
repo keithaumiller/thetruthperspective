@@ -6,6 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface;
+use Drupal\social_media_automation\Traits\ConfigurableLoggingTrait;
 
 /**
  * Content generator service for creating social media posts.
@@ -14,6 +15,8 @@ use Drupal\newsmotivationmetrics\Service\Interface\MetricsDataServiceInterface;
  * adapting it for different social media platforms.
  */
 class ContentGenerator {
+
+  use ConfigurableLoggingTrait;
 
   /**
    * The config factory.
@@ -77,8 +80,8 @@ class ContentGenerator {
     try {
       // Check if metrics service is available
       if (!$this->metricsDataService) {
-        $this->logger->warning('Metrics data service not available, using fallback content');
-        return $this->getFallbackContent();
+        $this->logWarning('Metrics data service not available, using fallback content');
+        return $this->getFallbackAnalytics();
       }
       
       // Get recent metrics data
@@ -111,8 +114,8 @@ class ContentGenerator {
       return $templates[array_rand($templates)];
 
     } catch (\Exception $e) {
-      $this->logger->error('Failed to generate analytics summary: @message', ['@message' => $e->getMessage()]);
-      return $this->getFallbackContent();
+            $this->logError('Failed to generate analytics summary: @message', ['@message' => $e->getMessage()]);
+      return $this->getFallbackAnalytics();
     }
   }
 
@@ -174,7 +177,7 @@ class ContentGenerator {
       return $templates[array_rand($templates)];
 
     } catch (\Exception $e) {
-      $this->logger->error('Failed to generate trending topics: @message', ['@message' => $e->getMessage()]);
+      $this->logError('Failed to generate trending topics: @message', ['@message' => $e->getMessage()]);
       return $this->getFallbackContent();
     }
   }
@@ -203,7 +206,7 @@ class ContentGenerator {
       
       if (empty($nids)) {
         // Fallback to any recent article if none in last 48 hours
-        $this->logger->info('No articles found in last 48 hours, falling back to most recent');
+        $this->logInfo('No articles found in last 48 hours, falling back to most recent');
         $query = $node_storage->getQuery()
           ->condition('type', 'article')
           ->condition('status', 1)
@@ -221,7 +224,7 @@ class ContentGenerator {
       $nids_array = array_values($nids);
       $random_nid = $nids_array[array_rand($nids_array)];
       
-      $this->logger->info('Selected random article @nid from @count articles in last 48 hours', [
+      $this->logInfo('Selected random article @nid from @count articles in last 48 hours', [
         '@nid' => $random_nid,
         '@count' => count($nids)
       ]);
@@ -289,7 +292,7 @@ class ContentGenerator {
       return $selected_template;
 
     } catch (\Exception $e) {
-      $this->logger->error('Failed to generate random recent article content: @message', ['@message' => $e->getMessage()]);
+      $this->logError('Failed to generate random recent article content: @message', ['@message' => $e->getMessage()]);
       return $this->getFallbackContent();
     }
   }
@@ -348,7 +351,7 @@ class ContentGenerator {
     $base_content = $this->generateBaseContent($type);
     
     if (empty($base_content)) {
-      $this->logger->error('Failed to generate base content for type: @type', ['@type' => $type]);
+      $this->logError('Failed to generate base content for type: @type', ['@type' => $type]);
       return [];
     }
 
@@ -356,7 +359,7 @@ class ContentGenerator {
     $enabled_platforms = $this->platformManager->getEnabledPlatforms();
     
     if (empty($enabled_platforms)) {
-      $this->logger->warning('No platforms enabled for posting');
+      $this->logWarning('No platforms enabled for posting');
       return [];
     }
 
@@ -366,7 +369,7 @@ class ContentGenerator {
       $adapted_content = $this->adaptContentForPlatform($base_content, $platform, $type, $context);
       $platform_content[$platform_name] = $adapted_content;
       
-      $this->logger->info('Generated content for @platform: @content', [
+      $this->logInfo('Generated content for @platform: @content', [
         '@platform' => $platform->getName(),
         '@content' => substr($adapted_content, 0, 100) . '...'
       ]);
@@ -399,7 +402,7 @@ class ContentGenerator {
         return $this->generateBiasInsight();
         
       default:
-        $this->logger->warning('Unknown content type: @type', ['@type' => $type]);
+        $this->logWarning('Unknown content type: @type', ['@type' => $type]);
         return $this->getFallbackContent();
     }
   }
