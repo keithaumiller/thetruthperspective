@@ -150,7 +150,7 @@
       createChart(canvas, chartData);
       setupEventListeners(canvasId);
       
-      // Set default selection to top 3 sources (highest article count)
+      // Set default selection to top 5 sources (highest article count)
       if (sourceSelector) {
         resetToTopSources();
       }
@@ -487,9 +487,9 @@
       option.selected = false;
     });
 
-    // Select top 3 options (top 3 sources by article count)
+    // Select top 5 options (top 5 sources by article count)
     const options = Array.from(sourceSelector.options);
-    for (let i = 0; i < Math.min(3, options.length); i++) {
+    for (let i = 0; i < Math.min(5, options.length); i++) {
       if (options[i]) {
         options[i].selected = true;
       }

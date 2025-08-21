@@ -1,7 +1,8 @@
 (function (Drupal, drupalSettings) {
   'use strict';
 
-  console.log('=== Sentiment Timeline Chart Script Loading ===');
+  console.log('=== Sentiment Timeline Chart       // Prepare datasets - show top 5 sources initially
+      const datasets = timelineArray.slice(0, 5).map((sourceData, index) => {ript Loading ===');
 
   let chart = null;
   let sourceSelector = null;
@@ -96,8 +97,8 @@
         throw new Error('No sentiment timeline data available');
       }
 
-      // Prepare datasets - show top 3 sources initially
-      const datasets = timelineArray.slice(0, 3).map((sourceData, index) => {
+      // Prepare datasets - show top 5 sources initially
+      const datasets = timelineArray.slice(0, 5).map((sourceData, index) => {
         console.log(`Processing dataset ${index}: ${sourceData.source_name}`);
         
         const colors = [
@@ -268,9 +269,9 @@
       option.selected = false;
     });
 
-    // Select top 3
+    // Select top 5
     const options = Array.from(sourceSelector.options);
-    for (let i = 0; i < Math.min(3, options.length); i++) {
+    for (let i = 0; i < Math.min(5, options.length); i++) {
       options[i].selected = true;
     }
 

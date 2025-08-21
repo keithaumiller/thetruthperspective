@@ -59,6 +59,7 @@ class SentimentTimelineChartService {
       'limit' => 10,
       'days_back' => 90,
       'source_ids' => [],
+      'source_limit' => 5,
     ];
 
     // Get chart data from the shared service
