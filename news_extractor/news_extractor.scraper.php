@@ -365,7 +365,7 @@ function _news_extractor_scraper_update_publication_date($entity, $article_data,
         // Set the date field value
         $entity->set('field_publication_date', $formatted_date);
         
-        \Drupal::logger('news_extractor')->info('Updated publication date @date (from @source, format: @type, length: @len) for @title', [
+        \Drupal::service('newsmotivationmetrics.logging_config')->info('Updated publication date @date (from @source, format: @type, length: @len) for @title', [
           '@date' => $formatted_date,
           '@source' => $source,
           '@type' => $datetime_type,
