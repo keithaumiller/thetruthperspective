@@ -59,6 +59,7 @@ class AuthoritarianismTimelineChartService {
       'limit' => 10,
       'days_back' => 90,
       'source_ids' => [],
+      'source_limit' => 5,
     ];
 
     // Get chart data from the shared service
@@ -120,8 +121,8 @@ class AuthoritarianismTimelineChartService {
     // Chart container and canvas
     $build['chart_container'] = $this->buildChartContainer($options, $chart_data);
 
-    // Chart actions (reset/clear buttons)
-    $build['actions'] = $this->buildChartActions($options['canvas_id'], $options['source_limit']);
+    // Chart actions (reset/clear buttons) - REMOVED for cleaner interface
+    // $build['actions'] = $this->buildChartActions($options['canvas_id'], $options['source_limit']);
 
     // Attach JavaScript settings and libraries with isolated namespace
     $build['#attached']['drupalSettings']['newsmotivationmetrics_authoritarianism'] = $this->buildJavaScriptSettings($chart_data, $options, $extended_sources);
