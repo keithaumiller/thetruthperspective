@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\newsmotivationmetrics\Traits;
+namespace Drupal\twitter_automation\Traits;
 
 /**
- * Trait for implementing controlled logging in newsmotivationmetrics.
+ * Trait for implementing controlled logging in twitter_automation.
  * 
  * This trait provides standard logging methods that respect the platform's
  * logging configuration to reduce log noise in production environments.
@@ -20,7 +20,7 @@ trait ConfigurableLoggingTrait {
     $config = \Drupal::config('thetruthperspective.logging');
     
     // Check for module-specific override first
-    $module_level = $config->get('modules.newsmotivationmetrics.level');
+    $module_level = $config->get('modules.twitter_automation.level');
     if ($module_level !== NULL) {
       return (int) $module_level;
     }

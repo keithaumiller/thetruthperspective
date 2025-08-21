@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\newsmotivationmetrics\Traits;
+namespace Drupal\ai_conversation\Traits;
 
 /**
- * Trait for implementing controlled logging in newsmotivationmetrics.
+ * Trait for implementing controlled logging in ai_conversation.
  * 
  * This trait provides standard logging methods that respect the platform's
  * logging configuration to reduce log noise in production environments.
@@ -20,7 +20,7 @@ trait ConfigurableLoggingTrait {
     $config = \Drupal::config('thetruthperspective.logging');
     
     // Check for module-specific override first
-    $module_level = $config->get('modules.newsmotivationmetrics.level');
+    $module_level = $config->get('modules.ai_conversation.level');
     if ($module_level !== NULL) {
       return (int) $module_level;
     }

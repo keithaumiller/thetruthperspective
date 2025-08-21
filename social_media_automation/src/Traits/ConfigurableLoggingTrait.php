@@ -3,7 +3,7 @@
 namespace Drupal\social_media_automation\Traits;
 
 /**
- * Trait for implementing controlled logging in social media automation.
+ * Trait for implementing controlled logging in social_media_automation.
  * 
  * This trait provides standard logging methods that respect the platform's
  * logging configuration to reduce log noise in production environments.

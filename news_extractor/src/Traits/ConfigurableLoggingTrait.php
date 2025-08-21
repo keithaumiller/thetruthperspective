@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\newsmotivationmetrics\Traits;
+namespace Drupal\news_extractor\Traits;
 
 /**
- * Trait for implementing controlled logging in newsmotivationmetrics.
+ * Trait for implementing controlled logging in news_extractor.
  * 
  * This trait provides standard logging methods that respect the platform's
  * logging configuration to reduce log noise in production environments.
@@ -20,7 +20,7 @@ trait ConfigurableLoggingTrait {
     $config = \Drupal::config('thetruthperspective.logging');
     
     // Check for module-specific override first
-    $module_level = $config->get('modules.newsmotivationmetrics.level');
+    $module_level = $config->get('modules.news_extractor.level');
     if ($module_level !== NULL) {
       return (int) $module_level;
     }
