@@ -90,45 +90,71 @@ class SocialMediaScheduler {
       return;
     }
 
-    $last_daily_post = $this->state->get('social_media_automation.last_daily_post', 0);
-    
     $current_time = time();
     $current_hour = (int) date('H', $current_time);
     $today = date('Y-m-d', $current_time);
     
-    // Daily post (10 AM - 2 PM)
-    if ($current_hour >= 10 && $current_hour < 14) {
-      $last_post_date = date('Y-m-d', $last_daily_post);
-      if ($last_post_date !== $today) {
-        $this->queueDailyPost();
+    // Three daily posts: Morning (8-10 AM), Afternoon (12-2 PM), Evening (6-8 PM)
+    $posting_windows = [
+      'morning' => ['start' => 8, 'end' => 10, 'state_key' => 'last_morning_post'],
+      'afternoon' => ['start' => 12, 'end' => 14, 'state_key' => 'last_afternoon_post'],
+      'evening' => ['start' => 18, 'end' => 20, 'state_key' => 'last_evening_post'],
+    ];
+    
+    foreach ($posting_windows as $window_name => $window) {
+      if ($current_hour >= $window['start'] && $current_hour < $window['end']) {
+        $last_post = $this->state->get('social_media_automation.' . $window['state_key'], 0);
+        $last_post_date = date('Y-m-d', $last_post);
+        
+        if ($last_post_date !== $today) {
+          $this->queueScheduledPost($window_name);
+          $this->state->set('social_media_automation.' . $window['state_key'], $current_time);
+        }
       }
     }
   }
 
   /**
-   * Queue daily post.
+   * Queue scheduled post for specific time window.
    */
-  protected function queueDailyPost(): void {
+  protected function queueScheduledPost(string $window_name): void {
     $queue = $this->queueFactory->get('social_media_automation_posts');
     
-    // Rotate through different content types for variety
-    $content_types = ['recent_article', 'analytics_summary', 'trending_topics', 'bias_insight'];
-    $last_content_type = $this->state->get('social_media_automation.last_content_type', 'recent_article');
+    // Different content types for each time window to ensure variety
+    $content_by_window = [
+      'morning' => ['recent_article', 'analytics_summary'],
+      'afternoon' => ['trending_topics', 'bias_insight'],
+      'evening' => ['recent_article', 'analytics_summary'],
+    ];
     
-    // Find next content type in rotation
-    $current_index = array_search($last_content_type, $content_types);
-    $next_index = ($current_index + 1) % count($content_types);
-    $next_type = $content_types[$next_index];
+    $available_types = $content_by_window[$window_name] ?? ['recent_article'];
+    $last_content_type = $this->state->get('social_media_automation.last_content_type_' . $window_name, '');
+    
+    // Rotate between available content types for this window
+    $current_index = array_search($last_content_type, $available_types);
+    $next_index = ($current_index === FALSE) ? 0 : ($current_index + 1) % count($available_types);
+    $next_type = $available_types[$next_index];
     
     $item = [
-      'type' => 'daily',
+      'type' => 'scheduled',
+      'window' => $window_name,
       'content_type' => $next_type,
       'timestamp' => time(),
     ];
     
     $queue->createItem($item);
-    $this->state->set('social_media_automation.last_content_type', $next_type);
-    $this->logInfo('Daily social media post queued with type: @type', ['@type' => $next_type]);
+    $this->state->set('social_media_automation.last_content_type_' . $window_name, $next_type);
+    $this->logInfo('Scheduled @window social media post queued with type: @type', [
+      '@window' => $window_name,
+      '@type' => $next_type
+    ]);
+  }
+
+  /**
+   * Queue daily post (legacy method - now redirects to morning post).
+   */
+  protected function queueDailyPost(): void {
+    $this->queueScheduledPost('morning');
   }
 
   /**
@@ -220,7 +246,7 @@ class SocialMediaScheduler {
   }
 
   /**
-   * Manually send a test post to all enabled platforms.
+   * Manually send a post to all enabled platforms.
    *
    * @param string $content_type
    *   The type of content to generate.
@@ -236,7 +262,7 @@ class SocialMediaScheduler {
       $platform_content = $this->contentGenerator->generateContent($content_type);
       
       if (empty($platform_content)) {
-        $this->logError('Failed to generate test content');
+        $this->logError('Failed to generate content');
         return [];
       }
 
@@ -253,23 +279,20 @@ class SocialMediaScheduler {
         }
 
         try {
-          // Add test prefix
-          $test_content = "🧪 TEST: " . $content;
-          
           // Use platform's formatContent to ensure proper length handling
-          $test_content = $platform->formatContent($test_content);
+          $formatted_content = $platform->formatContent($content);
           
-          $result = $platform->postContent($test_content);
+          $result = $platform->postContent($formatted_content);
           
           $results[$platform_name] = [
             'success' => $result,
-            'content' => substr($test_content, 0, 100) . '...',
+            'content' => substr($formatted_content, 0, 100) . '...',
           ];
           
           if ($result) {
-            $this->logInfo('Successfully posted test to @platform', ['@platform' => $platform->getName()]);
+            $this->logInfo('Successfully posted to @platform', ['@platform' => $platform->getName()]);
           } else {
-            $this->logError('Failed to post test to @platform', ['@platform' => $platform->getName()]);
+            $this->logError('Failed to post to @platform', ['@platform' => $platform->getName()]);
           }
           
         } catch (\Exception $e) {
@@ -278,7 +301,7 @@ class SocialMediaScheduler {
             'error' => $e->getMessage(),
           ];
           
-          $this->logError('Exception sending test to @platform: @message', [
+          $this->logError('Exception sending to @platform: @message', [
             '@platform' => $platform->getName(),
             '@message' => $e->getMessage(),
           ]);
@@ -286,14 +309,14 @@ class SocialMediaScheduler {
       }
 
     } catch (\Exception $e) {
-      $this->logError('Exception sending test posts: @message', ['@message' => $e->getMessage()]);
+      $this->logError('Exception sending posts: @message', ['@message' => $e->getMessage()]);
     }
     
     return $results;
   }
 
   /**
-   * Send test post to specific platform.
+   * Send post to specific platform.
    *
    * @param string $platform_name
    *   The machine name of the platform.
@@ -322,24 +345,21 @@ class SocialMediaScheduler {
 
       $content = $platform_content[$platform_name];
       
-      // Add test prefix
-      $test_content = "🧪 TEST: " . $content;
-      
       // Use platform's formatContent to ensure proper length handling
-      $test_content = $platform->formatContent($test_content);
+      $formatted_content = $platform->formatContent($content);
       
-      $result = $platform->postContent($test_content);
+      $result = $platform->postContent($formatted_content);
       
       if ($result !== FALSE) {
-        $this->logInfo('Successfully posted test to @platform', ['@platform' => $platform->getName()]);
+        $this->logInfo('Successfully posted to @platform', ['@platform' => $platform->getName()]);
         return TRUE;
       } else {
-        $this->logError('Failed to post test to @platform', ['@platform' => $platform->getName()]);
+        $this->logError('Failed to post to @platform', ['@platform' => $platform->getName()]);
         return FALSE;
       }
 
     } catch (\Exception $e) {
-      $this->logError('Exception sending test to @platform: @message', [
+      $this->logError('Exception sending to @platform: @message', [
         '@platform' => $platform_name,
         '@message' => $e->getMessage(),
       ]);

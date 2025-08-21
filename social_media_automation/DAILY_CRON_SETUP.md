@@ -1,33 +1,41 @@
-# Daily Social Media Automation Cron Setup
+# Social Media Automation Cron Setup
 
 ## Overview
 
-The social media automation module now automatically posts to Mastodon (and other enabled platforms) **once per day** during business hours. The system rotates through different content types to provide variety and maintain audience engagement.
+The social media automation module now automatically posts to Mastodon (and other enabled platforms) **three times per day** during optimal engagement hours. The system rotates through different content types to provide variety and maintain audience engagement.
 
 ## How It Works
 
 ### 1. **Cron Schedule**
-- **Posting Window**: 10 AM - 2 PM (4-hour window)
-- **Frequency**: Once per day
+- **Morning Window**: 8 AM - 10 AM (2-hour window)
+- **Afternoon Window**: 12 PM - 2 PM (2-hour window)
+- **Evening Window**: 6 PM - 8 PM (2-hour window)
+- **Frequency**: Three times per day
 - **Time Zone**: Server time (production server timezone)
 
-### 2. **Content Rotation**
-The system rotates through 4 content types:
-1. **recent_article** - Features the most recent article with AI motivation analysis
-2. **analytics_summary** - Daily statistics and insights 
-3. **trending_topics** - Popular themes from recent articles
-4. **bias_insight** - AI bias detection insights and platform transparency
+### 2. **Content Rotation by Time Window**
+**Morning Posts (8-10 AM):**
+- **recent_article** - Features the most recent article with AI motivation analysis
+- **analytics_summary** - Daily statistics and insights
+
+**Afternoon Posts (12-2 PM):**
+- **trending_topics** - Popular themes from recent articles
+- **bias_insight** - AI bias detection insights and platform transparency
+
+**Evening Posts (6-8 PM):**
+- **recent_article** - Features the most recent article with AI motivation analysis
+- **analytics_summary** - Daily statistics and insights
 
 ### 3. **Automatic Process Flow**
 ```
-Daily Cron Run (Drupal cron) → 
-Check if posting window (10 AM - 2 PM) → 
-Check if already posted today → 
-Queue post with next content type → 
+Cron Run (every hour) → 
+Check if current time in posting window → 
+Check if already posted today for this window → 
+Queue post with appropriate content type for window → 
 Queue worker processes post → 
 Content generator creates platform-specific content → 
 Post to all enabled platforms → 
-Update tracking state
+Update tracking state for this window
 ```
 
 ## Configuration

@@ -147,9 +147,9 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       // Add platform-specific credential fields
       $this->addPlatformCredentialFields($form['platforms'][$platform_name], $platform, $config, $platform_name);
 
-      // Add test connection button (test post for Mastodon)
+      // Add connection test button (actual post for Mastodon)
       $button_text = ($platform_name === 'mastodon') 
-        ? $this->t('Test @platform (Send AI-Generated Post)', ['@platform' => $platform->getName()])
+        ? $this->t('Post to @platform (Send AI-Generated Post)', ['@platform' => $platform->getName()])
         : $this->t('Test @platform Connection', ['@platform' => $platform->getName()]);
         
       $form['platforms'][$platform_name]['test_connection'] = [
@@ -286,7 +286,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
 
     $form['testing']['send_test_posts'] = [
       '#type' => 'button',
-      '#value' => $this->t('Send Test Posts to All Platforms'),
+      '#value' => $this->t('Send Posts to All Platforms'),
       '#ajax' => [
         'callback' => '::sendTestPostsCallback',
         'wrapper' => 'test-posts-status',
@@ -298,7 +298,7 @@ class SocialMediaAutomationSettingsForm extends ConfigFormBase {
       if ($config->get($platform_name . '.enabled')) {
         $form['testing']['send_test_' . $platform_name] = [
           '#type' => 'button',
-          '#value' => $this->t('Test @platform Only', ['@platform' => $platform->getName()]),
+          '#value' => $this->t('Post to @platform Only', ['@platform' => $platform->getName()]),
           '#ajax' => [
             'callback' => '::sendTestPostToPlatformCallback',
             'wrapper' => 'test-posts-status',
