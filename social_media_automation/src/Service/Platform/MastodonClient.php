@@ -22,20 +22,10 @@ class MastodonClient implements PlatformInterface {
    *
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
-  protected $configFactor  /**
-   * Build content generation prompt for social media post.
-   *
-   * @param string $article_title
-   *   The article title.
-   * @param string $article_url
-   *   The article URL.
-   * @param string $motivation_analysis
-   *   The motivation analysis data.
-   *
-   * @return string
-   *   The prompt for AI.
-   */
-  protected function buildContentPrompt($article_title, $article_url, $motivation_analysis): string { The logger service.
+  protected $configFactory;
+
+  /**
+   * The logger service.
    *
    * @var \Drupal\Core\Logger\LoggerChannelInterface
    */
