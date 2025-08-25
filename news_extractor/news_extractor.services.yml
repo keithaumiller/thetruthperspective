@@ -21,6 +21,14 @@ services:
       - '@entity_type.manager'
       - '@logger.factory'
 
+  # Daily Limit Service - Manages daily article processing limits per news source
+  news_extractor.daily_limit:
+    class: Drupal\news_extractor\Service\DailyLimitService
+    arguments:
+      - '@database'
+      - '@config.factory'
+      - '@logger.factory'
+
   # Main orchestrator service - Coordinates all three services
   news_extractor.extraction:
     class: Drupal\news_extractor\Service\NewsExtractionService

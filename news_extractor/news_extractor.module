@@ -75,7 +75,7 @@ function news_extractor_feeds_process_alter(&$feed, $item, $entity_interface) {
 
 /**
  * Implements hook_entity_insert().
- * Process new article entities.
+ * Process new article entities with daily limit checking.
  */
 function news_extractor_entity_insert(EntityInterface $entity) {
   if ($entity->bundle() === 'article' && $entity->hasField('field_original_url')) {
@@ -92,10 +92,37 @@ function news_extractor_entity_insert(EntityInterface $entity) {
     $original_url = $url_field->uri;
     
     if (!empty($original_url) && filter_var($original_url, FILTER_VALIDATE_URL)) {
-      // Note: News source extraction is handled during Diffbot scraping in ScrapingService::updateMetadataFields()
+      // STEP 1: Extract preliminary news source for daily limit checking
+      $preliminary_news_source = _news_extractor_get_preliminary_news_source($entity, $original_url);
+      
+      // STEP 2: Check daily limits before processing
+      /** @var \Drupal\news_extractor\Service\DailyLimitService $daily_limit_service */
+      $daily_limit_service = \Drupal::service('news_extractor.daily_limit');
+      
+      if (!$daily_limit_service->isProcessingAllowed($preliminary_news_source)) {
+        \Drupal::logger('news_extractor')->info('Daily limit reached for source @source - skipping article: @title (ID: @id)', [
+          '@source' => $preliminary_news_source,
+          '@title' => $entity->getTitle(),
+          '@id' => $entity->id(),
+        ]);
+        
+        // Set a field to indicate this article was skipped due to daily limit
+        if ($entity->hasField('field_processing_notes')) {
+          $processing_note = "Processing skipped on " . date('Y-m-d H:i:s') . " - daily limit reached for source: {$preliminary_news_source}";
+          $entity->set('field_processing_notes', $processing_note);
+          $entity->save();
+        }
+        
+        return;
+      }
+      
+      // STEP 3: Increment daily count before processing
+      $daily_limit_service->incrementDailyCount($preliminary_news_source);
+      
+      // STEP 4: Process the article using orchestrator service
+      // Note: News source extraction is refined during Diffbot scraping in ScrapingService::updateMetadataFields()
       // This ensures we have the actual siteName from Diffbot API for accurate source identification
       
-      // Use the orchestrator service for complete processing
       /** @var \Drupal\news_extractor\Service\NewsExtractionService $extraction_service */
       $extraction_service = \Drupal::service('news_extractor.extraction');
       $extraction_service->processArticle($entity, $original_url);
@@ -639,13 +666,44 @@ function news_extractor_cron() {
     }
   }
 
+  // STEP 5: Daily limit cleanup and reset
+  $logger->info('Step 5: Daily limit maintenance and cleanup');
+  
+  /** @var \Drupal\news_extractor\Service\DailyLimitService $daily_limit_service */
+  $daily_limit_service = \Drupal::service('news_extractor.daily_limit');
+  
+  // Clean up old records (older than 7 days)
+  $daily_limit_service->resetDailyCounts();
+  
+  // Log current daily statistics
+  $today_counts = $daily_limit_service->getAllDailyCounts();
+  $sources_at_limit = 0;
+  $total_processed_today = 0;
+  
+  foreach ($today_counts as $source => $data) {
+    $total_processed_today += $data['count'];
+    if ($data['at_limit']) {
+      $sources_at_limit++;
+    }
+  }
+  
+  $stats['daily_limit_sources_tracked'] = count($today_counts);
+  $stats['daily_limit_sources_at_limit'] = $sources_at_limit;
+  $stats['daily_limit_total_processed_today'] = $total_processed_today;
+  
+  $logger->info('Daily limit status: @tracked sources tracked, @at_limit at their daily limit, @total articles processed today', [
+    '@tracked' => count($today_counts),
+    '@at_limit' => $sources_at_limit,
+    '@total' => $total_processed_today,
+  ]);
+
   // Log final statistics
   $logger->info('News extractor cron job completed. Statistics: @stats', [
     '@stats' => json_encode($stats),
   ]);
 
   // Also log human-readable summary
-  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @assessment_missing articles missing assessment fields, reprocessed @assessment_reprocessed assessment fields, fixed @total_fields assessment field gaps, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds', [
+  $logger->info('Cron summary: Checked @checked published articles, unpublished @unpublished, found @found unpublished articles, reprocessed @success successfully, @failed failed, found @assessment_missing articles missing assessment fields, reprocessed @assessment_reprocessed assessment fields, fixed @total_fields assessment field gaps, found @stuck_found stuck feeds, unlocked @stuck_unlocked feeds, tracking @tracked_sources news sources, @sources_at_limit at daily limit, @daily_total processed today', [
     '@checked' => $stats['published_checked'],
     '@unpublished' => $stats['articles_unpublished'],
     '@found' => $stats['unpublished_found'],
@@ -656,6 +714,9 @@ function news_extractor_cron() {
     '@total_fields' => $stats['total_fields_fixed'] ?? 0,
     '@stuck_found' => $stats['stuck_feeds_found'],
     '@stuck_unlocked' => $stats['stuck_feeds_unlocked'],
+    '@tracked_sources' => $stats['daily_limit_sources_tracked'] ?? 0,
+    '@sources_at_limit' => $stats['daily_limit_sources_at_limit'] ?? 0,
+    '@daily_total' => $stats['daily_limit_total_processed_today'] ?? 0,
   ]);
 }
 
@@ -913,4 +974,72 @@ function _news_extractor_unlock_stuck_feed($feed_info) {
   }
   
   return FALSE;
+}
+
+/**
+ * Get preliminary news source for daily limit checking.
+ * 
+ * This function extracts news source from available entity data before
+ * full Diffbot processing to enable early daily limit checking.
+ * 
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The article entity.
+ * @param string $url
+ *   The article URL.
+ * 
+ * @return string
+ *   The preliminary news source name.
+ */
+function _news_extractor_get_preliminary_news_source($entity, $url) {
+  // Priority 1: Check if news source is already set from feed processing
+  if ($entity->hasField('field_news_source') && !$entity->get('field_news_source')->isEmpty()) {
+    $news_source = $entity->get('field_news_source')->value;
+    if (!empty($news_source) && $news_source !== 'Source Unavailable') {
+      return $news_source;
+    }
+  }
+  
+  // Priority 2: Extract from URL domain as fallback
+  $parsed_url = parse_url($url);
+  if (!empty($parsed_url['host'])) {
+    $domain = $parsed_url['host'];
+    
+    // Remove www. prefix
+    $domain = preg_replace('/^www\./', '', $domain);
+    
+    // Map common domains to clean news source names
+    $domain_mapping = [
+      'cnn.com' => 'CNN',
+      'politics.cnn.com' => 'CNN',
+      'foxnews.com' => 'Fox News',
+      'reuters.com' => 'Reuters',
+      'bbc.com' => 'BBC News',
+      'bbc.co.uk' => 'BBC News',
+      'nytimes.com' => 'New York Times',
+      'washingtonpost.com' => 'Washington Post',
+      'npr.org' => 'NPR',
+      'theonion.com' => 'TheOnion',
+      'abcnews.go.com' => 'ABC News',
+      'cbsnews.com' => 'CBS News',
+      'nbcnews.com' => 'NBC News',
+      'usatoday.com' => 'USA Today',
+      'wsj.com' => 'Wall Street Journal',
+      'apnews.com' => 'Associated Press',
+      'bloomberg.com' => 'Bloomberg',
+      'politico.com' => 'Politico',
+      'thehill.com' => 'The Hill',
+      'theguardian.com' => 'The Guardian',
+    ];
+    
+    if (isset($domain_mapping[$domain])) {
+      return $domain_mapping[$domain];
+    }
+    
+    // For unmapped domains, create a clean name from the domain
+    $clean_name = ucwords(str_replace(['.com', '.org', '.net', '.co.uk'], '', $domain));
+    return $clean_name;
+  }
+  
+  // Priority 3: Use a default fallback
+  return 'Unknown Source';
 }

@@ -1571,4 +1571,258 @@ class NewsExtractorCommands extends DrushCommands {
     return $processed;
   }
 
+  /**
+   * Show daily article processing limits status.
+   *
+   * @param array $options
+   *   Command options.
+   *
+   * @command news-extractor:daily-limits
+   * @aliases ne:limits,ne:daily
+   * @option date Date to check (Y-m-d format, defaults to today)
+   * @option source Show details for specific news source
+   * @usage news-extractor:daily-limits
+   *   Show today's daily limit status for all sources
+   * @usage news-extractor:daily-limits --date=2025-01-15
+   *   Show daily limit status for specific date
+   * @usage news-extractor:daily-limits --source="CNN"
+   *   Show detailed information for CNN
+   */
+  public function dailyLimits(array $options = ['date' => NULL, 'source' => NULL]) {
+    /** @var \Drupal\news_extractor\Service\DailyLimitService $daily_limit_service */
+    $daily_limit_service = \Drupal::service('news_extractor.daily_limit');
+    
+    $date = $options['date'] ?: date('Y-m-d');
+    $source_filter = $options['source'];
+    
+    $this->output()->writeln("📊 Daily Article Processing Limits - {$date}");
+    $this->output()->writeln("===============================================");
+    
+    if (!$daily_limit_service->isEnabled()) {
+      $this->output()->writeln("⚠️  <comment>Daily limits are currently DISABLED</comment>");
+      return;
+    }
+    
+    $all_counts = $daily_limit_service->getAllDailyCounts($date);
+    
+    if (empty($all_counts)) {
+      $this->output()->writeln("📭 No articles processed on {$date}");
+      return;
+    }
+    
+    // Filter by source if specified
+    if ($source_filter) {
+      if (isset($all_counts[$source_filter])) {
+        $all_counts = [$source_filter => $all_counts[$source_filter]];
+      } else {
+        $this->output()->writeln("❌ No data found for source: {$source_filter}");
+        return;
+      }
+    }
+    
+    $total_processed = 0;
+    $sources_at_limit = 0;
+    
+    foreach ($all_counts as $source => $data) {
+      $total_processed += $data['count'];
+      if ($data['at_limit']) {
+        $sources_at_limit++;
+      }
+      
+      $status_icon = $data['at_limit'] ? '🔴' : ($data['count'] >= $data['limit'] * 0.8 ? '🟡' : '🟢');
+      $status_text = $data['at_limit'] ? 'AT LIMIT' : 'Active';
+      
+      $this->output()->writeln("  {$status_icon} {$source}: {$data['count']}/{$data['limit']} articles ({$status_text})");
+      
+      if ($source_filter) {
+        $this->output()->writeln("     Remaining: {$data['remaining']} articles");
+        $this->output()->writeln("     Status: " . ($data['at_limit'] ? 'Processing blocked until tomorrow' : 'Accepting new articles'));
+      }
+    }
+    
+    $this->output()->writeln("");
+    $this->output()->writeln("📈 Summary for {$date}:");
+    $this->output()->writeln("   Sources tracked: " . count($all_counts));
+    $this->output()->writeln("   Sources at limit: {$sources_at_limit}");
+    $this->output()->writeln("   Total articles processed: {$total_processed}");
+  }
+
+  /**
+   * Set daily processing limit for a news source.
+   *
+   * @param string $source
+   *   The news source name.
+   * @param int $limit
+   *   The new daily limit.
+   * @param array $options
+   *   Command options.
+   *
+   * @command news-extractor:set-limit
+   * @aliases ne:set-limit
+   * @option global Set the global default limit for all sources
+   * @usage news-extractor:set-limit "CNN" 10
+   *   Set daily limit for CNN to 10 articles
+   * @usage news-extractor:set-limit --global 7
+   *   Set global default limit to 7 articles per source
+   */
+  public function setDailyLimit($source = NULL, $limit = NULL, array $options = ['global' => FALSE]) {
+    /** @var \Drupal\news_extractor\Service\DailyLimitService $daily_limit_service */
+    $daily_limit_service = \Drupal::service('news_extractor.daily_limit');
+    
+    if ($options['global']) {
+      if (!$limit) {
+        $this->output()->writeln("❌ Error: Global limit value required");
+        return;
+      }
+      
+      $config = \Drupal::configFactory()->getEditable('news_extractor.settings');
+      $config->set('default_daily_limit', (int) $limit);
+      $config->save();
+      
+      $this->output()->writeln("✅ Set global default daily limit to {$limit} articles per source");
+      return;
+    }
+    
+    if (!$source || !$limit) {
+      $this->output()->writeln("❌ Error: Both source name and limit value required");
+      $this->output()->writeln("Usage: drush ne:set-limit \"CNN\" 10");
+      return;
+    }
+    
+    $daily_limit_service->setDailyLimit($source, (int) $limit);
+    $this->output()->writeln("✅ Set daily limit for '{$source}' to {$limit} articles");
+  }
+
+  /**
+   * Show daily processing statistics for the last N days.
+   *
+   * @param int $days
+   *   Number of days to show statistics for.
+   * @param array $options
+   *   Command options.
+   *
+   * @command news-extractor:limit-stats
+   * @aliases ne:limit-stats,ne:stats
+   * @option format Output format: table or json
+   * @usage news-extractor:limit-stats 7
+   *   Show statistics for the last 7 days
+   * @usage news-extractor:limit-stats 14 --format=json
+   *   Show 14-day statistics in JSON format
+   */
+  public function limitStatistics($days = 7, array $options = ['format' => 'table']) {
+    /** @var \Drupal\news_extractor\Service\DailyLimitService $daily_limit_service */
+    $daily_limit_service = \Drupal::service('news_extractor.daily_limit');
+    
+    $statistics = $daily_limit_service->getProcessingStatistics($days);
+    
+    if ($options['format'] === 'json') {
+      $this->output()->writeln(json_encode($statistics, JSON_PRETTY_PRINT));
+      return;
+    }
+    
+    $this->output()->writeln("📊 Daily Processing Statistics (Last {$days} days)");
+    $this->output()->writeln("================================================");
+    
+    if (empty($statistics)) {
+      $this->output()->writeln("📭 No processing data available for the last {$days} days");
+      return;
+    }
+    
+    foreach ($statistics as $date => $day_data) {
+      $this->output()->writeln("");
+      $this->output()->writeln("📅 {$date}:");
+      $this->output()->writeln("   Total processed: {$day_data['total_processed']} articles");
+      $this->output()->writeln("   Sources at limit: {$day_data['sources_at_limit']}");
+      
+      if (!empty($day_data['sources'])) {
+        $this->output()->writeln("   Source breakdown:");
+        foreach ($day_data['sources'] as $source => $source_data) {
+          $status_icon = $source_data['at_limit'] ? '🔴' : '🟢';
+          $this->output()->writeln("     {$status_icon} {$source}: {$source_data['count']}/{$source_data['limit']}");
+        }
+      }
+    }
+  }
+
+  /**
+   * Enable or disable daily article processing limits.
+   *
+   * @param string $action
+   *   Action to take: 'enable' or 'disable'.
+   *
+   * @command news-extractor:toggle-limits
+   * @aliases ne:toggle-limits
+   * @usage news-extractor:toggle-limits enable
+   *   Enable daily processing limits
+   * @usage news-extractor:toggle-limits disable
+   *   Disable daily processing limits
+   */
+  public function toggleLimits($action = NULL) {
+    if (!in_array($action, ['enable', 'disable'])) {
+      $this->output()->writeln("❌ Error: Action must be 'enable' or 'disable'");
+      return;
+    }
+    
+    $config = \Drupal::configFactory()->getEditable('news_extractor.settings');
+    $enabled = ($action === 'enable');
+    $config->set('daily_limit_enabled', $enabled);
+    $config->save();
+    
+    $status = $enabled ? 'ENABLED' : 'DISABLED';
+    $icon = $enabled ? '✅' : '🔴';
+    
+    $this->output()->writeln("{$icon} Daily article processing limits {$status}");
+    
+    if ($enabled) {
+      $default_limit = $config->get('default_daily_limit') ?: 5;
+      $this->output()->writeln("   Default limit per source: {$default_limit} articles");
+    }
+  }
+
+  /**
+   * Reset daily counts for all sources (emergency use only).
+   *
+   * @param array $options
+   *   Command options.
+   *
+   * @command news-extractor:reset-limits
+   * @aliases ne:reset-limits
+   * @option date Reset counts for specific date (Y-m-d format)
+   * @option confirm Confirm the reset operation
+   * @usage news-extractor:reset-limits --confirm
+   *   Reset today's daily counts for all sources
+   * @usage news-extractor:reset-limits --date=2025-01-15 --confirm
+   *   Reset daily counts for specific date
+   */
+  public function resetLimits(array $options = ['date' => NULL, 'confirm' => FALSE]) {
+    if (!$options['confirm']) {
+      $this->output()->writeln("⚠️  This will reset daily article counts for all sources!");
+      $this->output()->writeln("Add --confirm to proceed with the reset operation.");
+      return;
+    }
+    
+    /** @var \Drupal\news_extractor\Service\DailyLimitService $daily_limit_service */
+    $daily_limit_service = \Drupal::service('news_extractor.daily_limit');
+    
+    $date = $options['date'] ?: date('Y-m-d');
+    
+    // Get current counts before reset
+    $before_counts = $daily_limit_service->getAllDailyCounts($date);
+    
+    // Delete records for the specified date
+    \Drupal::database()->delete('news_extractor_daily_limits')
+      ->condition('processing_date', $date)
+      ->execute();
+    
+    $this->output()->writeln("✅ Reset daily limits for {$date}");
+    $this->output()->writeln("   Sources affected: " . count($before_counts));
+    
+    if (!empty($before_counts)) {
+      $this->output()->writeln("   Previous counts:");
+      foreach ($before_counts as $source => $data) {
+        $this->output()->writeln("     {$source}: {$data['count']} articles");
+      }
+    }
+  }
+
 }

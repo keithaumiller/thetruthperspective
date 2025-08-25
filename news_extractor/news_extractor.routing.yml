@@ -5,3 +5,11 @@ news_extractor.settings:
     _title: 'News Extractor Settings'
   requirements:
     _permission: 'administer site configuration'
+
+news_extractor.daily_limits:
+  path: '/admin/reports/news-extractor/daily-limits'
+  defaults:
+    _controller: '\Drupal\news_extractor\Controller\DailyLimitController::dashboard'
+    _title: 'Daily Processing Limits'
+  requirements:
+    _permission: 'administer site configuration'

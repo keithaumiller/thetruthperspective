@@ -20,11 +20,14 @@ The Truth Perspective is an AI-powered news analysis platform built on Drupal 11
 #### 1. **news_extractor** (Core Content Processing)
 - **Purpose**: Content scraping, AI analysis, and data processing pipeline
 - **Key Features**:
-  - RSS feed import and processing
+  - RSS feed import and processing with daily source limits
   - Diffbot API integration for content extraction
   - Multi-stage news source population system
   - AWS Bedrock Claude integration for AI analysis
+  - Daily processing limits (5 articles per source per day)
+  - Custom daily limit tracking database table
   - Comprehensive Drush command suite for maintenance
+  - Web-based admin dashboard for limit monitoring
 
 #### 2. **newsmotivationmetrics** (Public Analytics Dashboard)
 - **Purpose**: Public-facing analytics and metrics visualization
@@ -386,11 +389,19 @@ function news_extractor_cron()
 - **Indexing**: Optimized indexes on frequently queried fields
 - **Batch Processing**: Prevent memory exhaustion with large datasets
 - **Query Optimization**: Efficient entity queries with proper conditions
+- **Daily Limits Table**: Custom table `news_extractor_daily_limits` with indexed date/source columns
+
+### Daily Processing Limits
+- **Enforcement**: Automatic blocking when source reaches daily limit (default: 5 articles)
+- **Tracking**: Real-time database tracking with daily cleanup via cron
+- **Resource Management**: Prevents API overuse and excessive processing costs
+- **Admin Monitoring**: Web dashboard at `/admin/reports/news-extractor/daily-limits`
 
 ### API Rate Limiting
-- **Diffbot**: Managed through existing integration
+- **Diffbot**: Managed through existing integration plus daily source limits
 - **AWS Bedrock**: Built-in rate limiting and retry logic
 - **Batch Delays**: Sleep intervals between processing batches
+- **Daily Caps**: Per-source limits reduce overall API usage
 
 ### Caching Strategy
 - **Field Data**: Cache expensive field queries

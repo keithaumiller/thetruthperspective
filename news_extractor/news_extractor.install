@@ -1,0 +1,129 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the news_extractor module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function news_extractor_schema() {
+  $schema = [];
+
+  // Daily article limit tracking table
+  $schema['news_extractor_daily_limits'] = [
+    'description' => 'Tracks daily article counts per news source for enforcing processing limits.',
+    'fields' => [
+      'id' => [
+        'description' => 'Primary key identifier.',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ],
+      'news_source' => [
+        'description' => 'The news source name (e.g., CNN, Fox News, Reuters).',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'processing_date' => [
+        'description' => 'The date for tracking (YYYY-MM-DD format).',
+        'type' => 'varchar',
+        'length' => 10,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'article_count' => [
+        'description' => 'Number of articles processed for this source on this date.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'daily_limit' => [
+        'description' => 'Daily processing limit for this source (default: 5).',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 5,
+      ],
+      'created' => [
+        'description' => 'Timestamp when this record was created.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'updated' => [
+        'description' => 'Timestamp when this record was last updated.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'source_date' => ['news_source', 'processing_date'],
+    ],
+    'indexes' => [
+      'processing_date' => ['processing_date'],
+      'news_source' => ['news_source'],
+      'article_count' => ['article_count'],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function news_extractor_install() {
+  // Set default configuration for daily limits
+  $config = \Drupal::configFactory()->getEditable('news_extractor.settings');
+  $config->set('daily_limit_enabled', TRUE);
+  $config->set('default_daily_limit', 5);
+  $config->set('enforce_limits_globally', TRUE);
+  $config->set('limit_reset_time', '00:00'); // Midnight
+  $config->save();
+
+  \Drupal::logger('news_extractor')->info('News Extractor module installed with daily limit tracking enabled (5 articles per source per day).');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function news_extractor_uninstall() {
+  // Clean up configuration
+  \Drupal::configFactory()->getEditable('news_extractor.settings')->delete();
+  
+  \Drupal::logger('news_extractor')->info('News Extractor module uninstalled and configuration cleaned up.');
+}
+
+/**
+ * Create the daily limits tracking table.
+ */
+function news_extractor_update_9001() {
+  $schema = \Drupal::database()->schema();
+  
+  if (!$schema->tableExists('news_extractor_daily_limits')) {
+    $table_schema = news_extractor_schema()['news_extractor_daily_limits'];
+    $schema->createTable('news_extractor_daily_limits', $table_schema);
+    
+    \Drupal::logger('news_extractor')->info('Created news_extractor_daily_limits table for tracking daily article processing limits.');
+  }
+  
+  // Initialize configuration if not exists
+  $config = \Drupal::configFactory()->getEditable('news_extractor.settings');
+  if ($config->get('daily_limit_enabled') === NULL) {
+    $config->set('daily_limit_enabled', TRUE);
+    $config->set('default_daily_limit', 5);
+    $config->set('enforce_limits_globally', TRUE);
+    $config->set('limit_reset_time', '00:00');
+    $config->save();
+    
+    \Drupal::logger('news_extractor')->info('Initialized daily limit configuration (5 articles per source per day).');
+  }
+}

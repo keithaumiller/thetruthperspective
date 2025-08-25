@@ -113,6 +113,16 @@ The module follows a service-oriented architecture with clear separation of conc
 - **Batch Processing**: Handles large volumes of articles efficiently
 - **Processing Status Tracking**: Monitors completion status of each processing stage
 - **Feed Lock Management**: Automatically detects and resolves stuck feed imports
+- **Daily Processing Limits**: Configurable article processing limits per news source
+
+### 🚦 **Daily Processing Limits**
+- **Per-Source Limits**: Configurable daily article processing limits for each news source (default: 5 articles/day)
+- **Automatic Enforcement**: Limits applied during RSS feed imports and entity creation
+- **Limit Tracking**: Database tracking of daily article counts with automatic cleanup
+- **Admin Dashboard**: Web-based monitoring of current limits and processing status
+- **Drush Commands**: Command-line tools for limit management and statistics
+- **Flexible Configuration**: Global defaults with per-source customization
+- **Resource Management**: Prevents excessive API usage and processing costs
 
 ### ⚙️ **Processing Pipeline**
 1. **Feed Import**: RSS/feed integration with validation
@@ -160,12 +170,19 @@ The module expects the following fields on the `article` content type:
 
 1. **Install the module**: `drush en news_extractor`
 
-2. **Configure API settings**: Navigate to `/admin/config/news-extractor/settings`
+2. **Configure API settings**: Navigate to `/admin/config/services/news-extractor`
    - Set Diffbot API key
-   - Set Claude AI API key
-   - Configure processing options
+   - Configure daily processing limits (default: 5 articles per source per day)
+   - Enable/disable limit enforcement
+   - Set global defaults and custom per-source limits
 
-3. **Set up Feeds**: Configure RSS/feed imports to target the article content type
+3. **Monitor daily limits**: Navigate to `/admin/reports/news-extractor/daily-limits`
+   - View real-time processing status
+   - Monitor daily article counts per source
+   - See which sources have reached their limits
+   - Review 7-day processing statistics
+
+4. **Set up Feeds**: Configure RSS/feed imports to target the article content type
 
 ## Usage
 
@@ -237,6 +254,33 @@ drush news-extractor:cleanup      # Same functionality
 - 🔗 **Articles with no URL** (missing `field_original_url`)
 
 > **💡 Tip**: Run `drush ne:cleanup --dry-run` first to see what would be deleted before running actual cleanup.
+
+#### Daily Limit Management
+```bash
+# View current daily processing limits
+drush ne:limits                   # Show today's status for all sources
+drush ne:daily                    # Same as above (alias)
+drush ne:limits --date=2025-01-15 # Show specific date
+drush ne:limits --source="CNN"    # Show details for specific source
+
+# Set daily limits
+drush ne:set-limit "CNN" 10       # Set CNN to 10 articles per day
+drush ne:set-limit "Fox News" 8   # Set Fox News to 8 articles per day
+drush ne:set-limit --global 7     # Set global default to 7 articles per source
+
+# View processing statistics
+drush ne:stats                    # Show last 7 days statistics
+drush ne:limit-stats 14           # Show last 14 days
+drush ne:stats --format=json      # Output in JSON format
+
+# Enable/disable daily limits
+drush ne:toggle-limits enable     # Enable daily processing limits
+drush ne:toggle-limits disable    # Disable daily processing limits
+
+# Emergency reset (use with caution)
+drush ne:reset-limits --confirm   # Reset today's counts for all sources
+drush ne:reset-limits --date=2025-01-15 --confirm  # Reset specific date
+```
 
 #### Standard Processing
 ```bash
